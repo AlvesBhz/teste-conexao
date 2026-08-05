@@ -1,0 +1,17 @@
+# Databricks App — Value Driver Tree
+command:
+  - npm
+  - start
+
+env:
+  - name: CATALOG_NAME
+    value: franquia_bmsa_insight
+
+  - name: SCHEMA_NAME
+    value: ci
+
+  - name: TABLE_NAME
+    value: estrutura_salobo_mill_production
+
+  - name: DATABRICKS_WAREHOUSE_ID
+    valueFrom: sql-warehouse

@@ -1,0 +1,13 @@
+{
+  "name": "value-driver-tree",
+  "version": "1.1.0",
+  "dependencies": {
+    "@databricks/sql": "^1.17.0",
+    "d3": "^7.9.0",
+    "express": "^5.2.1",
+    "jsdom": "^29.1.1"
+  },
+  "scripts": {
+    "start": "node server.js"
+  }
+}

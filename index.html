@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Árvore de Direcionadores de Valor</title>
+  <link href="https://fonts.googleapis.com" rel="preconnect"/>
+  <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Estilo dos conectores e do tema Branco/Business vivem em style.css -->
+  <script>/* Anti-flash: restaura o tema Business antes do 1º paint */
+  (function(){try{if(localStorage.getItem('vdt-theme')==='dark'){document.documentElement.style.background='linear-gradient(145deg,#1a1a1a 0%,#0d2640 100%)'}}catch(e){}})();
+  </script>
+</head>
+
+<body>
+
+  <!-- HEADER (padrão ds-nav do Design System) -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <a href="#" class="logo">
+        <img src="assets/vale-logo.svg" alt="Vale" class="logo-img" />
+      </a>
+      <span class="header-divider"></span>
+      <h1 class="header-title">Value Driver Tree</h1>
+    </div>
+    <div class="topbar-right">
+      <button class="settings-btn" id="settingsBtn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="settingsPanel" title="Configurações" data-i18n-title="settings.btnTitle">
+        <svg width="17" height="17" viewBox="0 0 20 20" fill="none">
+          <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" stroke="currentColor" stroke-width="1.5" />
+          <path d="M16.2 12.3a1.4 1.4 0 0 0 .28 1.54l.05.05a1.7 1.7 0 1 1-2.4 2.4l-.05-.05a1.4 1.4 0 0 0-1.54-.28 1.4 1.4 0 0 0-.85 1.28V17.4a1.7 1.7 0 0 1-3.4 0v-.08a1.4 1.4 0 0 0-.91-1.28 1.4 1.4 0 0 0-1.54.28l-.05.05a1.7 1.7 0 1 1-2.4-2.4l.05-.05a1.4 1.4 0 0 0 .28-1.54 1.4 1.4 0 0 0-1.28-.85H2.6a1.7 1.7 0 0 1 0-3.4h.08a1.4 1.4 0 0 0 1.28-.91 1.4 1.4 0 0 0-.28-1.54l-.05-.05a1.7 1.7 0 1 1 2.4-2.4l.05.05a1.4 1.4 0 0 0 1.54.28h.06a1.4 1.4 0 0 0 .85-1.28V2.6a1.7 1.7 0 0 1 3.4 0v.08a1.4 1.4 0 0 0 .85 1.28h.06a1.4 1.4 0 0 0 1.54-.28l.05-.05a1.7 1.7 0 1 1 2.4 2.4l-.05.05a1.4 1.4 0 0 0-.28 1.54v.06a1.4 1.4 0 0 0 1.28.85h.08a1.7 1.7 0 0 1 0 3.4h-.08a1.4 1.4 0 0 0-1.28.85Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+        </svg>
+      </button>
+      <div class="user-chip">
+        <div class="user-text">
+          <span class="user-email">cristian.alves@vale.com</span>
+          <span class="user-company">VALE S.A.</span>
+        </div>
+        <span class="user-avatar">CA</span>
+      </div>
+    </div>
+
+    <div class="filter-container">
+      <label for="cmbVDT" data-i18n="filter.label">VDT:</label>
+
+      <select id="cmbVDT">
+        <option value="Mill Production - Salobo">
+          Mill Production - Salobo
+        </option>
+
+        <option value="Mine Production - Salobo">
+          Mine Production - Salobo
+        </option>
+      </select>
+
+      <button id="btnAplicar" type="button">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M3 4h10M5 8h6M7 12h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+        </svg>
+        <span data-i18n="filter.apply">Aplicar Filtro</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- FAIXA DE TÍTULO — nome da árvore atualmente aplicada, fixa entre
+       o header e a janela da árvore (atualiza ao clicar "Aplicar Filtro") -->
+  <div class="tree-title-bar" id="treeTitleBar">
+    <span class="tree-title-icon" aria-hidden="true">
+      <svg width="15" height="15" viewBox="0 0 20 20" fill="none">
+        <circle cx="6" cy="5" r="2.4" stroke="currentColor" stroke-width="1.5" />
+        <circle cx="14.5" cy="9.5" r="2.4" stroke="currentColor" stroke-width="1.5" />
+        <circle cx="14.5" cy="15.2" r="2.4" stroke="currentColor" stroke-width="1.5" />
+        <path d="M8 6.2h2.2c1 0 1.8.8 1.8 1.8v.2M12 9.5H8.4M12 15.2H8.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+      </svg>
+    </span>
+    <div class="tree-title-text">
+      <span class="tree-title-eyebrow" data-i18n="treeTitle.eyebrow">Árvore selecionada</span>
+      <h2 id="treeTitleText">Mill Production - Salobo</h2>
+    </div>
+  </div>
+
+  <!-- PAINEL LATERAL DE CONFIGURAÇÕES (Theme + Language) -->
+  <div class="settings-backdrop" id="settingsBackdrop"></div>
+  <aside class="settings-panel" id="settingsPanel" role="dialog" aria-modal="true" aria-label="Configurações" aria-hidden="true">
+    <div class="settings-panel-head">
+      <h2 data-i18n="settings.title">Settings</h2>
+      <button class="settings-close" id="settingsClose" type="button" aria-label="Fechar" data-i18n-aria="settings.close">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg>
+      </button>
+    </div>
+
+    <div class="settings-panel-body">
+      <section class="settings-section">
+        <span class="settings-section-title" data-i18n="settings.theme">Theme</span>
+        <div class="theme-toggle" role="group" aria-label="Alternar tema">
+          <button class="theme-toggle-btn active" id="btnWhite" data-i18n="theme.white">Claro</button>
+          <button class="theme-toggle-btn" id="btnBusiness" data-i18n="theme.dark">Escuro</button>
+        </div>
+      </section>
+
+      <div class="settings-divider"></div>
+
+      <section class="settings-section">
+        <span class="settings-section-title">
+          <span data-i18n="settings.language">Language</span>
+          <span class="settings-info" title="Idioma da interface" data-i18n-title="settings.languageInfo">i</span>
+        </span>
+        <div class="settings-select-wrap">
+          <select id="langSelect" class="settings-select">
+            <option value="pt-BR">Português (Brasil)</option>
+            <option value="en">English</option>
+          </select>
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="none" class="settings-select-caret"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
+        </div>
+      </section>
+    </div>
+  </aside>
+
+  <!-- TREE VIEWPORT -->
+  <!--
+    Nova estrutura de navegação (v2):
+      .tree-viewport  → janela fixa, overflow:hidden (sem scrollbar longa);
+                        recebe o d3.zoom (pan por arrasto + zoom por scroll)
+      .tree-world     → contêiner "mundo" que recebe translate/scale;
+                        contém o SVG de conectores E os cards HTML,
+                        que se movem/escalam juntos
+  -->
+  <section class="tree-viewport" id="treeViewport">
+    <div class="tree-world" id="treeWorld">
+      <svg class="connectors" id="connectorsSvg" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div class="tree-canvas" id="treeCanvas"></div>
+    </div>
+
+    <!-- Legenda fixa (positivo/negativo) -->
+    <div class="tree-legend">
+      <span class="legend-item"><span class="dot green"></span> <span data-i18n="legend.favorable">Positivo</span></span>
+      <span class="legend-item"><span class="dot red"></span> <span data-i18n="legend.unfavorable">Negativo</span></span>
+    </div>
+
+    <!-- Controles de zoom -->
+    <div class="zoom-controls">
+      <button id="zoomInBtn" class="zoom-btn" title="Aproximar" data-i18n-title="zoom.in">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+      <button id="zoomOutBtn" class="zoom-btn" title="Afastar" data-i18n-title="zoom.out">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+      <button id="zoomFitBtn" class="zoom-btn" title="Enquadrar tudo" data-i18n-title="zoom.fit">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 6V3a1 1 0 0 1 1-1h3M10 2h3a1 1 0 0 1 1 1v3M14 10v3a1 1 0 0 1-1 1h-3M6 14H3a1 1 0 0 1-1-1v-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+
+    <div class="viewport-hint" data-i18n="hint.viewport">Arraste para mover · Scroll para zoom · Passe o mouse num card para destacar a trajetória · Clique para expandir</div>
+  </section>
+
+  <!--
+    D3 v7 VENDORIZADO no projeto (arquivo d3.v7.min.js na raiz).
+    Não depende de CDN externo nem de node_modules — basta o arquivo
+    estar na mesma pasta do index.html.
+  -->
+  <script src="d3.v7.min.js"></script>
+  <script src="app.js"></script>
+  <script>
+  // Faixa de título da árvore — reflete o VDT atualmente APLICADO
+  // (nome do <option> selecionado), não o que está só sendo escolhido
+  // no combo. Sincroniza no carregamento e a cada clique em "Aplicar Filtro".
+  (function () {
+    var select = document.getElementById('cmbVDT');
+    var titleEl = document.getElementById('treeTitleText');
+    var applyBtn = document.getElementById('btnAplicar');
+    if (!select || !titleEl) return;
+
+    function syncTitle() {
+      var opt = select.options[select.selectedIndex];
+      titleEl.textContent = (opt && opt.text.trim()) || select.value;
+    }
+
+    syncTitle();
+    applyBtn && applyBtn.addEventListener('click', syncTitle);
+  })();
+
+  // Painel de configurações — abre/fecha via engrenagem, fecha no backdrop/✕/Esc.
+  (function () {
+    var btn = document.getElementById('settingsBtn');
+    var panel = document.getElementById('settingsPanel');
+    var backdrop = document.getElementById('settingsBackdrop');
+    var closeBtn = document.getElementById('settingsClose');
+    if (!btn || !panel || !backdrop) return;
+
+    function openPanel() {
+      panel.classList.add('open');
+      backdrop.classList.add('open');
+      btn.setAttribute('aria-expanded', 'true');
+      panel.setAttribute('aria-hidden', 'false');
+    }
+    function closePanel() {
+      panel.classList.remove('open');
+      backdrop.classList.remove('open');
+      btn.setAttribute('aria-expanded', 'false');
+      panel.setAttribute('aria-hidden', 'true');
+    }
+
+    btn.addEventListener('click', function () {
+      panel.classList.contains('open') ? closePanel() : openPanel();
+    });
+    closeBtn && closeBtn.addEventListener('click', closePanel);
+    backdrop.addEventListener('click', closePanel);
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closePanel();
+    });
+  })();
+
+  // Seletor de idioma — Português / Inglês. Ao trocar, traduz todo texto
+  // marcado com data-i18n (estático no HTML + os labels fixos injetados
+  // pelo app.js dentro de cada card, que já nascem com esses atributos).
+  (function () {
+    var I18N = {
+      'pt-BR': {
+        'settings.btnTitle': 'Configurações',
+        'settings.title': 'Configurações',
+        'settings.close': 'Fechar',
+        'settings.theme': 'Tema',
+        'theme.white': 'Claro',
+        'theme.dark': 'Escuro',
+        'settings.language': 'Idioma',
+        'settings.languageInfo': 'Idioma da interface',
+        'legend.favorable': 'Positivo',
+        'legend.unfavorable': 'Negativo',
+        'hint.viewport': 'Arraste para mover · Scroll para zoom · Passe o mouse num card para destacar a trajetória · Clique para expandir',
+        'zoom.in': 'Aproximar',
+        'zoom.out': 'Afastar',
+        'zoom.fit': 'Enquadrar tudo',
+        'lbl.lobp': 'LOBP',
+        'lbl.budget': 'Orçamento',
+        'lbl.forecast': 'Previsão',
+        'lbl.vs': 'vs',
+        'lbl.bud': 'ORÇ',
+        'filter.label': 'VDT:',
+        'filter.apply': 'Aplicar Filtro',
+        'treeTitle.eyebrow': 'Árvore selecionada',
+      },
+      'en': {
+        'settings.btnTitle': 'Settings',
+        'settings.title': 'Settings',
+        'settings.close': 'Close',
+        'settings.theme': 'Theme',
+        'theme.white': 'Light',
+        'theme.dark': 'Dark',
+        'settings.language': 'Language',
+        'settings.languageInfo': 'Interface language',
+        'legend.favorable': 'Positive',
+        'legend.unfavorable': 'Negative',
+        'hint.viewport': 'Drag to pan · Scroll to zoom · Hover a card to highlight its path · Click to expand',
+        'zoom.in': 'Zoom in',
+        'zoom.out': 'Zoom out',
+        'zoom.fit': 'Fit all',
+        'lbl.lobp': 'LOBP',
+        'lbl.budget': 'Budget',
+        'lbl.forecast': 'Forecast',
+        'lbl.vs': 'vs',
+        'lbl.bud': 'BUD',
+        'filter.label': 'VDT:',
+        'filter.apply': 'Apply Filter',
+        'treeTitle.eyebrow': 'Selected tree',
+      }
+    };
+
+    var select = document.getElementById('langSelect');
+
+    function translatePage(lang) {
+      var dict = I18N[lang] || I18N['pt-BR'];
+      document.querySelectorAll('[data-i18n]').forEach(function (el) {
+        var key = el.dataset.i18n;
+        if (dict[key] != null) el.textContent = dict[key];
+      });
+      document.querySelectorAll('[data-i18n-title]').forEach(function (el) {
+        var key = el.dataset.i18nTitle;
+        if (dict[key] != null) el.setAttribute('title', dict[key]);
+      });
+      document.querySelectorAll('[data-i18n-aria]').forEach(function (el) {
+        var key = el.dataset.i18nAria;
+        if (dict[key] != null) el.setAttribute('aria-label', dict[key]);
+      });
+    }
+
+    function applyLang(lang) {
+      if (!I18N[lang]) lang = 'pt-BR';
+      if (select) select.value = lang;
+      document.documentElement.lang = lang;
+      translatePage(lang);
+      try { localStorage.setItem('vdt-lang', lang); } catch (e) {}
+    }
+
+    select && select.addEventListener('change', function () { applyLang(select.value); });
+
+    var saved = 'pt-BR';
+    try { saved = localStorage.getItem('vdt-lang') || 'pt-BR'; } catch (e) {}
+    applyLang(saved);
+
+    // Os cards da árvore são montados pelo app.js no DOMContentLoaded (ainda
+    // não existem quando este script roda). Reaplica a tradução depois que
+    // eles nascerem, para os labels fixos (LOBP/Budget/Forecast/vs/BUD)
+    // saírem já no idioma certo.
+    document.addEventListener('DOMContentLoaded', function () {
+      translatePage(document.documentElement.lang);
+    });
+  })();
+  </script>
+</body>
+
+</html>
