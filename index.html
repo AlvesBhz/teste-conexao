@@ -57,15 +57,6 @@
     </div>
   </header>
 
-  <!-- TÍTULO DA ÁRVORE — nome do VDT atualmente selecionado, em destaque
-       entre o header e a janela da árvore (atualiza ao trocar o filtro VDT).
-       Sem tarja/ícone: só o texto, em tamanho grande, para o usuário
-       identificar de cara em qual árvore está navegando. -->
-  <div class="tree-title-bar" id="treeTitleBar">
-    <span class="tree-title-eyebrow" data-i18n="treeTitle.eyebrow">Árvore selecionada</span>
-    <h2 id="treeTitleText">Mill Production - Salobo</h2>
-  </div>
-
   <!-- PAINEL LATERAL DE CONFIGURAÇÕES (Theme + Language) -->
   <div class="settings-backdrop" id="settingsBackdrop"></div>
   <aside class="settings-panel" id="settingsPanel" role="dialog" aria-modal="true" aria-label="Configurações" aria-hidden="true">
@@ -116,6 +107,15 @@
     <div class="tree-world" id="treeWorld">
       <svg class="connectors" id="connectorsSvg" xmlns="http://www.w3.org/2000/svg"></svg>
       <div class="tree-canvas" id="treeCanvas"></div>
+    </div>
+
+    <!-- Título da árvore selecionada — badge fixo e centralizado no topo
+         do viewport. É irmão de .tree-world (não filho), então não sofre
+         o pan/zoom da árvore: fica sempre visível, no mesmo lugar,
+         enquanto o usuário navega. -->
+    <div class="tree-title-badge" id="treeTitleBar">
+      <span class="tree-title-eyebrow" data-i18n="treeTitle.eyebrow">Árvore selecionada</span>
+      <h2 id="treeTitleText">Mill Production - Salobo</h2>
     </div>
 
     <!-- Legenda fixa (positivo/negativo) -->
