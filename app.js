@@ -759,25 +759,20 @@ const fmtLobp = formatValuePlain(
     if (box) box.remove();
   }
 
-  // Liga o botão "Aplicar Filtro": busca de novo os dados (agora com o
-  // NM_VDT selecionado no combo) e reconstrói a árvore do zero.
+  // Liga o filtro (VDT): ao trocar a opção do combo, já busca de novo
+  // os dados (agora com o NM_VDT selecionado) e reconstrói a árvore do
+  // zero — sem precisar de um botão "Aplicar Filtro" separado.
   function attachFilterEvents() {
-    const btn = document.getElementById('btnAplicar');
     const select = document.getElementById('cmbVDT');
-    if (!btn || !select) return;
+    if (!select) return;
 
-    btn.addEventListener('click', async () => {
-      if (btn.disabled) return;
-      btn.disabled = true;
+    select.addEventListener('change', async () => {
+      if (select.disabled) return;
       select.disabled = true;
-      const originalLabel = btn.textContent;
-      btn.textContent = '...';
       try {
         await loadTreeAndRender({ isReload: true });
       } finally {
-        btn.disabled = false;
         select.disabled = false;
-        btn.textContent = originalLabel;
       }
     });
   }
@@ -789,7 +784,7 @@ const fmtLobp = formatValuePlain(
   /**
    * Busca os dados (respeitando o NM_VDT selecionado no combo) e
    * (re)constrói a árvore inteira. Usada tanto no boot inicial quanto
-   * toda vez que o usuário clica em "Aplicar Filtro".
+   * toda vez que o usuário troca o filtro VDT.
    */
   async function loadTreeAndRender({ isReload = false } = {}) {
     const canvas = document.getElementById('treeCanvas');

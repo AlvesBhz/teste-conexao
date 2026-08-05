@@ -54,18 +54,11 @@
           Mine Production - Salobo
         </option>
       </select>
-
-      <button id="btnAplicar" type="button">
-        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <path d="M3 4h10M5 8h6M7 12h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
-        </svg>
-        <span data-i18n="filter.apply">Aplicar Filtro</span>
-      </button>
     </div>
   </header>
 
   <!-- FAIXA DE TÍTULO — nome da árvore atualmente aplicada, fixa entre
-       o header e a janela da árvore (atualiza ao clicar "Aplicar Filtro") -->
+       o header e a janela da árvore (atualiza ao trocar o filtro VDT) -->
   <div class="tree-title-bar" id="treeTitleBar">
     <span class="tree-title-icon" aria-hidden="true">
       <svg width="15" height="15" viewBox="0 0 20 20" fill="none">
@@ -163,13 +156,12 @@
   <script src="d3.v7.min.js"></script>
   <script src="app.js"></script>
   <script>
-  // Faixa de título da árvore — reflete o VDT atualmente APLICADO
-  // (nome do <option> selecionado), não o que está só sendo escolhido
-  // no combo. Sincroniza no carregamento e a cada clique em "Aplicar Filtro".
+  // Faixa de título da árvore — reflete o VDT atualmente selecionado
+  // (nome do <option> selecionado). Sincroniza no carregamento e a
+  // cada troca do filtro (o filtro se aplica sozinho ao mudar).
   (function () {
     var select = document.getElementById('cmbVDT');
     var titleEl = document.getElementById('treeTitleText');
-    var applyBtn = document.getElementById('btnAplicar');
     if (!select || !titleEl) return;
 
     function syncTitle() {
@@ -178,7 +170,7 @@
     }
 
     syncTitle();
-    applyBtn && applyBtn.addEventListener('click', syncTitle);
+    select.addEventListener('change', syncTitle);
   })();
 
   // Painel de configurações — abre/fecha via engrenagem, fecha no backdrop/✕/Esc.
@@ -238,7 +230,6 @@
         'lbl.vs': 'vs',
         'lbl.bud': 'ORÇ',
         'filter.label': 'VDT:',
-        'filter.apply': 'Aplicar Filtro',
         'treeTitle.eyebrow': 'Árvore selecionada',
       },
       'en': {
@@ -262,7 +253,6 @@
         'lbl.vs': 'vs',
         'lbl.bud': 'BUD',
         'filter.label': 'VDT:',
-        'filter.apply': 'Apply Filter',
         'treeTitle.eyebrow': 'Selected tree',
       }
     };

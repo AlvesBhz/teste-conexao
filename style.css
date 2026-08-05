@@ -318,11 +318,14 @@ body.theme-ready .tree-title-eyebrow {
   font-weight: 700;
 }
 
-/* ── Filtro de VDT — centralizado na topbar (pill de vidro sobre o azul) ──
+/* ── Filtro de VDT — centralizado na topbar ──
    Tirado do fluxo flex (position:absolute) e centralizado em relação à
    .topbar inteira, para que fique fixo no meio independentemente da
    largura de topbar-left/topbar-right — igual ao padrão de nav central
-   do Design System. */
+   do Design System. Estilo alinhado ao seletor de Tema do painel de
+   Configurações (.theme-toggle): pill de fundo neutro e borda fina, sem
+   vidro/azul — e sem botão de aplicar: a troca do <select> já reaplica
+   o filtro sozinha (ver app.js). */
 .filter-container {
   position: absolute;
   left: 50%;
@@ -331,17 +334,14 @@ body.theme-ready .tree-title-eyebrow {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 5px 5px 5px 16px;
-  background: rgba(255,255,255,.14);
-  border: 1px solid rgba(255,255,255,.24);
+  padding: .16rem .16rem .16rem 16px;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
   border-radius: 100px;
-  box-shadow: 0 1px 2px rgba(13,38,64,.08), inset 0 1px 0 rgba(255,255,255,.12);
+  box-shadow: 0 1px 2px rgba(13,38,64,.08);
   transition: background .25s var(--ease-out), border-color .25s var(--ease-out);
 }
-@supports (backdrop-filter: blur(1px)) {
-  .filter-container { backdrop-filter: blur(10px) saturate(140%); -webkit-backdrop-filter: blur(10px) saturate(140%); }
-}
-.filter-container:hover { background: rgba(255,255,255,.19); border-color: rgba(255,255,255,.32); }
+.filter-container:hover { border-color: var(--vbm-blue-light); }
 
 .filter-container label {
   font-family: var(--font-poppins);
@@ -349,84 +349,54 @@ body.theme-ready .tree-title-eyebrow {
   font-size: .68rem;
   letter-spacing: .09em;
   text-transform: uppercase;
-  color: rgba(255,255,255,.82);
+  color: var(--text-muted);
   white-space: nowrap;
   flex-shrink: 0;
 }
 
-/* Select estilizado — pill branca sólida, seta custom via SVG inline */
+/* Select estilizado — mesmo tratamento flat do .theme-toggle-btn (pill
+   sem fundo próprio, seta custom via SVG inline) */
 .filter-container select {
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
   border: none;
   border-radius: 100px;
-  background-color: #fff;
+  background-color: transparent;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M4 6l4 4 4-4' stroke='%231a8bbf' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 14px center;
-  padding: 7px 34px 7px 16px;
+  padding: .38rem 34px .38rem 16px;
   min-width: 190px;
   max-width: 260px;
   font-family: var(--font-poppins);
   font-weight: 600;
   font-size: .8rem;
-  color: var(--vbm-blue-deep);
+  color: var(--text-primary);
   cursor: pointer;
-  transition: box-shadow .2s var(--ease-out);
+  transition: background-color .2s var(--ease-out), opacity .2s var(--ease-out);
 }
-.filter-container select:hover { box-shadow: 0 0 0 3px rgba(255,255,255,.28); }
+.filter-container select:hover { background-color: var(--blue-light); }
 .filter-container select:focus {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(255,255,255,.45);
+  box-shadow: 0 0 0 3px rgba(60,181,229,.25);
 }
+.filter-container select:disabled { opacity: .55; cursor: wait; }
 
-/* Botão "Aplicar Filtro" — pill sólida em azul profundo, mesmo padrão de
-   micro-interação (hover lift + spring) dos demais controles do DS */
-.filter-container button {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  border: none;
-  border-radius: 100px;
-  padding: 8px 18px;
-  background: linear-gradient(135deg, var(--vbm-blue-deep), #123a5e);
-  color: #fff;
-  font-family: var(--font-poppins);
-  font-weight: 600;
-  font-size: .78rem;
-  white-space: nowrap;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(13,38,64,.3);
-  transition: transform .25s var(--ease-spring), box-shadow .25s var(--ease-out), background .25s var(--ease-out);
-}
-.filter-container button svg { flex-shrink: 0; }
-.filter-container button:hover {
-  background: linear-gradient(135deg, #123a5e, var(--vbm-blue-deep));
-  transform: translateY(-1px);
-  box-shadow: 0 5px 16px rgba(13,38,64,.4);
-}
-.filter-container button:active { transform: translateY(0); box-shadow: 0 2px 6px rgba(13,38,64,.3); }
-
-/* Vidro escuro (tema Business): o mesmo tratamento translúcido já
-   funciona sobre o fundo escuro — só reforçamos o contraste do select
-   e do botão para não "sumirem" no glass mais sóbrio do tema Business. */
+/* Vidro escuro (tema Business) — mesmo princípio do .theme-toggle em
+   modo escuro: pill translúcida clara sobre o glass do header. */
 [data-bg="dark"] .filter-container {
   background: rgba(255,255,255,.06);
   border-color: rgba(255,255,255,.14);
 }
-[data-bg="dark"] .filter-container:hover { background: rgba(255,255,255,.1); }
+[data-bg="dark"] .filter-container label { color: rgba(255,255,255,.55); }
 [data-bg="dark"] .filter-container select {
-  background-color: rgba(255,255,255,.94);
+  color: var(--vbm-white);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M4 6l4 4 4-4' stroke='%23ffffff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
-[data-bg="dark"] .filter-container button {
-  background: linear-gradient(135deg, var(--vbm-blue), var(--vbm-blue-dark));
-  box-shadow: 0 2px 10px rgba(0,0,0,.35);
-}
-[data-bg="dark"] .filter-container button:hover {
-  background: linear-gradient(135deg, var(--vbm-blue-dark), var(--vbm-blue));
-  box-shadow: 0 6px 18px rgba(0,0,0,.45);
-}
+[data-bg="dark"] .filter-container select:hover { background-color: rgba(255,255,255,.1); }
+[data-bg="dark"] .filter-container select:focus { box-shadow: 0 0 0 3px rgba(60,181,229,.3); }
+[data-bg="dark"] .filter-container select option { background: var(--vbm-blue-deep); color: #fff; }
 
 /* Telas estreitas: o filtro sai do centro absoluto (evita colidir com
    logo/user-chip) e volta ao fluxo normal, empilhado abaixo da topbar. */
@@ -1055,7 +1025,9 @@ body.theme-ready .settings-info,
 body.theme-ready .settings-divider,
 body.theme-ready .theme-toggle,
 body.theme-ready .theme-toggle-btn,
-body.theme-ready .settings-select {
+body.theme-ready .settings-select,
+body.theme-ready .filter-container,
+body.theme-ready .filter-container select {
   transition-property: background-color, border-color, color;
   transition-duration: .2s;
   transition-timing-function: var(--ease-smooth);
