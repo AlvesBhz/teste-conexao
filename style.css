@@ -477,12 +477,13 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
   pointer-events: none;
 }
 
-/* ---- TÍTULO DA ÁRVORE (badge fixo, centralizado no topo do tree-viewport) ----
+/* ---- TÍTULO DA ÁRVORE (texto fixo, centralizado no topo do tree-viewport) ----
    Irmão de .tree-world dentro de .tree-viewport (position:relative): fica
    posicionado em absolute e por isso NÃO recebe o transform de pan/zoom
    aplicado à árvore — permanece sempre visível, no mesmo lugar, enquanto
-   o usuário arrasta/dá zoom. pointer-events:none deixa o arrasto do fundo
-   funcionar mesmo com o cursor sobre o badge. */
+   o usuário arrasta/dá zoom. Só o texto, sem cartão/borda ao redor.
+   pointer-events:none deixa o arrasto do fundo funcionar mesmo com o
+   cursor sobre o título. */
 .tree-title-badge {
   position: absolute;
   top: 16px;
@@ -494,17 +495,8 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
   align-items: center;
   gap: 1px;
   max-width: calc(100% - 260px);
-  padding: 9px 26px;
-  border-radius: 100px;
-  background: rgba(255,255,255,.85);
-  border: 1px solid var(--border-light);
-  box-shadow: var(--card-shadow);
   pointer-events: none;
   text-align: center;
-  transition: background .25s, border-color .25s;
-}
-@supports (backdrop-filter: blur(1px)) {
-  .tree-title-badge { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
 }
 
 .tree-title-eyebrow {
@@ -530,8 +522,7 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
 }
 
 @media (max-width: 880px) {
-  .tree-title-badge { max-width: calc(100% - 32px); padding: 7px 16px; }
-  #treeTitleText { font-size: 1.1rem; }
+  .tree-title-badge { max-width: calc(100% - 32px); }
 }
 
 /* ---- LEGEND (fixa dentro do tree-viewport, canto superior esquerdo) ---- */
@@ -991,7 +982,6 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
 body.theme-ready,
 body.theme-ready .topbar,
 body.theme-ready .tree-viewport,
-body.theme-ready .tree-title-badge,
 body.theme-ready #treeTitleText,
 body.theme-ready .tree-title-eyebrow,
 body.theme-ready .legend-item,
@@ -1038,8 +1028,7 @@ body[data-bg="dark"] {
 [data-bg="dark"] .connector-line.is-active { stroke: rgba(255,255,255,.72); }
 [data-bg="dark"] .connector-line.is-dimmed { stroke: rgba(255,255,255,.12); opacity: 1; }
 
-/* Título da árvore, legenda, controles de zoom, dica de navegação — vidro claro sobre o fundo escuro */
-[data-bg="dark"] .tree-title-badge,
+/* Legenda, controles de zoom, dica de navegação — vidro claro sobre o fundo escuro */
 [data-bg="dark"] .legend-item,
 [data-bg="dark"] .zoom-btn,
 [data-bg="dark"] .viewport-hint {
