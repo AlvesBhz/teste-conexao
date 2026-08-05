@@ -117,75 +117,51 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
 @keyframes glowPulse{ 0%,100%{opacity:.35;transform:scale(1);} 50%{opacity:.7;transform:scale(1.12);} }
 
 /* ============================================================
-   FAIXA DE TÍTULO DA ÁRVORE — entre o header e o tree-viewport,
-   fixa (sticky) logo abaixo da topbar; mostra o VDT aplicado.
-   ============================================================ */
+   TÍTULO DA ÁRVORE — entre o header e o tree-viewport, fixo (sticky)
+   logo abaixo da topbar; mostra o VDT aplicado. Sem tarja/ícone: o
+   fundo é o mesmo da página (sem borda), só o nome da árvore em
+   destaque — texto grande faz o papel de "cartão de identificação"
+   sem parecer um bloco separado. */
 .tree-title-bar {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1.2;
   margin: 0 36px;
-  padding: 14px 0 13px;
-  border-bottom: 1px solid var(--border);
+  padding: 22px 0 18px;
   position: sticky;
   top: 64px;   /* altura fixa da .topbar */
   z-index: 90;
   background: var(--bg);
 }
 
-.tree-title-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  flex-shrink: 0;
-  border-radius: 9px;
-  background: var(--vbm-blue-pale);
-  color: var(--vbm-blue-dark);
-}
-
-.tree-title-text {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.25;
-  min-width: 0;
-}
-
 .tree-title-eyebrow {
   font-family: var(--font-poppins);
   font-weight: 600;
-  font-size: .64rem;
-  letter-spacing: .1em;
+  font-size: .68rem;
+  letter-spacing: .12em;
   text-transform: uppercase;
   color: var(--text-muted);
 }
 
-.tree-title-text h2 {
+#treeTitleText {
   font-family: var(--font-poppins);
-  font-weight: 700;
-  font-size: 1.05rem;
-  letter-spacing: -.01em;
+  font-weight: 800;
+  font-size: 1.95rem;
+  line-height: 1.15;
+  letter-spacing: -.02em;
   color: var(--vbm-blue-deep);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-[data-bg="dark"] .tree-title-bar {
-  background: var(--vbm-dark);
-  border-bottom-color: rgba(255,255,255,.09);
-}
-[data-bg="dark"] .tree-title-icon {
-  background: rgba(60,181,229,.16);
-  color: var(--vbm-blue-light);
-}
-[data-bg="dark"] .tree-title-text h2 { color: #fff; }
+[data-bg="dark"] .tree-title-bar { background: var(--vbm-dark); }
+[data-bg="dark"] #treeTitleText { color: #fff; }
 [data-bg="dark"] .tree-title-eyebrow { color: rgba(255,255,255,.45); }
 
 body.theme-ready .tree-title-bar,
-body.theme-ready .tree-title-icon,
-body.theme-ready .tree-title-text h2,
+body.theme-ready #treeTitleText,
 body.theme-ready .tree-title-eyebrow {
   transition-property: background-color, border-color, color;
   transition-duration: .2s;
@@ -193,7 +169,8 @@ body.theme-ready .tree-title-eyebrow {
 }
 
 @media (max-width: 880px) {
-  .tree-title-bar { position: static; margin: 0 16px; padding: 12px 0; }
+  .tree-title-bar { position: static; margin: 0 16px; padding: 14px 0 12px; }
+  #treeTitleText { font-size: 1.5rem; }
 }
 
 /* ---- TOPBAR (ds-nav do DS, cor de marca --vbm-blue) ---- */

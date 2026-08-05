@@ -57,21 +57,13 @@
     </div>
   </header>
 
-  <!-- FAIXA DE TÍTULO — nome da árvore atualmente aplicada, fixa entre
-       o header e a janela da árvore (atualiza ao trocar o filtro VDT) -->
+  <!-- TÍTULO DA ÁRVORE — nome do VDT atualmente selecionado, em destaque
+       entre o header e a janela da árvore (atualiza ao trocar o filtro VDT).
+       Sem tarja/ícone: só o texto, em tamanho grande, para o usuário
+       identificar de cara em qual árvore está navegando. -->
   <div class="tree-title-bar" id="treeTitleBar">
-    <span class="tree-title-icon" aria-hidden="true">
-      <svg width="15" height="15" viewBox="0 0 20 20" fill="none">
-        <circle cx="6" cy="5" r="2.4" stroke="currentColor" stroke-width="1.5" />
-        <circle cx="14.5" cy="9.5" r="2.4" stroke="currentColor" stroke-width="1.5" />
-        <circle cx="14.5" cy="15.2" r="2.4" stroke="currentColor" stroke-width="1.5" />
-        <path d="M8 6.2h2.2c1 0 1.8.8 1.8 1.8v.2M12 9.5H8.4M12 15.2H8.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-      </svg>
-    </span>
-    <div class="tree-title-text">
-      <span class="tree-title-eyebrow" data-i18n="treeTitle.eyebrow">Árvore selecionada</span>
-      <h2 id="treeTitleText">Mill Production - Salobo</h2>
-    </div>
+    <span class="tree-title-eyebrow" data-i18n="treeTitle.eyebrow">Árvore selecionada</span>
+    <h2 id="treeTitleText">Mill Production - Salobo</h2>
   </div>
 
   <!-- PAINEL LATERAL DE CONFIGURAÇÕES (Theme + Language) -->
