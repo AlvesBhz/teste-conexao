@@ -525,7 +525,7 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
   .tree-title-badge { max-width: calc(100% - 32px); }
 }
 
-/* ---- PAINEL "TOP 15 PERDAS" (fixo à esquerda do tree-viewport) ----
+/* ---- PAINEL "PERDAS & GANHOS" (fixo à esquerda do tree-viewport) ----
    Irmão de .tree-world dentro de .tree-viewport (position:relative):
    fica em absolute e por isso NÃO recebe o transform de pan/zoom da
    árvore — permanece sempre visível, no mesmo lugar, enquanto o
@@ -599,6 +599,49 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
   pointer-events: none;
 }
 
+/* Barra de ordenação — mesmo padrão visual do .theme-toggle segmentado
+   (Configurações > Tema): reaproveita a linguagem já estabelecida no
+   app pra um segundo controle segmentado em vez de inventar um novo
+   estilo. Ícones = mesma seta ↑/↓ já usada nos deltas dos cards. */
+.loss-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.loss-toolbar-label {
+  font-family: var(--font-poppins);
+  font-weight: 600;
+  font-size: .64rem;
+  letter-spacing: .04em;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.loss-sort-group {
+  display: flex; align-items: center;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  padding: .14rem; gap: .1rem;
+  flex-shrink: 0;
+}
+.loss-sort-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px;
+  border-radius: 100px;
+  border: none; background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background .2s, color .2s;
+}
+.loss-sort-btn:hover { color: var(--vbm-blue-dark); }
+.loss-sort-btn.active {
+  background: var(--blue); color: #fff;
+  box-shadow: 0 3px 10px rgba(60,181,229,.35);
+}
+
 .loss-list {
   flex: 1;
   overflow-y: auto;
@@ -628,22 +671,29 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
   font-family: var(--font-poppins);
   font-weight: 700;
   font-size: .72rem;
-  color: var(--red-dark);
   flex-shrink: 0;
   white-space: nowrap;
 }
 .loss-row-bar-track {
   height: 6px;
   border-radius: 100px;
-  background: var(--red-light);
   overflow: hidden;
 }
 .loss-row-bar {
   height: 100%;
   border-radius: 100px;
-  background: linear-gradient(90deg, var(--red), var(--red-dark));
   transition: width .4s var(--ease-out);
 }
+
+/* Perda (desfavorável) = vermelho · Ganho (favorável) = verde — mesma
+   paleta semântica da legenda Positivo/Negativo do viewport. */
+.loss-row.is-loss .loss-row-value    { color: var(--red-dark); }
+.loss-row.is-loss .loss-row-bar-track { background: var(--red-light); }
+.loss-row.is-loss .loss-row-bar      { background: linear-gradient(90deg, var(--red), var(--red-dark)); }
+
+.loss-row.is-gain .loss-row-value    { color: var(--green-dark); }
+.loss-row.is-gain .loss-row-bar-track { background: var(--green-light); }
+.loss-row.is-gain .loss-row-bar      { background: linear-gradient(90deg, var(--green), var(--green-dark)); }
 
 .loss-empty {
   padding: 20px 4px;
@@ -763,6 +813,15 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
 }
 .card-status-dot.fav   { background: var(--green); }
 .card-status-dot.unfav { background: var(--red); }
+/* Sem dado (valor-base ou comparação nulo): cinza neutro, sem pulso —
+   não é favorável nem desfavorável, é "não calculável". */
+.card-status-dot.nodata {
+  background: var(--text-muted);
+  opacity: .45;
+  animation: none;
+}
+.card-status-dot.nodata::before,
+.card-status-dot.nodata::after { display: none; }
 
 /* ============================================================
    VIEWPORT + WORLD  (modelo de navegação — sem scrollbar)
@@ -1091,6 +1150,7 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
 }
 .drow .delta.fav   { color: var(--green-dark); }
 .drow .delta.unfav { color: var(--red-dark); }
+.drow .delta.nodata { color: var(--text-muted); font-weight: 600; }
 
 /* ---- HIDDEN / COLLAPSED ---- */
 .tree-node.hidden {
@@ -1131,6 +1191,8 @@ body.theme-ready #treeTitleText,
 body.theme-ready .tree-title-eyebrow,
 body.theme-ready .loss-panel,
 body.theme-ready .loss-compare-select,
+body.theme-ready .loss-sort-group,
+body.theme-ready .loss-sort-btn,
 body.theme-ready .legend-item,
 body.theme-ready .zoom-btn,
 body.theme-ready .viewport-hint,
@@ -1205,9 +1267,15 @@ body[data-bg="dark"] {
 [data-bg="dark"] .loss-compare-select:hover { border-color: var(--vbm-blue-light); }
 [data-bg="dark"] .loss-compare-select option { background: var(--vbm-blue-deep); color: #fff; }
 [data-bg="dark"] .loss-compare-caret { color: rgba(255,255,255,.5); }
+[data-bg="dark"] .loss-toolbar-label { color: rgba(255,255,255,.5); }
+[data-bg="dark"] .loss-sort-group { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.16); }
+[data-bg="dark"] .loss-sort-btn { color: rgba(255,255,255,.55); }
+[data-bg="dark"] .loss-sort-btn.active { background: var(--vbm-blue); color: #fff; }
 [data-bg="dark"] .loss-row-name { color: rgba(255,255,255,.85); }
-[data-bg="dark"] .loss-row-value { color: #f87171; }
-[data-bg="dark"] .loss-row-bar-track { background: rgba(255,255,255,.08); }
+[data-bg="dark"] .loss-row.is-loss .loss-row-value     { color: #f87171; }
+[data-bg="dark"] .loss-row.is-loss .loss-row-bar-track { background: rgba(255,255,255,.08); }
+[data-bg="dark"] .loss-row.is-gain .loss-row-value     { color: #4ade80; }
+[data-bg="dark"] .loss-row.is-gain .loss-row-bar-track { background: rgba(255,255,255,.08); }
 [data-bg="dark"] .loss-empty { color: rgba(255,255,255,.4); }
 
 /* Cards da árvore — vidro escuro (kpi-card do DS em modo Business).
@@ -1252,6 +1320,8 @@ body[data-bg="dark"] {
 [data-bg="dark"] .drow-item + .drow-item { border-color: rgba(255,255,255,.1); }
 [data-bg="dark"] .drow .delta.fav   { color: #4ade80; }
 [data-bg="dark"] .drow .delta.unfav { color: #f87171; }
+[data-bg="dark"] .drow .delta.nodata { color: rgba(255,255,255,.4); }
+[data-bg="dark"] .card-status-dot.nodata { background: rgba(255,255,255,.35); }
 
 /* Chip do usuário (email/empresa) — só precisa do divisor mais discreto no vidro escuro */
 [data-bg="dark"] .user-chip { border-left-color: rgba(255,255,255,.16); }

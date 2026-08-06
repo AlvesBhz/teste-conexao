@@ -67,6 +67,18 @@
 
   
 
+  // Converte pra número preservando a ausência de dado: null/undefined/''
+  // viram `null` (sem informação), nunca 0 — só um 0 vindo da fonte de
+  // dados vira o número 0. É a base de toda a regra "nulo vs. zero"
+  // (ver formatValuePlain/calcVariation): tudo que é "sem dado" precisa
+  // continuar null até a hora de exibir, nunca ser silenciosamente
+  // convertido em zero no meio do caminho.
+  function toNullableNumber(value) {
+    if (value === null || value === undefined || value === '') return null;
+    const n = Number(value);
+    return Number.isNaN(n) ? null : n;
+  }
+
   async function fetchTreeData() {
     const nmVDT = document.getElementById("cmbVDT").value;
     const res= await fetch(`/api/tree?nm_vdt=${encodeURIComponent(nmVDT)}`);
@@ -85,46 +97,44 @@
       SG_DECIMAL: r.SG_DECIMAL,
       NodeType: inferNodeType(r.IndicatorName),
       DisplayOrder: r.DisplayOrder,
-      VL_PROJ: Number(r.VL_PROJ) || 0,
-      VL_ORC: Number(r.VL_ORC) || 0,
-      VL_LOBP: Number(r.VL_LOBP) || 0,
+      VL_PROJ: toNullableNumber(r.VL_PROJ),
+      VL_ORC: toNullableNumber(r.VL_ORC),
+      VL_LOBP: toNullableNumber(r.VL_LOBP),
     }));
   }
 
 
-  // ── 2. FORMATAÇÃO DE VALORES (inalterado) ───────────────────
+  // ── 2. FORMATAÇÃO DE VALORES ─────────────────────────────────
   // Valor "só número" — sem prefixo (R$), sufixo (M) ou símbolo (%).
   // A unidade já fica implícita no título do indicador (ex.: "(tpa)", "(%)").
+  //
+  // Regra nulo vs. zero: `value === null` (sem informação na fonte) SEMPRE
+  // exibe "-", nunca "0" e nunca entra em conta alguma. Um 0 de verdade
+  // (número, não null) é formatado e tratado normalmente.
   function formatValuePlain(value, type, factor = 1, decimalFlag = 1) {
-    const finalValue = Number(value || 0) * Number(factor || 1);
-    const decimals = decimalFlag 
-
-    if (type === 'percentage') {
-        return finalValue.toLocaleString('pt-BR', {
-            minimumFractionDigits: decimals,
-            maximumFractionDigits: decimals
-        });
-    }
-
-    if (type === 'currency') {
-        return finalValue.toLocaleString('pt-BR', {
-            minimumFractionDigits: decimals,
-            maximumFractionDigits: decimals
-        });
-    }
-
+    if (value === null || value === undefined) return '-';
+    const finalValue = Number(value) * Number(factor || 1);
     return finalValue.toLocaleString('pt-BR', {
-        minimumFractionDigits: decimals,
-        maximumFractionDigits: decimals
+      minimumFractionDigits: decimalFlag,
+      maximumFractionDigits: decimalFlag,
     });
-}
+  }
 
+  // Regra nulo vs. zero: se o valor base OU o de comparação for null (sem
+  // dado), não há variação calculável — retorna noData:true (quem
+  // consome isto deve exibir "-" no delta, sem seta/cor de favorável ou
+  // desfavorável, e excluir o item de rankings). Um 0 real (não-null)
+  // segue participando do cálculo normalmente — inclusive como
+  // referência (mantém o guard existente contra divisão por zero).
   function calcVariation(actual, reference, nodeId) {
-    if (!reference || reference === 0) return { pct: 0, favorable: true };
+    if (actual === null || actual === undefined || reference === null || reference === undefined) {
+      return { pct: null, favorable: null, noData: true };
+    }
+    if (!reference || reference === 0) return { pct: 0, favorable: true, noData: false };
     const pct = ((actual - reference) / Math.abs(reference)) * 100;
     const higherIsBad = [3, 5];
     const favorable = higherIsBad.includes(nodeId) ? pct <= 0 : pct >= 0;
-    return { pct, favorable };
+    return { pct, favorable, noData: false };
   }
 
   // ── 3. CONSTRUÇÃO DA ÁRVORE (inalterado) ────────────────────
@@ -192,15 +202,16 @@ const fmtLobp = formatValuePlain(
 );
 
     // Cor de cada delta segue a favorabilidade real (higherIsBad-aware);
-    // a seta (↑/↓) segue o sinal bruto da variação.
-    const orcClass  = vsOrc.favorable  ? 'fav' : 'unfav';
-    const lobpClass = vsLobp.favorable ? 'fav' : 'unfav';
+    // a seta (↑/↓) segue o sinal bruto da variação. Sem dado (noData) não
+    // tem favorável/desfavorável — nem seta, nem %, só "-" em cinza.
+    const orcClass  = vsOrc.noData  ? 'nodata' : (vsOrc.favorable  ? 'fav' : 'unfav');
+    const lobpClass = vsLobp.noData ? 'nodata' : (vsLobp.favorable ? 'fav' : 'unfav');
 
-    const orcPct  = (vsOrc.pct  >= 0 ? '+' : '') + vsOrc.pct.toFixed(1)  + '%';
-    const lobpPct = (vsLobp.pct >= 0 ? '+' : '') + vsLobp.pct.toFixed(1) + '%';
+    const orcPct  = vsOrc.noData  ? '-' : (vsOrc.pct  >= 0 ? '+' : '') + vsOrc.pct.toFixed(1)  + '%';
+    const lobpPct = vsLobp.noData ? '-' : (vsLobp.pct >= 0 ? '+' : '') + vsLobp.pct.toFixed(1) + '%';
 
-    const orcArrow  = svgArrow(vsOrc.pct  > 0);
-    const lobpArrow = svgArrow(vsLobp.pct > 0);
+    const orcArrow  = vsOrc.noData  ? '' : svgArrow(vsOrc.pct  > 0);
+    const lobpArrow = vsLobp.noData ? '' : svgArrow(vsLobp.pct > 0);
 
     const toggleBtn = isLeaf
       ? `<button class="toggle-btn" disabled>${svgRight()}</button>`
@@ -797,69 +808,78 @@ const fmtLobp = formatValuePlain(
     });
   }
 
-  // ── 13.1 PAINEL "TOP 15 PERDAS" ──────────────────────────────
+  // ── 13.1 PAINEL "PERDAS & GANHOS" ─────────────────────────────
   // Painel fixo à esquerda do tree-viewport (não sofre o pan/zoom da
   // árvore — é irmão de .tree-world, igual ao badge de título). Reusa
   // os mesmos dados já buscados pra árvore (TREE_MAP), já filtrados
   // pelo VDT selecionado: nenhuma consulta nova ao Databricks é feita
-  // aqui. O combo de comparação (Fcst×Bdgt / Fcst×LOBP / Bdgt×LOBP)
-  // só recalcula este painel — os cards da árvore continuam mostrando
-  // os dois deltas fixos de sempre (vs LOBP / vs Bdgt).
+  // aqui. O combo de comparação (Fcst×Bdgt / Fcst×LOBP / Bdgt×LOBP) e a
+  // ordenação (maior/menor impacto) só recalculam este painel — os
+  // cards da árvore continuam mostrando os dois deltas fixos de sempre
+  // (vs LOBP / vs Bdgt).
   const LOSS_COMPARE_DEFS = {
     fcst_bdgt: { actualKey: 'VL_PROJ', referenceKey: 'VL_ORC' },
     fcst_lobp: { actualKey: 'VL_PROJ', referenceKey: 'VL_LOBP' },
     bdgt_lobp: { actualKey: 'VL_ORC', referenceKey: 'VL_LOBP' },
   };
-  const LOSS_TOP_N = 15;
   let lossCompareKey = 'fcst_bdgt';
+  let lossSortDir = 'desc'; // 'asc' = menor impacto primeiro · 'desc' = maior impacto primeiro
 
-  // "Perda" = nó-folha com variação desfavorável (calcVariation, a
-  // mesma função usada nos cards — inclusive a heurística higherIsBad)
-  // na comparação ativa. Ordenado pela maior diferença absoluta.
-  function computeTopLosses(map, compareKey) {
+  // Todo nó-folha com variação CALCULÁVEL (nem valor-base nem
+  // valor-comparação nulos — calcVariation.noData) na comparação ativa
+  // entra na lista, seja perda (desfavorável) ou ganho (favorável). Item
+  // sem dado suficiente simplesmente não aparece (não é "perda zero").
+  function computeVarianceEntries(map, compareKey) {
     const def = LOSS_COMPARE_DEFS[compareKey] || LOSS_COMPARE_DEFS.fcst_bdgt;
 
     return Object.values(map)
       .filter((node) => node && node.children.length === 0)
       .map((node) => {
-        const actual    = Number(node[def.actualKey])    || 0;
-        const reference = Number(node[def.referenceKey]) || 0;
+        const actual    = node[def.actualKey];
+        const reference = node[def.referenceKey];
         const variation = calcVariation(actual, reference, node.NodeID);
-        const rawDelta  = Math.abs(actual - reference);
+        const rawDelta  = variation.noData ? null : Math.abs(actual - reference);
         return { node, actual, reference, variation, rawDelta };
       })
-      .filter((entry) => !entry.variation.favorable && entry.rawDelta > 0)
-      .sort((a, b) => b.rawDelta - a.rawDelta)
-      .slice(0, LOSS_TOP_N);
+      .filter((entry) => !entry.variation.noData && entry.rawDelta > 0);
   }
 
   function renderLossPanel() {
     const list = document.getElementById('lossList');
     if (!list || !ROOT_ID) return;
 
-    const losses = computeTopLosses(TREE_MAP, lossCompareKey);
+    const entries = computeVarianceEntries(TREE_MAP, lossCompareKey);
 
-    if (losses.length === 0) {
-      list.innerHTML = `<div class="loss-empty" data-i18n="loss.empty">Nenhuma perda neste comparativo.</div>`;
+    if (entries.length === 0) {
+      list.innerHTML = `<div class="loss-empty" data-i18n="loss.empty">Nenhuma perda ou ganho neste comparativo.</div>`;
       return;
     }
 
-    const maxDelta = losses[0].rawDelta;
+    // Escala das barras é sempre relativa ao MAIOR impacto do conjunto
+    // inteiro (antes de ordenar/inverter) — assim a barra de cada item
+    // continua proporcionalmente correta independente da direção de
+    // ordenação escolhida pelo usuário.
+    const maxDelta = Math.max(...entries.map((e) => e.rawDelta));
+    const sorted = [...entries].sort((a, b) =>
+      lossSortDir === 'asc' ? a.rawDelta - b.rawDelta : b.rawDelta - a.rawDelta
+    );
 
-    list.innerHTML = losses.map(({ node, actual, reference, variation, rawDelta }) => {
+    list.innerHTML = sorted.map(({ node, actual, reference, variation, rawDelta }) => {
       const fmtDelta     = formatValuePlain(rawDelta,   node.NodeType, node.VL_FATOR, node.SG_DECIMAL);
       const fmtActual    = formatValuePlain(actual,     node.NodeType, node.VL_FATOR, node.SG_DECIMAL);
       const fmtReference = formatValuePlain(reference,  node.NodeType, node.VL_FATOR, node.SG_DECIMAL);
       const pctText   = (variation.pct >= 0 ? '+' : '') + variation.pct.toFixed(1) + '%';
       const widthPct  = maxDelta > 0 ? Math.max(4, (rawDelta / maxDelta) * 100) : 0;
+      const kindClass = variation.favorable ? 'is-gain' : 'is-loss';
+      const sign      = variation.favorable ? '+' : '−';
       const tooltip = `${node.IndicatorName}\n${fmtActual} vs ${fmtReference} (${pctText})\nDiferença: ${fmtDelta}`
         .replace(/"/g, '&quot;');
 
       return `
-        <div class="loss-row" title="${tooltip}">
+        <div class="loss-row ${kindClass}" title="${tooltip}">
           <div class="loss-row-top">
             <span class="loss-row-name">${node.IndicatorName}</span>
-            <span class="loss-row-value">${fmtDelta}</span>
+            <span class="loss-row-value">${sign}${fmtDelta}</span>
           </div>
           <div class="loss-row-bar-track">
             <div class="loss-row-bar" style="width:${widthPct}%"></div>
@@ -871,11 +891,22 @@ const fmtLobp = formatValuePlain(
 
   function attachLossPanelEvents() {
     const select = document.getElementById('lossCompareSelect');
-    if (!select) return;
-    select.value = lossCompareKey;
-    select.addEventListener('change', () => {
-      lossCompareKey = select.value;
-      renderLossPanel();
+    if (select) {
+      select.value = lossCompareKey;
+      select.addEventListener('change', () => {
+        lossCompareKey = select.value;
+        renderLossPanel();
+      });
+    }
+
+    const sortBtns = Array.from(document.querySelectorAll('.loss-sort-btn'));
+    sortBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (btn.dataset.sort === lossSortDir) return;
+        lossSortDir = btn.dataset.sort;
+        sortBtns.forEach((b) => b.classList.toggle('active', b.dataset.sort === lossSortDir));
+        renderLossPanel();
+      });
     });
   }
 

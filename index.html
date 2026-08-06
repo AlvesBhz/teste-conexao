@@ -118,13 +118,16 @@
       <h2 id="treeTitleText">Mill Production - Salobo</h2>
     </div>
 
-    <!-- Painel "Top 15 Perdas" — fixo à esquerda do viewport (irmão de
+    <!-- Painel "Perdas & Ganhos" — fixo à esquerda do viewport (irmão de
          .tree-world: não sofre pan/zoom da árvore). Usa os mesmos dados
-         já buscados pra árvore (respeita o filtro VDT atual); o combo de
-         comparação só recalcula este painel, não mexe nos cards. -->
+         já buscados pra árvore (respeita o filtro VDT atual); combo de
+         comparação e ordenação só recalculam este painel, não mexem nos
+         cards. Mostra TODOS os itens com dado calculável (sem cap de
+         quantidade) — itens com valor-base ou valor-comparação nulo não
+         entram na lista. -->
     <aside class="loss-panel" id="lossPanel">
       <div class="loss-panel-head">
-        <h3 data-i18n="loss.title">Top 15 Perdas</h3>
+        <h3 data-i18n="loss.title">Perdas &amp; Ganhos</h3>
         <div class="loss-compare-select-wrap">
           <select id="lossCompareSelect" class="loss-compare-select">
             <option value="fcst_bdgt" data-i18n="loss.cmp.fcstBdgt">Fcst x Bdgt</option>
@@ -132,6 +135,17 @@
             <option value="bdgt_lobp" data-i18n="loss.cmp.bdgtLobp">Bdgt x LOBP</option>
           </select>
           <svg width="9" height="9" viewBox="0 0 16 16" fill="none" class="loss-compare-caret"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
+        </div>
+        <div class="loss-toolbar">
+          <span class="loss-toolbar-label" data-i18n="loss.sort.label">Ordenar por impacto</span>
+          <div class="loss-sort-group" role="group" aria-label="Ordenar por impacto">
+            <button type="button" class="loss-sort-btn" data-sort="asc" title="Menor impacto primeiro" data-i18n-title="loss.sort.ascTitle" aria-label="Menor impacto primeiro" data-i18n-aria="loss.sort.ascTitle">
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 13V3M4 7l4-4 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button type="button" class="loss-sort-btn active" data-sort="desc" title="Maior impacto primeiro" data-i18n-title="loss.sort.descTitle" aria-label="Maior impacto primeiro" data-i18n-aria="loss.sort.descTitle">
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M4 9l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
         </div>
       </div>
       <div class="loss-list" id="lossList">
@@ -244,12 +258,15 @@
         'lbl.bud': 'Bdgt',
         'filter.label': 'VDT:',
         'treeTitle.eyebrow': 'Árvore selecionada',
-        'loss.title': 'Top 15 Perdas',
+        'loss.title': 'Perdas & Ganhos',
         'loss.cmp.fcstBdgt': 'Fcst x Bdgt',
         'loss.cmp.fcstLobp': 'Fcst x LOBP',
         'loss.cmp.bdgtLobp': 'Bdgt x LOBP',
-        'loss.empty': 'Nenhuma perda neste comparativo.',
+        'loss.empty': 'Nenhuma perda ou ganho neste comparativo.',
         'loss.loading': 'Carregando…',
+        'loss.sort.label': 'Ordenar por impacto',
+        'loss.sort.ascTitle': 'Menor impacto primeiro',
+        'loss.sort.descTitle': 'Maior impacto primeiro',
       },
       'en': {
         'settings.btnTitle': 'Settings',
@@ -273,12 +290,15 @@
         'lbl.bud': 'Bdgt',
         'filter.label': 'VDT:',
         'treeTitle.eyebrow': 'Selected tree',
-        'loss.title': 'Top 15 Losses',
+        'loss.title': 'Losses & Gains',
         'loss.cmp.fcstBdgt': 'Fcst x Bdgt',
         'loss.cmp.fcstLobp': 'Fcst x LOBP',
         'loss.cmp.bdgtLobp': 'Bdgt x LOBP',
-        'loss.empty': 'No losses in this comparison.',
+        'loss.empty': 'No losses or gains in this comparison.',
         'loss.loading': 'Loading…',
+        'loss.sort.label': 'Sort by impact',
+        'loss.sort.ascTitle': 'Smallest impact first',
+        'loss.sort.descTitle': 'Largest impact first',
       }
     };
 
