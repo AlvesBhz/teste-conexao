@@ -659,6 +659,25 @@ const fmtLobp = formatValuePlain(
     update(id);
   }
 
+  // Expande todos os ancestrais de `id` (sem mexer no próprio nó nem
+  // nos irmãos) e reenquadra a viewport nele — usado pelo clique num
+  // item do painel "Perdas & Ganhos" pra abrir a árvore até aquele nó.
+  // Reaproveita o mesmo layout/centerNode já usados no boot e no
+  // toggle de nós, sem duplicar lógica de posicionamento/zoom.
+  function openTreeToNode(id) {
+    let parentId = TREE_MAP[id] && TREE_MAP[id].ParentID;
+    while (parentId !== null && parentId !== undefined && TREE_MAP[parentId]) {
+      TREE_MAP[parentId].expanded = true;
+      parentId = TREE_MAP[parentId].ParentID;
+    }
+
+    const pos = computeLayout();
+    CURRENT_POS = pos;
+    applyPositions(pos);
+    drawConnectors(pos);
+    centerNode(id, CFG.INITIAL_SCALE, true);
+  }
+
   // ── 11. EVENTOS ─────────────────────────────────────────────
   function attachEvents() {
     // Delegação de evento único no canvas em vez de 1 listener por card/botão
@@ -1058,7 +1077,7 @@ const fmtLobp = formatValuePlain(
         .replace(/"/g, '&quot;');
 
       return `
-        <div class="loss-row ${kindClass}" title="${tooltip}">
+        <div class="loss-row ${kindClass}" title="${tooltip}" data-node="${node.NodeID}">
           <div class="loss-row-top">
             <span class="loss-row-name">${displayName}</span>
             <span class="loss-row-value">${sign}${fmtDelta} <span class="loss-row-pct">(${pctText})</span></span>
@@ -1101,6 +1120,19 @@ const fmtLobp = formatValuePlain(
         renderLossPanel();
       });
     });
+
+    // Clique num item da lista: abre a árvore até o nó dele (mesma
+    // delegação de evento no container — a lista é reconstruída a cada
+    // renderLossPanel(), então o listener precisa ficar no pai fixo).
+    const list = document.getElementById('lossList');
+    if (list) {
+      list.addEventListener('click', (e) => {
+        const row = e.target.closest('.loss-row');
+        if (!row) return;
+        const nodeId = Number(row.dataset.node);
+        if (Number.isFinite(nodeId)) openTreeToNode(nodeId);
+      });
+    }
   }
 
   // ── 14. INIT ────────────────────────────────────────────────

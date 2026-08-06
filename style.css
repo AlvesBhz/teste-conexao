@@ -714,7 +714,19 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
 }
 .loss-list::-webkit-scrollbar-thumb:hover { background: var(--vbm-blue-light); }
 
-.loss-row { display: flex; flex-direction: column; gap: 5px; cursor: default; }
+/* Clicável: abre a árvore até o nó deste indicador (ver openTreeToNode
+   em app.js) — mesmo tom de hover já usado em .vdt-option/selects. */
+.loss-row {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 4px 6px;
+  margin: -4px -6px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color .15s var(--ease-out);
+}
+.loss-row:hover { background: var(--blue-light); }
 .loss-row-top {
   display: flex;
   align-items: baseline;
@@ -1355,6 +1367,7 @@ body[data-bg="dark"] {
 [data-bg="dark"] .loss-sort-group { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.16); }
 [data-bg="dark"] .loss-sort-btn { color: rgba(255,255,255,.55); }
 [data-bg="dark"] .loss-sort-btn.active { background: var(--vbm-blue); color: #fff; }
+[data-bg="dark"] .loss-row:hover { background: rgba(60,181,229,.22); }
 [data-bg="dark"] .loss-row-name { color: rgba(255,255,255,.85); }
 [data-bg="dark"] .loss-row.is-loss .loss-row-value     { color: #f87171; }
 [data-bg="dark"] .loss-row.is-loss .loss-row-bar-track { background: rgba(255,255,255,.08); }
