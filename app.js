@@ -801,20 +801,111 @@ const fmtLobp = formatValuePlain(
 
   // Liga o filtro (VDT): ao trocar a opção do combo, já busca de novo
   // os dados (agora com o NM_VDT selecionado) e reconstrói a árvore do
-  // zero — sem precisar de um botão "Aplicar Filtro" separado.
+  // zero — sem precisar de um botão "Aplicar Filtro" separado. O select
+  // em si fica oculto (ver .vdt-dropdown); quem dá feedback visual de
+  // "carregando" pro usuário é o botão-gatilho.
   function attachFilterEvents() {
-    const select = document.getElementById('cmbVDT');
+    const select  = document.getElementById('cmbVDT');
+    const trigger = document.getElementById('vdtTrigger');
     if (!select) return;
 
     select.addEventListener('change', async () => {
       if (select.disabled) return;
       select.disabled = true;
+      if (trigger) trigger.disabled = true;
       try {
         await loadTreeAndRender({ isReload: true });
       } finally {
         select.disabled = false;
+        if (trigger) trigger.disabled = false;
       }
     });
+  }
+
+  // ── 13.0.5 DROPDOWN CUSTOMIZADO DO FILTRO VDT ────────────────
+  // O <select id="cmbVDT"> continua sendo a fonte de dados/eventos
+  // (loadVDTFiltros/attachFilterEvents não mudam nada); este bloco só
+  // desenha por cima um botão + lista customizados, cuja lista aberta
+  // omite a VDT atualmente aplicada — algo impossível com um <select>
+  // nativo puro, já que o rótulo fechado dele é sempre também um item
+  // da própria lista.
+  function syncVdtTriggerLabel() {
+    const select = document.getElementById('cmbVDT');
+    const label  = document.getElementById('vdtTriggerLabel');
+    if (!select || !label) return;
+    const opt = select.options[select.selectedIndex];
+    label.textContent = (opt && opt.text.trim()) || select.value;
+  }
+
+  // Monta a lista só com as opções DIFERENTES da atualmente selecionada
+  // — chamado sempre de novo a cada abertura, pra refletir trocas feitas
+  // por loadVDTFiltros() entretanto.
+  function renderVdtDropdownList() {
+    const select = document.getElementById('cmbVDT');
+    const list   = document.getElementById('vdtDropdownList');
+    if (!select || !list) return;
+    const current = select.value;
+    list.innerHTML = Array.from(select.options)
+      .filter((opt) => opt.value !== current)
+      .map((opt) => `<li class="vdt-option" role="option" tabindex="0" data-value="${opt.value.replace(/"/g, '&quot;')}">${opt.text}</li>`)
+      .join('');
+  }
+
+  function attachVdtDropdownEvents() {
+    const select   = document.getElementById('cmbVDT');
+    const dropdown = document.getElementById('vdtDropdown');
+    const trigger  = document.getElementById('vdtTrigger');
+    const list     = document.getElementById('vdtDropdownList');
+    if (!select || !dropdown || !trigger || !list) return;
+
+    function openList() {
+      if (trigger.disabled) return;
+      renderVdtDropdownList();
+      list.hidden = false;
+      trigger.setAttribute('aria-expanded', 'true');
+      dropdown.classList.add('open');
+    }
+    function closeList() {
+      list.hidden = true;
+      trigger.setAttribute('aria-expanded', 'false');
+      dropdown.classList.remove('open');
+    }
+    function selectValue(value) {
+      if (!value || value === select.value) { closeList(); return; }
+      select.value = value;
+      // dispatchEvent (não .click()) já dispara o listener 'change' de
+      // attachFilterEvents() normalmente — mesmo caminho de sempre pra
+      // recarregar a árvore, sem duplicar lógica aqui.
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      closeList();
+      trigger.focus();
+    }
+
+    trigger.addEventListener('click', () => {
+      dropdown.classList.contains('open') ? closeList() : openList();
+    });
+
+    list.addEventListener('click', (e) => {
+      const li = e.target.closest('.vdt-option');
+      if (li) selectValue(li.dataset.value);
+    });
+    list.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const li = e.target.closest('.vdt-option');
+      if (li) { e.preventDefault(); selectValue(li.dataset.value); }
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!dropdown.contains(e.target)) closeList();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && dropdown.classList.contains('open')) {
+        closeList();
+        trigger.focus();
+      }
+    });
+
+    select.addEventListener('change', syncVdtTriggerLabel);
   }
 
   // ── 13.1 PAINEL "PERDAS & GANHOS" ─────────────────────────────
@@ -853,13 +944,21 @@ const fmtLobp = formatValuePlain(
 
   // Fonte única da verdade pra "é indicador de tempo?": a unidade de
   // medida (node.Unit) que já vem do Databricks — nenhuma lista fixa de
-  // nomes de indicador no front-end. Reconhece "h" isolado (h, hh, hr,
-  // hrs, "hora(s)") e também taxas com hora no numerador (h/y, h/d,
-  // h/mês...), que é como a unidade aparece de fato na base (ex.: "(h/y)").
+  // nomes de indicador no front-end, válida igual em qualquer VDT (a
+  // regra não depende de qual árvore está selecionada). Cobre:
+  //   - "hora"/"horas" por extenso, em qualquer posição (ex.: "Horas/Ano")
+  //   - abreviação isolada: h, hh, hr, hrs
+  //   - taxa com hora no numerador: h/y, hr/y, hrs/mês, h/d... (com ou
+  //     sem espaço ao redor da barra)
+  //   - taxa com hora no denominador: un/h, 1/hr...
   function isTimeIndicator(node) {
     const unit = stripUnitParens(node && node.Unit).toLowerCase();
     if (!unit) return false;
-    return /^h{1,2}(rs?)?$/.test(unit) || /^h\s*\//.test(unit) || unit.includes('hora');
+    if (unit.includes('hora')) return true;
+    if (/^h{1,2}(r|rs)?$/.test(unit)) return true;
+    if (/^h(r|rs)?\s*\//.test(unit)) return true;
+    if (/\/\s*h(r|rs)?$/.test(unit)) return true;
+    return false;
   }
 
   // Todo nó-folha com variação CALCULÁVEL (nem valor-base nem
@@ -1075,6 +1174,8 @@ const fmtLobp = formatValuePlain(
     await loadVDTFiltros();
 
     attachFilterEvents();
+    attachVdtDropdownEvents();
+    syncVdtTriggerLabel(); // reflete o valor real definido por loadVDTFiltros()
     attachLossPanelEvents();
 
     await loadTreeAndRender();

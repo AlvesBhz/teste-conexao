@@ -274,19 +274,25 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
   flex-shrink: 0;
 }
 
-/* Select estilizado — mesmo tratamento flat do .theme-toggle-btn (pill
-   sem fundo próprio, seta custom via SVG inline) */
-.filter-container select {
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
+/* <select> real: só existe como fonte de dados/eventos pro resto do
+   app (loadVDTFiltros/attachFilterEvents) — nunca é visto/clicado. */
+.vdt-native-select { display: none; }
+
+/* Dropdown customizado do filtro VDT — mesmo tratamento visual flat que
+   o select tinha (pill sem fundo próprio, seta custom), agora como
+   botão + lista próprios: permite a lista aberta OMITIR a VDT atual
+   (impossível com <select> nativo, cujo rótulo fechado é sempre também
+   um item da própria lista). */
+.vdt-dropdown { position: relative; }
+
+.vdt-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   border: none;
   border-radius: 100px;
   background-color: transparent;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M4 6l4 4 4-4' stroke='%231a8bbf' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 14px center;
-  padding: .38rem 34px .38rem 16px;
+  padding: .38rem 12px .38rem 16px;
   min-width: 190px;
   max-width: 260px;
   font-family: var(--font-poppins);
@@ -294,14 +300,55 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
   font-size: .8rem;
   color: var(--text-primary);
   cursor: pointer;
-  transition: background-color .2s var(--ease-out), opacity .2s var(--ease-out);
+  transition: background-color .2s var(--ease-out);
 }
-.filter-container select:hover { background-color: var(--blue-light); }
-.filter-container select:focus {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(60,181,229,.25);
+.vdt-trigger-caret { flex-shrink: 0; margin-left: auto; color: #1a8bbf; transition: transform .2s var(--ease-out); }
+.vdt-trigger span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vdt-trigger:hover { background-color: var(--blue-light); }
+.vdt-trigger:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(60,181,229,.25); }
+.vdt-trigger:disabled { opacity: .55; cursor: wait; pointer-events: none; }
+.vdt-dropdown.open .vdt-trigger { background-color: var(--blue-light); }
+.vdt-dropdown.open .vdt-trigger-caret { transform: rotate(180deg); }
+
+/* Lista — só as OUTRAS VDTs (a atual nunca aparece aqui, ver
+   renderVdtDropdownList em app.js). Cartão flutuante no mesmo padrão
+   visual do .loss-panel/.settings-panel (fundo sólido, borda, sombra). */
+.vdt-dropdown-list {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 100%;
+  width: max-content;
+  max-width: 320px;
+  max-height: 260px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  box-shadow: var(--card-shadow-hover);
+  z-index: 50;
 }
-.filter-container select:disabled { opacity: .55; cursor: wait; }
+.vdt-option {
+  padding: .55rem .8rem;
+  border-radius: 8px;
+  font-family: var(--font-poppins);
+  font-weight: 600;
+  font-size: .78rem;
+  color: var(--text-primary);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background-color .15s var(--ease-out);
+}
+.vdt-option:hover,
+.vdt-option:focus-visible { background: var(--blue-light); outline: none; }
+.vdt-dropdown-list::-webkit-scrollbar { width: 6px; }
+.vdt-dropdown-list::-webkit-scrollbar-track { background: transparent; }
+.vdt-dropdown-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 100px; }
 
 /* Vidro escuro (tema Business) — mesmo princípio do .theme-toggle em
    modo escuro: pill translúcida clara sobre o glass do header. */
@@ -310,13 +357,18 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
   border-color: rgba(255,255,255,.14);
 }
 [data-bg="dark"] .filter-container label { color: rgba(255,255,255,.55); }
-[data-bg="dark"] .filter-container select {
-  color: var(--vbm-white);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M4 6l4 4 4-4' stroke='%23ffffff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+[data-bg="dark"] .vdt-trigger { color: var(--vbm-white); }
+[data-bg="dark"] .vdt-trigger-caret { color: #fff; }
+[data-bg="dark"] .vdt-trigger:hover { background-color: rgba(255,255,255,.1); }
+[data-bg="dark"] .vdt-dropdown.open .vdt-trigger { background-color: rgba(255,255,255,.1); }
+[data-bg="dark"] .vdt-dropdown-list {
+  background: var(--vbm-blue-deep);
+  border-color: rgba(255,255,255,.14);
 }
-[data-bg="dark"] .filter-container select:hover { background-color: rgba(255,255,255,.1); }
-[data-bg="dark"] .filter-container select:focus { box-shadow: 0 0 0 3px rgba(60,181,229,.3); }
-[data-bg="dark"] .filter-container select option { background: var(--vbm-blue-deep); color: #fff; }
+[data-bg="dark"] .vdt-option { color: #fff; }
+[data-bg="dark"] .vdt-option:hover,
+[data-bg="dark"] .vdt-option:focus-visible { background: rgba(60,181,229,.22); }
+[data-bg="dark"] .vdt-dropdown-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,.18); }
 
 /* Telas estreitas: o filtro sai do centro absoluto (evita colidir com
    logo/user-chip) e volta ao fluxo normal, empilhado abaixo da topbar. */

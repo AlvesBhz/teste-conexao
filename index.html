@@ -43,9 +43,23 @@
     </div>
 
     <div class="filter-container">
-      <label for="cmbVDT" data-i18n="filter.label">VDT:</label>
+      <label for="vdtTrigger" data-i18n="filter.label">VDT:</label>
 
-      <select id="cmbVDT">
+      <!-- Dropdown customizado: ao abrir, a lista mostra só as OUTRAS
+           VDTs (a atualmente aplicada não se repete dentro da própria
+           lista — já está exibida no botão fechado). O <select> nativo
+           abaixo continua sendo a fonte única de verdade dos dados/
+           eventos (loadVDTFiltros/attachFilterEvents em app.js não
+           mudam nada); o usuário só interage com o botão + lista. -->
+      <div class="vdt-dropdown" id="vdtDropdown">
+        <button type="button" id="vdtTrigger" class="vdt-trigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="vdtDropdownList">
+          <span id="vdtTriggerLabel">Mill Production - Salobo</span>
+          <svg width="10" height="10" viewBox="0 0 16 16" fill="none" class="vdt-trigger-caret"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
+        </button>
+        <ul id="vdtDropdownList" class="vdt-dropdown-list" role="listbox" aria-label="Selecionar VDT" hidden></ul>
+      </div>
+
+      <select id="cmbVDT" class="vdt-native-select" tabindex="-1" aria-hidden="true">
         <option value="Mill Production - Salobo">
           Mill Production - Salobo
         </option>
