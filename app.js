@@ -823,7 +823,11 @@ const fmtLobp = formatValuePlain(
     bdgt_lobp: { actualKey: 'VL_ORC', referenceKey: 'VL_LOBP' },
   };
   let lossCompareKey = 'fcst_bdgt';
-  let lossSortDir = 'desc'; // 'asc' = menor impacto primeiro · 'desc' = maior impacto primeiro
+  // 'asc' (padrão) = maiores perdas → menores perdas → menores ganhos →
+  // maiores ganhos (transição contínua cruzando o zero — é a leitura
+  // "natural" do painel: começa no problema mais grave, termina no
+  // melhor resultado). 'desc' = espelho exato dessa sequência.
+  let lossSortDir = 'asc';
 
   // Todo nó-folha com variação CALCULÁVEL (nem valor-base nem
   // valor-comparação nulos — calcVariation.noData) na comparação ativa
@@ -861,16 +865,17 @@ const fmtLobp = formatValuePlain(
     // ordenação escolhida pelo usuário.
     const maxDelta = Math.max(...entries.map((e) => e.rawDelta));
 
-    // Perdas e ganhos nunca se misturam na lista: perdas sempre formam
-    // o primeiro bloco, ganhos o segundo — só a ordem DENTRO de cada
-    // bloco inverte com o toggle (crescente = menor impacto primeiro,
-    // decrescente = maior impacto primeiro, igual nos dois blocos).
-    const byImpact = lossSortDir === 'asc'
-      ? (a, b) => a.rawDelta - b.rawDelta
-      : (a, b) => b.rawDelta - a.rawDelta;
-    const perdas = entries.filter((e) => !e.variation.favorable).sort(byImpact);
-    const ganhos = entries.filter((e) => e.variation.favorable).sort(byImpact);
-    const sorted = [...perdas, ...ganhos];
+    // Ordenação por valor COM SINAL (perda = negativo, ganho = positivo)
+    // — não por magnitude bruta. Crescente (asc): maiores perdas →
+    // menores perdas → menores ganhos → maiores ganhos, uma transição
+    // contínua cruzando o zero, nunca um "reset" de magnitude no meio
+    // da lista. Decrescente (desc) é o espelho exato: maiores ganhos →
+    // menores ganhos → menores perdas → maiores perdas.
+    const sorted = [...entries].sort((a, b) => {
+      const signedA = a.variation.favorable ? a.rawDelta : -a.rawDelta;
+      const signedB = b.variation.favorable ? b.rawDelta : -b.rawDelta;
+      return lossSortDir === 'asc' ? signedA - signedB : signedB - signedA;
+    });
 
     list.innerHTML = sorted.map(({ node, actual, reference, variation, rawDelta }) => {
       const fmtDelta     = formatValuePlain(rawDelta,   node.NodeType, node.VL_FATOR, node.SG_DECIMAL);
