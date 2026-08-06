@@ -84,18 +84,13 @@
     return Number.isNaN(n) ? null : n;
   }
 
-  async function fetchTreeData() {
-    const nmVDT = document.getElementById("cmbVDT").value;
-    const anoSelect = document.getElementById("cmbAno");
-    const params = new URLSearchParams({ nm_vdt: nmVDT });
-    if (anoSelect && anoSelect.value) params.set('ano', anoSelect.value);
-    const res = await fetch(`/api/tree?${params.toString()}`);
-    if (!res.ok) {
-      let detail = '';
-      try { detail = (await res.json()).error || ''; } catch (e) {}
-      throw new Error(`Falha ao buscar /api/tree (HTTP ${res.status}) ${detail}`);
-    }
-    const rows = await res.json();
+  // VDT que a tela tenta selecionar ao abrir (só é aplicada se existir
+  // de fato na lista real vinda do backend — ver /api/bootstrap).
+  const DEFAULT_VDT = 'Mine Production - Salobo';
+
+  // Normalização das linhas cruas da API — mesma para /api/tree e para
+  // a árvore que vem embutida em /api/bootstrap, então mora num lugar só.
+  function mapTreeRows(rows) {
     return rows.map((r) => ({
       NodeID: r.NodeID,
       ParentID: r.ParentID,
@@ -109,6 +104,20 @@
       VL_ORC: toNullableNumber(r.VL_ORC),
       VL_LOBP: toNullableNumber(r.VL_LOBP),
     }));
+  }
+
+  async function fetchTreeData() {
+    const nmVDT = document.getElementById("cmbVDT").value;
+    const anoSelect = document.getElementById("cmbAno");
+    const params = new URLSearchParams({ nm_vdt: nmVDT });
+    if (anoSelect && anoSelect.value) params.set('ano', anoSelect.value);
+    const res = await fetch(`/api/tree?${params.toString()}`);
+    if (!res.ok) {
+      let detail = '';
+      try { detail = (await res.json()).error || ''; } catch (e) {}
+      throw new Error(`Falha ao buscar /api/tree (HTTP ${res.status}) ${detail}`);
+    }
+    return mapTreeRows(await res.json());
   }
 
 
@@ -281,6 +290,15 @@ const fmtLobp = formatValuePlain(
       </div>
     `;
 
+    // Guarda as referências no próprio nó: o card é criado UMA vez e
+    // nunca sai do DOM (só ganha/perde .hidden), então applyPositions
+    // pode reusá-las em vez de refazer document.getElementById duas
+    // vezes por nó a cada expandir/colapsar/troca de filtro.
+    // O botão só é guardado para nós COM filhos — nas folhas ele existe
+    // mas é apenas um placeholder desabilitado, que nunca recebe estado.
+    node.el = el;
+    node.toggleBtnEl = isLeaf ? null : el.querySelector('.toggle-btn');
+
     return el;
   }
 
@@ -337,33 +355,39 @@ const fmtLobp = formatValuePlain(
     return p;
   }
 
+  // Passada ÚNICA sobre os nós (antes eram duas, cada uma refazendo
+  // document.getElementById por nó), usando as referências já guardadas
+  // em createNodeElement. Numa árvore de algumas centenas de cards isso
+  // tirava centenas de buscas no DOM de cada re-layout.
   function applyPositions(pos) {
-    Object.keys(TREE_MAP).forEach((idStr) => {
-      const id = Number(idStr);
-      const el = document.getElementById('node-' + id);
+    Object.values(TREE_MAP).forEach((node) => {
+      const el = node.el;
       if (!el) return;
 
-      if (pos[id]) {
-        el.classList.remove('hidden');
-        el.style.left = pos[id].x + 'px';
-        el.style.top  = pos[id].y + 'px';
-      } else {
+      const own = pos[node.NodeID];
+      let target = own;
+      if (!own) {
         // Nó oculto: anima "para dentro" do ancestral visível mais
         // próximo — efeito de colapso/compactação
-        el.classList.add('hidden');
-        const anc = nearestVisibleAncestor(id, pos);
-        if (anc != null && pos[anc]) {
-          el.style.left = pos[anc].x + 'px';
-          el.style.top  = pos[anc].y + 'px';
-        }
+        const anc = nearestVisibleAncestor(node.NodeID, pos);
+        target = anc != null ? pos[anc] : null;
       }
-    });
 
-    // Atualiza ícones dos botões toggle
-    Object.values(TREE_MAP).forEach((node) => {
-      if (node.children.length === 0) return;
-      const btn = document.getElementById('btn-' + node.NodeID);
-      if (btn) btn.classList.toggle('collapsed', !node.expanded);
+      el.classList.toggle('hidden', !own);
+
+      // Só escreve no style quando a posição realmente mudou: num
+      // expandir/colapsar a maioria dos cards continua exatamente onde
+      // estava, e reescrever left/top neles invalidaria o layout à toa.
+      if (target && (node._x !== target.x || node._y !== target.y)) {
+        node._x = target.x;
+        node._y = target.y;
+        el.style.left = target.x + 'px';
+        el.style.top  = target.y + 'px';
+      }
+
+      if (node.toggleBtnEl) {
+        node.toggleBtnEl.classList.toggle('collapsed', !node.expanded);
+      }
     });
   }
 
@@ -395,6 +419,12 @@ const fmtLobp = formatValuePlain(
     return roundedElbowPath(sx, sy, tx, ty, 10);
   }
 
+  // Índice link-id -> elemento <path>, reconstruído só quando os
+  // conectores mudam (aqui, o único lugar que os cria/remove). O
+  // destaque de hover lê deste Map em vez de refazer um
+  // querySelectorAll no SVG inteiro a cada movimento do mouse.
+  const connectorElsById = new Map();
+
   function drawConnectors(pos) {
     const links = [];
     Object.keys(pos).forEach((idStr) => {
@@ -421,7 +451,7 @@ const fmtLobp = formatValuePlain(
       .style('opacity', 1);
 
     // Entrada: nasce colapsado na borda do pai e "cresce" até o filho
-    sel.enter()
+    const entered = sel.enter()
       .append('path')
       .attr('class', 'connector-line')
       .attr('data-link-id', (d) => d.id)
@@ -432,10 +462,17 @@ const fmtLobp = formatValuePlain(
         const sy = pos[d.s].y + CFG.CARD_H / 2;
         return roundedElbowPath(sx, sy, sx, sy, 10);
       })
-      .style('opacity', 0)
+      .style('opacity', 0);
+
+    entered
       .transition().duration(CFG.ANIM_MS).ease(d3.easeCubicInOut)
       .attr('d', (d) => connectorPath(pos, d))
       .style('opacity', 1);
+
+    // Só os conectores que permanecem (entrada + atualização) entram no
+    // índice — os de saída estão sumindo e serão removidos do DOM.
+    connectorElsById.clear();
+    entered.merge(sel).each(function (d) { connectorElsById.set(d.id, this); });
   }
 
   // ── 7.1 DESTAQUE DE TRAJETÓRIA (hover) ───────────────────────
@@ -460,24 +497,23 @@ const fmtLobp = formatValuePlain(
     const activeIds = new Set(ancestorChainLinks(nodeId));
     node.children.forEach((cid) => activeIds.add(nodeId + '-' + cid));
 
-    document.querySelectorAll('#connectorsSvg path.connector-line').forEach((p) => {
-      const isActive = activeIds.has(p.getAttribute('data-link-id'));
-      p.classList.toggle('is-active', isActive);
-      p.classList.toggle('is-dimmed', !isActive);
-    });
-
+    // Uma passada só sobre o índice em memória (antes: duas varreduras
+    // completas do SVG a cada mouseover).
     // SVG pinta na ordem do DOM: uma linha ativa que veio antes no
     // documento pode ficar por baixo de uma linha esmaecida vizinha,
-    // criando um "gap" onde elas se aproximam/cruzam. Reenvia cada
-    // trecho ativo para o fim do <svg> para garantir que a trajetória
+    // criando um "gap" onde elas se aproximam/cruzam. Reenviar cada
+    // trecho ativo para o fim do <svg> garante que a trajetória
     // destacada sempre fique por cima de tudo o que está dimmed.
-    document.querySelectorAll('#connectorsSvg path.connector-line.is-active').forEach((p) => {
-      p.parentNode.appendChild(p);
+    connectorElsById.forEach((p, linkId) => {
+      const isActive = activeIds.has(linkId);
+      p.classList.toggle('is-active', isActive);
+      p.classList.toggle('is-dimmed', !isActive);
+      if (isActive && p.parentNode) p.parentNode.appendChild(p);
     });
   }
 
   function clearConnectorHighlight() {
-    document.querySelectorAll('#connectorsSvg path.connector-line').forEach((p) => {
+    connectorElsById.forEach((p) => {
       p.classList.remove('is-active', 'is-dimmed');
     });
   }
@@ -782,36 +818,42 @@ const fmtLobp = formatValuePlain(
   // próprio elemento. Aqui só populamos as opções com dados reais
   // (vindos de /api/filtros-vdt e /api/filtros-ano) e garantimos que
   // eles SEMPRE nascem com um valor selecionado.
-  async function loadOptionsFiltro(selectId, url, rowKey, logTag, preferredValue) {
+  // Preenche um <select> com a lista de valores e deixa um deles
+  // selecionado. A preferência (ex.: DEFAULT_VDT) só é aplicada se
+  // existir de fato na lista; senão cai no 1º valor (no filtro de Ano a
+  // lista já vem ordenada decrescente — logo o 1º é o mais recente).
+  // Usada tanto pelo bootstrap quanto pelas recargas de filtro.
+  function fillSelect(selectId, valores, preferredValue) {
     const select = document.getElementById(selectId);
-    if (!select) return;
+    if (!select || !valores.length) return false;
+
+    select.innerHTML = valores
+      .map((v) => `<option value="${v}">${v}</option>`)
+      .join('');
+
+    select.value = (preferredValue != null && valores.some((v) => String(v) === String(preferredValue)))
+      ? preferredValue
+      : valores[0];
+    return true;
+  }
+
+  function extractValues(rows, rowKey) {
+    return (Array.isArray(rows) ? rows : [])
+      .map((r) => r && r[rowKey])
+      .filter((v) => v != null && String(v).trim() !== '');
+  }
+
+  async function loadOptionsFiltro(selectId, url, rowKey, logTag, preferredValue) {
+    if (!document.getElementById(selectId)) return;
 
     try {
       const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const rows = await res.json();
 
-      const valores = (Array.isArray(rows) ? rows : [])
-        .map((r) => r && r[rowKey])
-        .filter((v) => v != null && String(v).trim() !== '');
-
-      if (valores.length === 0) {
+      const valores = extractValues(await res.json(), rowKey);
+      if (!fillSelect(selectId, valores, preferredValue)) {
         console.warn(`[${logTag}] ${url} não retornou valores; mantendo opções fixas do HTML.`);
-        return;
       }
-
-      select.innerHTML = valores
-        .map((v) => `<option value="${v}">${v}</option>`)
-        .join('');
-
-      // Preferência de valor inicial (ex.: VDT default "Mine Production
-      // - Salobo") só é aplicada se ela realmente existir na lista
-      // vinda do backend; senão cai no 1º valor (no filtro de Ano a
-      // lista já vem ordenada decrescente — logo o 1º é o ano mais
-      // recente daquela VDT).
-      select.value = (preferredValue != null && valores.some((v) => String(v) === String(preferredValue)))
-        ? preferredValue
-        : valores[0];
     } catch (err) {
       // Falhou a busca da lista de filtros: mantém as opções fixas que
       // já vieram no HTML (fallback), pra tela não ficar sem nenhuma opção.
@@ -820,7 +862,7 @@ const fmtLobp = formatValuePlain(
   }
 
   const loadVDTFiltros = () =>
-    loadOptionsFiltro('cmbVDT', '/api/filtros-vdt', 'NM_VDT', 'VDT', 'Mine Production - Salobo');
+    loadOptionsFiltro('cmbVDT', '/api/filtros-vdt', 'NM_VDT', 'VDT', DEFAULT_VDT);
 
   // O Ano é um recorte da VDT selecionada (VDT é o filtro mandatório):
   // a lista de anos vem escopada pra VDT atual (?nm_vdt=...) — troque
@@ -1205,16 +1247,22 @@ const fmtLobp = formatValuePlain(
    * (re)constrói a árvore inteira. Usada tanto no boot inicial quanto
    * toda vez que o usuário troca o filtro VDT.
    */
-  async function loadTreeAndRender({ isReload = false } = {}) {
+  async function loadTreeAndRender({ isReload = false, rows = null } = {}) {
     const canvas = document.getElementById('treeCanvas');
 
     let rawData;
-    try {
-      rawData = await fetchTreeData();
-    } catch (err) {
-      console.error('[VDT] Erro ao carregar dados da tabela:', err);
-      showViewportError(`Erro ao carregar dados da tabela: ${err.message}`);
-      return false;
+    if (rows) {
+      // Árvore já veio embutida em /api/bootstrap — nenhuma requisição
+      // extra é necessária no carregamento inicial.
+      rawData = rows;
+    } else {
+      try {
+        rawData = await fetchTreeData();
+      } catch (err) {
+        console.error('[VDT] Erro ao carregar dados da tabela:', err);
+        showViewportError(`Erro ao carregar dados da tabela: ${err.message}`);
+        return false;
+      }
     }
 
     if (!Array.isArray(rawData) || rawData.length === 0) {
@@ -1227,7 +1275,11 @@ const fmtLobp = formatValuePlain(
 
     // Ao reaplicar o filtro, descarta os cards/conectores da árvore
     // anterior antes de montar a nova (o boot inicial já começa vazio).
+    // A classe de animação sai junto: o 1º posicionamento da árvore nova
+    // precisa ser instantâneo (senão os cards "voam" desde 0,0).
+    canvas.classList.remove('anim-ready');
     canvas.innerHTML = '';
+    connectorElsById.clear();
     d3.select('#connectorsSvg').selectAll('*').remove();
 
     const { map, rootId } = buildTree(rawData);
@@ -1265,15 +1317,12 @@ const fmtLobp = formatValuePlain(
     centerNode(ROOT_ID, CFG.INITIAL_SCALE, isReload);
 
     // Habilita as transições de posição APENAS após o 1º posicionamento
-    // já estar pintado. Duração sincronizada com CFG.ANIM_MS.
-    setTimeout(() => {
-      document.querySelectorAll('.tree-node').forEach((el) => {
-        el.style.transition =
-          `left ${CFG.ANIM_MS}ms cubic-bezier(0.65,0,0.35,1), ` +
-          `top ${CFG.ANIM_MS}ms cubic-bezier(0.65,0,0.35,1), ` +
-          `opacity 300ms ease, transform 300ms ease`;
-      });
-    }, 60);
+    // já estar pintado. Antes isso era feito escrevendo a mesma string
+    // de transition inline em CADA card (centenas de escritas de style);
+    // agora é uma classe só no canvas, com a duração vinda de CFG por
+    // custom property — CFG segue sendo a fonte única da verdade.
+    canvas.style.setProperty('--tree-anim', CFG.ANIM_MS + 'ms');
+    setTimeout(() => canvas.classList.add('anim-ready'), 60);
 
     return true;
   }
@@ -1287,23 +1336,46 @@ const fmtLobp = formatValuePlain(
     attachEvents();
     setupConnectorHighlight();
 
-    // Popula o combo de VDT primeiro (default "Mine Production -
-    // Salobo" se existir na lista real) e só then o de Ano, já
-    // escopado pra essa VDT — o Ano é sempre um recorte da VDT
-    // (filtro mandatório), nunca o contrário, então não dá pra buscar
-    // os dois em paralelo aqui.
-    await loadVDTFiltros();
-    await loadAnoFiltros(document.getElementById('cmbVDT').value);
+    // Carga inicial numa ÚNICA ida e volta: /api/bootstrap já devolve a
+    // lista de VDTs, a VDT resolvida (respeitando DEFAULT_VDT), os anos
+    // dela e a árvore pronta. Antes eram 3 chamadas ENCADEADAS (lista de
+    // VDTs → anos daquela VDT → árvore), somando 3 latências de rede
+    // antes do 1º card aparecer — e as duas primeiras só existiam pra
+    // descobrir QUAL VDT/ano carregar, coisa que o servidor resolve.
+    let boot = null;
+    try {
+      const res = await fetch(`/api/bootstrap?vdt_preferido=${encodeURIComponent(DEFAULT_VDT)}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      boot = await res.json();
+    } catch (err) {
+      console.error('[VDT] /api/bootstrap indisponível; caindo no carregamento em etapas:', err);
+    }
+
+    const bootOk = !!(boot && Array.isArray(boot.vdts) && boot.vdts.length);
+
+    if (bootOk) {
+      fillSelect('cmbVDT', boot.vdts, boot.vdtSelecionada);
+      fillSelect('cmbAno', boot.anos || [], boot.anoSelecionado);
+    } else {
+      // Fallback pro caminho antigo em etapas — a tela continua
+      // funcionando mesmo se a rota de bootstrap falhar.
+      await loadVDTFiltros();
+      await loadAnoFiltros(document.getElementById('cmbVDT').value);
+    }
 
     attachFilterEvents();
     attachAnoFilterEvents();
     attachVdtDropdownEvents();
     attachAnoDropdownEvents();
-    syncVdtTriggerLabel(); // reflete o valor real definido por loadVDTFiltros()
-    syncAnoTriggerLabel(); // reflete o valor real definido por loadAnoFiltros()
+    syncVdtTriggerLabel(); // reflete o valor real já definido nos combos
+    syncAnoTriggerLabel();
     attachLossPanelEvents();
 
-    await loadTreeAndRender();
+    // Com o bootstrap OK a árvore já está em mãos: renderiza direto,
+    // sem uma segunda requisição.
+    await loadTreeAndRender({
+      rows: bootOk ? mapTreeRows(boot.arvore || []) : null,
+    });
   }
 
   // ── 14. BOOT ────────────────────────────────────────────────

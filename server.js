@@ -3,7 +3,17 @@ const path = require("path");
 const { DBSQLClient } = require("@databricks/sql");
 const app = express();
 
-app.use(express.static(__dirname));
+// gzip/brotli nos estáticos (d3.v7.min.js sozinho tem ~280 KB de texto
+// altamente compressível). Opcional de propósito: se a dependência não
+// estiver instalada no ambiente, o servidor sobe do mesmo jeito, só sem
+// compressão — nunca deixa a app fora do ar por causa disso.
+try {
+  app.use(require("compression")());
+} catch (err) {
+  console.warn("[perf] middleware 'compression' indisponível; servindo sem gzip.");
+}
+
+app.use(express.static(__dirname, { maxAge: "1d", etag: true }));
 
 async function createSession() {
   const client = new DBSQLClient();
@@ -40,102 +50,152 @@ async function createSession() {
   return { client, session };
 }
 
-async function getTreeData(nmVDT = null, ano = null) {
+// ── Sessão Databricks reaproveitada ────────────────────────────
+// ANTES: cada consulta chamava createSession() — handshake OAuth
+// completo + abertura de sessão SQL do zero — e fechava tudo no
+// finally. Como o handshake custa MUITO mais que a query em si numa
+// tabela pequena, era ele (não o volume de dados) que dominava o tempo
+// de resposta: a tela inicial pagava esse custo 2–3x seguidas e cada
+// troca de filtro pagava de novo.
+// AGORA: uma única sessão "quente" é mantida no processo e reusada.
+let sessionPromise = null;
 
-  const { client, session } = await createSession();
-
-  const catalog = process.env.CATALOG_NAME || "franquia_bmsa_insight";
-  const schema = process.env.SCHEMA_NAME || "default";
-  const table = process.env.TABLE_NAME || "estrutura_salobo_mill_production";
-
+async function getSession() {
+  if (!sessionPromise) sessionPromise = createSession();
   try {
-
-    let sql = `
-      SELECT
-        NO_PAI,
-        NO_FILHO,
-        NM_KPI,
-        NM_VDT,
-        Unit,
-        VL_FATOR,
-        SG_DECIMAL,
-        ID_ORDEM,
-        VL_PROJ,
-        VL_ORC,
-        VL_LOBP,
-        (VL_PROJ - VL_ORC) AS VL_DIF_PROJ_ORC
-      FROM ${catalog}.${schema}.${table}
-    `;
-
-    // nmVDT é escapado (é texto livre); ano só chega aqui já validado
-    // como inteiro por app.get("/api/tree") — nunca interpolado como
-    // string, então não precisa (nem faz sentido) de escaping de aspas.
-    const where = [];
-    if (nmVDT) where.push(`NM_VDT = '${nmVDT.replace(/'/g, "''")}'`);
-    if (ano !== null) where.push(`YEAR(DT_REF) = ${ano}`);
-    if (where.length) sql += `WHERE ${where.join(" AND ")}\n`;
-
-    sql += `
-      ORDER BY ID_ORDEM
-    `;
-
-    const query = await session.executeStatement(sql);
-
-    const rows = await query.fetchAll();
-
-    await query.close();
-
-    return rows.map((r) => ({
-      NodeID: r.NO_PAI,
-      ParentID: r.NO_FILHO,
-      IndicatorName: r.NM_KPI,
-      NM_VDT: r.NM_VDT,
-      Unit: r.Unit,
-      VL_FATOR: r.VL_FATOR,
-      SG_DECIMAL: r.SG_DECIMAL,
-      DisplayOrder: r.ID_ORDEM,
-      VL_PROJ: r.VL_PROJ,
-      VL_ORC: r.VL_ORC,
-      VL_LOBP: r.VL_LOBP,
-      VL_DIF_PROJ_ORC: r.VL_DIF_PROJ_ORC
-    }));
-
-  } finally {
-
-    await session.close();
-    await client.close();
-
+    return await sessionPromise;
+  } catch (err) {
+    sessionPromise = null; // falhou ao conectar: não cacheia a promise quebrada
+    throw err;
   }
 }
-async function getListaVDT() {
 
-  const { client, session } = await createSession();
+async function closeSessionQuietly() {
+  const pending = sessionPromise;
+  sessionPromise = null;
+  if (!pending) return;
+  try {
+    const { client, session } = await pending;
+    await session.close();
+    await client.close();
+  } catch (err) {
+    /* sessão já estava morta — nada a fazer */
+  }
+}
 
+// O driver não garante segurança para statements concorrentes na mesma
+// sessão, então as execuções são serializadas numa fila. Com o volume
+// atual (consultas de milissegundos numa tabela pequena) isso não vira
+// gargalo, e evita a classe inteira de bug de concorrência que um
+// client compartilhado traria.
+let queue = Promise.resolve();
+
+async function executeOnSession(sql) {
+  const { session } = await getSession();
+  const query = await session.executeStatement(sql);
+  try {
+    return await query.fetchAll();
+  } finally {
+    await query.close();
+  }
+}
+
+async function runQuery(sql) {
+  const run = async () => {
+    try {
+      return await executeOnSession(sql);
+    } catch (err) {
+      // A sessão pode ter expirado por ociosidade entre uma requisição
+      // e outra. Descarta e tenta UMA vez com sessão nova; se falhar de
+      // novo, o erro é real (SQL inválido, warehouse fora, etc.) e sobe.
+      await closeSessionQuietly();
+      return executeOnSession(sql);
+    }
+  };
+  queue = queue.then(run, run); // segue a fila mesmo após uma falha
+  return queue;
+}
+
+// ── Cache em memória para listas de filtro ─────────────────────
+// VDTs e anos são dados estruturais: mudam raramente e eram
+// reconsultados por inteiro a cada carregamento de página e a cada
+// troca de VDT. TTL curto mantém a tela atualizada sem repetir a
+// consulta a cada clique. Os DADOS DA ÁRVORE não entram aqui de
+// propósito — são valores de negócio e devem vir sempre frescos.
+const CACHE_TTL_MS = 5 * 60 * 1000;
+const cache = new Map();
+
+async function withCache(key, fetcher) {
+  const hit = cache.get(key);
+  if (hit && hit.expiresAt > Date.now()) return hit.data;
+  const data = await fetcher();
+  cache.set(key, { data, expiresAt: Date.now() + CACHE_TTL_MS });
+  return data;
+}
+
+function tableRef() {
   const catalog = process.env.CATALOG_NAME || "franquia_bmsa_insight";
   const schema = process.env.SCHEMA_NAME || "default";
   const table = process.env.TABLE_NAME || "estrutura_salobo_mill_production";
+  return `${catalog}.${schema}.${table}`;
+}
 
-  try {
+async function getTreeData(nmVDT = null, ano = null) {
 
-    const query = await session.executeStatement(`
-      SELECT DISTINCT NM_VDT
-      FROM ${catalog}.${schema}.${table}
-      WHERE NM_VDT IS NOT NULL
-      ORDER BY NM_VDT
-    `);
+  let sql = `
+    SELECT
+      NO_PAI,
+      NO_FILHO,
+      NM_KPI,
+      NM_VDT,
+      Unit,
+      VL_FATOR,
+      SG_DECIMAL,
+      ID_ORDEM,
+      VL_PROJ,
+      VL_ORC,
+      VL_LOBP,
+      (VL_PROJ - VL_ORC) AS VL_DIF_PROJ_ORC
+    FROM ${tableRef()}
+  `;
 
-    const rows = await query.fetchAll();
+  // nmVDT é escapado (é texto livre); ano só chega aqui já validado
+  // como inteiro por app.get("/api/tree") — nunca interpolado como
+  // string, então não precisa (nem faz sentido) de escaping de aspas.
+  const where = [];
+  if (nmVDT) where.push(`NM_VDT = '${nmVDT.replace(/'/g, "''")}'`);
+  if (ano !== null) where.push(`YEAR(DT_REF) = ${ano}`);
+  if (where.length) sql += `WHERE ${where.join(" AND ")}\n`;
 
-    await query.close();
+  sql += `
+    ORDER BY ID_ORDEM
+  `;
 
-    return rows;
+  const rows = await runQuery(sql);
 
-  } finally {
+  return rows.map((r) => ({
+    NodeID: r.NO_PAI,
+    ParentID: r.NO_FILHO,
+    IndicatorName: r.NM_KPI,
+    NM_VDT: r.NM_VDT,
+    Unit: r.Unit,
+    VL_FATOR: r.VL_FATOR,
+    SG_DECIMAL: r.SG_DECIMAL,
+    DisplayOrder: r.ID_ORDEM,
+    VL_PROJ: r.VL_PROJ,
+    VL_ORC: r.VL_ORC,
+    VL_LOBP: r.VL_LOBP,
+    VL_DIF_PROJ_ORC: r.VL_DIF_PROJ_ORC
+  }));
+}
 
-    await session.close();
-    await client.close();
-
-  }
+async function getListaVDT() {
+  return withCache("vdt-list", () => runQuery(`
+    SELECT DISTINCT NM_VDT
+    FROM ${tableRef()}
+    WHERE NM_VDT IS NOT NULL
+    ORDER BY NM_VDT
+  `));
 }
 
 // Anos distintos da coluna DT_REF, mais recente primeiro — usado pra
@@ -144,22 +204,12 @@ async function getListaVDT() {
 // ORDER BY elimina duplicidade de datas do mesmo ano.
 // A VDT é o filtro mandatório: o Ano é sempre um RECORTE da VDT
 // selecionada (nunca o contrário), então a lista de anos só traz os
-// anos que aquela VDT específica realmente possui — se a VDT só tiver
-// dado em 2026, a lista devolvida tem 1 item só, e o combo de Ano fica
-// travado nesse único valor (ver app.js).
+// anos que aquela VDT específica realmente possui.
 async function getListaAnos(nmVDT = null) {
-
-  const { client, session } = await createSession();
-
-  const catalog = process.env.CATALOG_NAME || "franquia_bmsa_insight";
-  const schema = process.env.SCHEMA_NAME || "default";
-  const table = process.env.TABLE_NAME || "estrutura_salobo_mill_production";
-
-  try {
-
+  return withCache(`anos:${nmVDT || "*"}`, () => {
     let sql = `
       SELECT DISTINCT YEAR(DT_REF) AS ANO
-      FROM ${catalog}.${schema}.${table}
+      FROM ${tableRef()}
       WHERE DT_REF IS NOT NULL
     `;
 
@@ -169,20 +219,8 @@ async function getListaAnos(nmVDT = null) {
 
     sql += ` ORDER BY ANO DESC`;
 
-    const query = await session.executeStatement(sql);
-
-    const rows = await query.fetchAll();
-
-    await query.close();
-
-    return rows;
-
-  } finally {
-
-    await session.close();
-    await client.close();
-
-  }
+    return runQuery(sql);
+  });
 }
 
 app.get("/api/tree", async (req, res) => {
@@ -246,6 +284,56 @@ app.get("/api/filtros-ano", async (req, res) => {
     const dados = await getListaAnos(nmVDT);
 
     res.json(dados);
+
+  } catch (err) {
+
+    console.error(err);
+
+    res.status(500).json({
+      error: err.message
+    });
+
+  }
+});
+
+// Carga inicial numa única ida e volta. ANTES o boot da página fazia 3
+// chamadas ENCADEADAS (lista de VDTs → anos daquela VDT → árvore),
+// somando 3 latências de rede antes do 1º card aparecer. Como as duas
+// primeiras só existem pra descobrir QUAL VDT/ano carregar, o servidor
+// resolve isso sozinho e devolve tudo junto.
+// A preferência de VDT default continua sendo do cliente (parâmetro
+// vdt_preferido) — o servidor só a respeita se ela existir de fato na
+// lista real, mesma regra que o front já aplicava.
+app.get("/api/bootstrap", async (req, res) => {
+  try {
+
+    const preferida = req.query.vdt_preferido || null;
+
+    const vdtRows = await getListaVDT();
+    const vdts = vdtRows
+      .map((r) => r && r.NM_VDT)
+      .filter((v) => v != null && String(v).trim() !== "");
+
+    const vdtSelecionada =
+      (preferida && vdts.includes(preferida)) ? preferida : (vdts[0] || null);
+
+    // Sem nenhuma VDT na tabela não há o que carregar — devolve a
+    // estrutura vazia e deixa o front exibir a mensagem de "sem dados".
+    if (!vdtSelecionada) {
+      return res.json({ vdts: [], vdtSelecionada: null, anos: [], anoSelecionado: null, arvore: [] });
+    }
+
+    const anoRows = await getListaAnos(vdtSelecionada);
+    const anos = anoRows
+      .map((r) => r && r.ANO)
+      .filter((v) => v != null);
+
+    // Lista já vem ordenada decrescente: o 1º é o ano mais recente.
+    const anoSelecionado = anos.length ? anos[0] : null;
+
+    const arvore = await getTreeData(vdtSelecionada, anoSelecionado);
+
+    res.json({ vdts, vdtSelecionada, anos, anoSelecionado, arvore });
 
   } catch (err) {
 

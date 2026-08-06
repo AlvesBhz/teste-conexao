@@ -8,7 +8,15 @@
    antigo, para facilitar o fine-tuning.
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap');
+/* A fonte Poppins NÃO é mais carregada por @import aqui. Um @import é
+   totalmente render-blocking e ainda serializa o download (o navegador
+   precisa baixar style.css inteiro antes de sequer iniciar o pedido da
+   fonte), e ele bloqueia também a execução de <script src> clássicos —
+   app.js entre eles. Com o fonts.googleapis.com inacessível (proxy
+   corporativo, por exemplo), a árvore só aparecia quando o request
+   expirava: ~13s medidos, contra ~0,3s. Agora a fonte é injetada por JS
+   depois do DOMContentLoaded (ver fim do <body> em index.html) e a
+   cadeia de fallback de --font-poppins segura a tela até ela chegar. */
 
 :root {
   /* ── VBM Design Tokens ── */
@@ -26,7 +34,11 @@
   --ease-out:       cubic-bezier(0.2,1,0.2,1);
   --ease-spring:    cubic-bezier(0.34,1.56,0.64,1);
   --ease-smooth:    cubic-bezier(0.4,0,0.2,1);
-  --font-poppins:   'Poppins', sans-serif;
+  /* Fallback de sistema explícito: o Poppins agora carrega de forma
+     assíncrona (ver index.html), então a tela pinta com estas fontes
+     antes dele chegar — e continua legível mesmo se a rede corporativa
+     bloquear o Google Fonts por completo. */
+  --font-poppins:   'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 
   /* ── App-level aliases (mapeados aos tokens VBM) ── */
   --bg:          var(--vbm-off-white);
@@ -1068,6 +1080,20 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
 .tree-node {
   position: absolute;
   width: var(--card-w);
+}
+
+/* Transição de posição dos cards — ativada por uma classe única no
+   canvas (app.js) só depois do 1º posicionamento já estar pintado,
+   senão os cards "voam" desde 0,0 ao carregar. A duração vem de
+   CFG.ANIM_MS via custom property, mantendo o CFG como fonte única
+   da verdade sem precisar escrever style inline em cada card. */
+.tree-canvas { --tree-anim: 400ms; }
+.tree-canvas.anim-ready .tree-node {
+  transition:
+    left var(--tree-anim) cubic-bezier(0.65, 0, 0.35, 1),
+    top var(--tree-anim) cubic-bezier(0.65, 0, 0.35, 1),
+    opacity 300ms ease,
+    transform 300ms ease;
 }
 
 /* ---- CARD — "Dense Row" (opção 3) ----

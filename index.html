@@ -7,7 +7,13 @@
   <title>Árvore de Direcionadores de Valor</title>
   <link href="https://fonts.googleapis.com" rel="preconnect"/>
   <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap" rel="stylesheet"/>
+  <!-- A fonte Poppins NÃO é carregada aqui: um <link rel="stylesheet">
+       no <head> entra no conjunto de folhas pendentes que bloqueiam a
+       EXECUÇÃO de <script src> clássicos — e app.js é um deles. Com o
+       fonts.googleapis.com inacessível (proxy corporativo, por exemplo)
+       a árvore só aparecia quando o request expirava: ~13s medidos,
+       contra ~0,3s com a fonte respondendo. Ela é injetada por JS no
+       fim do <body>, fora do caminho crítico. -->
   <link rel="stylesheet" href="style.css" />
   <!-- Estilo dos conectores e do tema Branco/Business vivem em style.css -->
   <script>/* Anti-flash: restaura o tema Business antes do 1º paint */
@@ -230,6 +236,31 @@
   -->
   <script src="d3.v7.min.js"></script>
   <script src="app.js"></script>
+  <script>
+  /* Fonte Poppins injetada aqui, DEPOIS de app.js já ter sido executado
+     (ver comentário no <head>): assim ela nunca entra no caminho crítico
+     de renderização. A tela pinta imediatamente com a fonte de sistema
+     do fallback (--font-poppins em style.css) e o Poppins assume assim
+     que chegar — a URL já usa display=swap, então não há texto invisível
+     durante a troca. Se o Google Fonts estiver bloqueado na rede, a
+     aplicação simplesmente segue na fonte de sistema, sem travar. */
+  (function () {
+    function carregarFonte() {
+      var l = document.createElement('link');
+      l.rel = 'stylesheet';
+      l.href = 'https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap';
+      document.head.appendChild(l);
+    }
+    // Só DEPOIS do DOMContentLoaded: uma folha de estilo injetada
+    // enquanto o documento ainda está sendo parseado continua atrasando
+    // o próprio DOMContentLoaded — e é nele que app.js monta a árvore.
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', carregarFonte);
+    } else {
+      carregarFonte();
+    }
+  })();
+  </script>
   <script>
   // Faixa de título da árvore (#treeTitleText) — sincronizada junto com
   // o botão do filtro VDT por syncVdtTriggerLabel() em app.js (chamada
