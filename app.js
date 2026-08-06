@@ -933,6 +933,23 @@ const fmtLobp = formatValuePlain(
   // dele existir).
   let lossShowTimeIndicators = true;
 
+  // Nomes dos até `maxLevels` ancestrais de `node` na árvore, do pai
+  // mais próximo pro mais distante (ex.: ["Copper Concentrate",
+  // "Copper Concentrate (Dry)", "Copper Contained", "Run of Plant"]) —
+  // dá contexto de onde um indicador-folha se encaixa na hierarquia,
+  // sem precisar abrir/navegar a árvore pra descobrir.
+  function getAncestorPath(node, maxLevels) {
+    const path = [];
+    let parentId = node && node.ParentID;
+    while (path.length < maxLevels && parentId !== null && parentId !== undefined) {
+      const parent = TREE_MAP[parentId];
+      if (!parent) break;
+      path.push(parent.IndicatorName);
+      parentId = parent.ParentID;
+    }
+    return path;
+  }
+
   // Remove parênteses externos de uma unidade, se houver — a coluna
   // Unit no Databricks às vezes já vem como "(h/y)"/"(%)" prontos, então
   // qualquer lugar que precise do texto "cru" da unidade (pra comparar
@@ -1026,9 +1043,18 @@ const fmtLobp = formatValuePlain(
       // cadastrada, mostra só o nome do indicador. A unidade às vezes já
       // vem com parênteses da própria base ("(h/y)"); stripUnitParens
       // evita duplicar ("((h/y))") reaproveitando sempre um único par.
+      // Termina com o ID do nó ("N16") — referência rápida pra localizar
+      // o registro exato na tabela do Databricks.
       const unitLabel  = stripUnitParens(node.Unit);
-      const displayName = unitLabel ? `${node.IndicatorName} (${unitLabel})` : node.IndicatorName;
-      const tooltip = `${displayName}\n${fmtActual} vs ${fmtReference} (${pctText})\nDiferença: ${fmtDelta}`
+      const displayName = `${unitLabel ? `${node.IndicatorName} (${unitLabel})` : node.IndicatorName} - N${node.NodeID}`;
+
+      // Caminho até 5 níveis acima na árvore (pai mais próximo primeiro),
+      // dá contexto de ONDE esse indicador-folha está — só nomes, sem
+      // unidade/ID, pra não poluir o tooltip.
+      const ancestors = getAncestorPath(node, 5);
+      const breadcrumb = ancestors.length ? `\n${ancestors.join(' >> ')}` : '';
+
+      const tooltip = `${displayName}${breadcrumb}\n${fmtActual} vs ${fmtReference} (${pctText})\nDiferença: ${fmtDelta}`
         .replace(/"/g, '&quot;');
 
       return `
