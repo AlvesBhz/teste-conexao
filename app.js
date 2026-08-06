@@ -842,14 +842,24 @@ const fmtLobp = formatValuePlain(
   // dele existir).
   let lossShowTimeIndicators = true;
 
+  // Remove parênteses externos de uma unidade, se houver — a coluna
+  // Unit no Databricks às vezes já vem como "(h/y)"/"(%)" prontos, então
+  // qualquer lugar que precise do texto "cru" da unidade (pra comparar
+  // ou pra remontar o parêntese na exibição) passa por aqui primeiro.
+  function stripUnitParens(unit) {
+    const trimmed = String(unit || '').trim();
+    return trimmed.replace(/^\(([\s\S]*)\)$/, '$1').trim();
+  }
+
   // Fonte única da verdade pra "é indicador de tempo?": a unidade de
   // medida (node.Unit) que já vem do Databricks — nenhuma lista fixa de
-  // nomes de indicador no front-end. Reconhece as grafias comuns de
-  // "hora" como unidade (h, hr, hrs, horas...).
+  // nomes de indicador no front-end. Reconhece "h" isolado (h, hh, hr,
+  // hrs, "hora(s)") e também taxas com hora no numerador (h/y, h/d,
+  // h/mês...), que é como a unidade aparece de fato na base (ex.: "(h/y)").
   function isTimeIndicator(node) {
-    const unit = String((node && node.Unit) || '').trim().toLowerCase();
+    const unit = stripUnitParens(node && node.Unit).toLowerCase();
     if (!unit) return false;
-    return /^h$|^hh$|^hr$|^hrs$|hora/.test(unit);
+    return /^h{1,2}(rs?)?$/.test(unit) || /^h\s*\//.test(unit) || unit.includes('hora');
   }
 
   // Todo nó-folha com variação CALCULÁVEL (nem valor-base nem
@@ -885,21 +895,23 @@ const fmtLobp = formatValuePlain(
       return;
     }
 
-    // Escala das barras é sempre relativa ao MAIOR impacto do conjunto
-    // inteiro (antes de ordenar/inverter) — assim a barra de cada item
-    // continua proporcionalmente correta independente da direção de
-    // ordenação escolhida pelo usuário.
-    const maxDelta = Math.max(...entries.map((e) => e.rawDelta));
+    // Classificação (ordenação + tamanho da barra) é sempre pelo
+    // PERCENTUAL, não pelo valor bruto: a lista mistura indicadores de
+    // unidades muito diferentes (h/y, g/t, %, t...), então comparar
+    // magnitude bruta entre eles não tem significado — 1.777 h/y não é
+    // "maior impacto" que -52% de recuperação só por ter mais dígitos.
+    // O percentual é a única medida comparável entre indicadores.
+    const maxPct = Math.max(...entries.map((e) => Math.abs(e.variation.pct)));
 
-    // Ordenação por valor COM SINAL (perda = negativo, ganho = positivo)
-    // — não por magnitude bruta. Crescente (asc): maiores perdas →
-    // menores perdas → menores ganhos → maiores ganhos, uma transição
-    // contínua cruzando o zero, nunca um "reset" de magnitude no meio
-    // da lista. Decrescente (desc) é o espelho exato: maiores ganhos →
-    // menores ganhos → menores perdas → maiores perdas.
+    // Ordenação por percentual COM SINAL (perda = negativo, ganho =
+    // positivo, seguindo a favorabilidade real — não o sinal bruto do
+    // pct, que se inverte pra nós com a heurística higherIsBad).
+    // Crescente (asc): maiores perdas % → menores perdas % → menores
+    // ganhos % → maiores ganhos %, transição contínua cruzando o zero.
+    // Decrescente (desc) é o espelho exato.
     const sorted = [...entries].sort((a, b) => {
-      const signedA = a.variation.favorable ? a.rawDelta : -a.rawDelta;
-      const signedB = b.variation.favorable ? b.rawDelta : -b.rawDelta;
+      const signedA = a.variation.favorable ? Math.abs(a.variation.pct) : -Math.abs(a.variation.pct);
+      const signedB = b.variation.favorable ? Math.abs(b.variation.pct) : -Math.abs(b.variation.pct);
       return lossSortDir === 'asc' ? signedA - signedB : signedB - signedA;
     });
 
@@ -908,12 +920,15 @@ const fmtLobp = formatValuePlain(
       const fmtActual    = formatValuePlain(actual,     node.NodeType, node.VL_FATOR, node.SG_DECIMAL);
       const fmtReference = formatValuePlain(reference,  node.NodeType, node.VL_FATOR, node.SG_DECIMAL);
       const pctText   = formatPercentPtBR(variation.pct);
-      const widthPct  = maxDelta > 0 ? Math.max(4, (rawDelta / maxDelta) * 100) : 0;
+      const widthPct  = maxPct > 0 ? Math.max(4, (Math.abs(variation.pct) / maxPct) * 100) : 0;
       const kindClass = variation.favorable ? 'is-gain' : 'is-loss';
       const sign      = variation.favorable ? '+' : '−';
       // Nome + unidade cadastrada no Databricks (node.Unit) — sem unidade
-      // cadastrada, mostra só o nome do indicador.
-      const displayName = node.Unit ? `${node.IndicatorName} (${node.Unit})` : node.IndicatorName;
+      // cadastrada, mostra só o nome do indicador. A unidade às vezes já
+      // vem com parênteses da própria base ("(h/y)"); stripUnitParens
+      // evita duplicar ("((h/y))") reaproveitando sempre um único par.
+      const unitLabel  = stripUnitParens(node.Unit);
+      const displayName = unitLabel ? `${node.IndicatorName} (${unitLabel})` : node.IndicatorName;
       const tooltip = `${displayName}\n${fmtActual} vs ${fmtReference} (${pctText})\nDiferença: ${fmtDelta}`
         .replace(/"/g, '&quot;');
 
