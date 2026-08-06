@@ -828,17 +828,6 @@ const fmtLobp = formatValuePlain(
   const loadAnoFiltros = (nmVDT) =>
     loadOptionsFiltro('cmbAno', `/api/filtros-ano?nm_vdt=${encodeURIComponent(nmVDT || '')}`, 'ANO', 'Ano');
 
-  // Se a VDT atual só tiver 1 ano disponível, não faz sentido abrir um
-  // dropdown com uma lista vazia (a lista já omite o valor selecionado
-  // — ver renderList em setupCustomDropdown) — trava o botão-gatilho
-  // nesse caso, igual ao estado de "carregando" (trigger.disabled).
-  function updateAnoTriggerAvailability() {
-    const select  = document.getElementById('cmbAno');
-    const trigger = document.getElementById('anoTrigger');
-    if (!select || !trigger) return;
-    trigger.disabled = select.options.length <= 1;
-  }
-
   function showViewportError(msg) {
     clearViewportError();
     const vp = document.getElementById('treeViewport');
@@ -878,13 +867,12 @@ const fmtLobp = formatValuePlain(
   // VDT é o filtro mandatório e o de Ano é sempre um recorte dela (ver
   // loadAnoFiltros): trocar de VDT precisa re-escopar a lista de anos
   // pra ela ANTES de recarregar a árvore, já que fetchTreeData lê
-  // cmbAno.value pra montar a query — e travar (ou destravar) o botão
-  // de Ano se a nova VDT só tiver 1 ano disponível (ver
-  // updateAnoTriggerAvailability).
+  // cmbAno.value pra montar a query. O combo de Ano continua sempre
+  // clicável — só mostra os anos que aquela VDT realmente tem (mesmo
+  // que seja 1 único).
   const attachFilterEvents = () => attachSelectReload('cmbVDT', 'vdtTrigger', async () => {
     await loadAnoFiltros(document.getElementById('cmbVDT').value);
     syncAnoTriggerLabel();
-    updateAnoTriggerAvailability();
   });
   const attachAnoFilterEvents = () => attachSelectReload('cmbAno', 'anoTrigger');
 
@@ -1313,7 +1301,6 @@ const fmtLobp = formatValuePlain(
     attachAnoDropdownEvents();
     syncVdtTriggerLabel(); // reflete o valor real definido por loadVDTFiltros()
     syncAnoTriggerLabel(); // reflete o valor real definido por loadAnoFiltros()
-    updateAnoTriggerAvailability(); // trava o combo de Ano se a VDT default só tiver 1 ano
     attachLossPanelEvents();
 
     await loadTreeAndRender();
