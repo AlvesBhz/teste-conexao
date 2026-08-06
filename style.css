@@ -685,6 +685,13 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
   flex-shrink: 0;
   white-space: nowrap;
 }
+/* Percentual entre parênteses — mesma cor semântica do valor, porém
+   mais leve/discreto (peso 600, opacidade reduzida), pra não competir
+   com o número principal na leitura. */
+.loss-row-pct {
+  font-weight: 600;
+  opacity: .72;
+}
 .loss-row-bar-track {
   height: 6px;
   border-radius: 100px;

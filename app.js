@@ -120,6 +120,15 @@
     });
   }
 
+  // Percentual formatado no locale da aplicação (pt-BR: vírgula decimal),
+  // com sinal explícito — mesma base de cálculo de calcVariation.pct.
+  // `null`/`noData` vira "-", nunca "0%" nem um percentual inventado.
+  function formatPercentPtBR(pct) {
+    if (pct === null || pct === undefined) return '-';
+    const sign = pct >= 0 ? '+' : '';
+    return sign + pct.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
+  }
+
   // Regra nulo vs. zero: se o valor base OU o de comparação for null (sem
   // dado), não há variação calculável — retorna noData:true (quem
   // consome isto deve exibir "-" no delta, sem seta/cor de favorável ou
@@ -828,16 +837,33 @@ const fmtLobp = formatValuePlain(
   // "natural" do painel: começa no problema mais grave, termina no
   // melhor resultado). 'desc' = espelho exato dessa sequência.
   let lossSortDir = 'asc';
+  // Indicadores de tempo ficam visíveis por padrão (troca de filtro é
+  // opt-in: adicionar o filtro não deve mudar o que já aparecia antes
+  // dele existir).
+  let lossShowTimeIndicators = true;
+
+  // Fonte única da verdade pra "é indicador de tempo?": a unidade de
+  // medida (node.Unit) que já vem do Databricks — nenhuma lista fixa de
+  // nomes de indicador no front-end. Reconhece as grafias comuns de
+  // "hora" como unidade (h, hr, hrs, horas...).
+  function isTimeIndicator(node) {
+    const unit = String((node && node.Unit) || '').trim().toLowerCase();
+    if (!unit) return false;
+    return /^h$|^hh$|^hr$|^hrs$|hora/.test(unit);
+  }
 
   // Todo nó-folha com variação CALCULÁVEL (nem valor-base nem
   // valor-comparação nulos — calcVariation.noData) na comparação ativa
   // entra na lista, seja perda (desfavorável) ou ganho (favorável). Item
   // sem dado suficiente simplesmente não aparece (não é "perda zero").
+  // Indicador de tempo some por completo (lista, ranking e gráfico)
+  // quando o filtro "Apresentar Indicadores de Tempo" está em "Não".
   function computeVarianceEntries(map, compareKey) {
     const def = LOSS_COMPARE_DEFS[compareKey] || LOSS_COMPARE_DEFS.fcst_bdgt;
 
     return Object.values(map)
       .filter((node) => node && node.children.length === 0)
+      .filter((node) => lossShowTimeIndicators || !isTimeIndicator(node))
       .map((node) => {
         const actual    = node[def.actualKey];
         const reference = node[def.referenceKey];
@@ -881,18 +907,21 @@ const fmtLobp = formatValuePlain(
       const fmtDelta     = formatValuePlain(rawDelta,   node.NodeType, node.VL_FATOR, node.SG_DECIMAL);
       const fmtActual    = formatValuePlain(actual,     node.NodeType, node.VL_FATOR, node.SG_DECIMAL);
       const fmtReference = formatValuePlain(reference,  node.NodeType, node.VL_FATOR, node.SG_DECIMAL);
-      const pctText   = (variation.pct >= 0 ? '+' : '') + variation.pct.toFixed(1) + '%';
+      const pctText   = formatPercentPtBR(variation.pct);
       const widthPct  = maxDelta > 0 ? Math.max(4, (rawDelta / maxDelta) * 100) : 0;
       const kindClass = variation.favorable ? 'is-gain' : 'is-loss';
       const sign      = variation.favorable ? '+' : '−';
-      const tooltip = `${node.IndicatorName}\n${fmtActual} vs ${fmtReference} (${pctText})\nDiferença: ${fmtDelta}`
+      // Nome + unidade cadastrada no Databricks (node.Unit) — sem unidade
+      // cadastrada, mostra só o nome do indicador.
+      const displayName = node.Unit ? `${node.IndicatorName} (${node.Unit})` : node.IndicatorName;
+      const tooltip = `${displayName}\n${fmtActual} vs ${fmtReference} (${pctText})\nDiferença: ${fmtDelta}`
         .replace(/"/g, '&quot;');
 
       return `
         <div class="loss-row ${kindClass}" title="${tooltip}">
           <div class="loss-row-top">
-            <span class="loss-row-name">${node.IndicatorName}</span>
-            <span class="loss-row-value">${sign}${fmtDelta}</span>
+            <span class="loss-row-name">${displayName}</span>
+            <span class="loss-row-value">${sign}${fmtDelta} <span class="loss-row-pct">(${pctText})</span></span>
           </div>
           <div class="loss-row-bar-track">
             <div class="loss-row-bar" style="width:${widthPct}%"></div>
@@ -918,6 +947,17 @@ const fmtLobp = formatValuePlain(
         if (btn.dataset.sort === lossSortDir) return;
         lossSortDir = btn.dataset.sort;
         sortBtns.forEach((b) => b.classList.toggle('active', b.dataset.sort === lossSortDir));
+        renderLossPanel();
+      });
+    });
+
+    const timeBtns = Array.from(document.querySelectorAll('.loss-time-btn'));
+    timeBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const show = btn.dataset.time === 'show';
+        if (show === lossShowTimeIndicators) return;
+        lossShowTimeIndicators = show;
+        timeBtns.forEach((b) => b.classList.toggle('active', b.dataset.time === (show ? 'show' : 'hide')));
         renderLossPanel();
       });
     });
