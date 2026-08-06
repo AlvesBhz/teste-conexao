@@ -86,7 +86,10 @@
 
   async function fetchTreeData() {
     const nmVDT = document.getElementById("cmbVDT").value;
-    const res= await fetch(`/api/tree?nm_vdt=${encodeURIComponent(nmVDT)}`);
+    const anoSelect = document.getElementById("cmbAno");
+    const params = new URLSearchParams({ nm_vdt: nmVDT });
+    if (anoSelect && anoSelect.value) params.set('ano', anoSelect.value);
+    const res = await fetch(`/api/tree?${params.toString()}`);
     if (!res.ok) {
       let detail = '';
       try { detail = (await res.json()).error || ''; } catch (e) {}
@@ -772,29 +775,29 @@ const fmtLobp = formatValuePlain(
     }));
   }
 
-  // ── 13. FILTRO (VDT) ─────────────────────────────────────────
-  // O <select id="cmbVDT"> é nativo: por natureza só permite escolher
-  // 1 valor por vez (não é multi-select), então "o usuário é obrigado
-  // a escolher apenas um valor" já é garantido pelo próprio elemento.
-  // Aqui só populamos as opções com dados reais (vindos de
-  // /api/filtros-vdt) e garantimos que ele SEMPRE nasce com um valor
-  // selecionado (o primeiro da lista), nunca em branco.
-  async function loadVDTFiltros() {
-    const select = document.getElementById('cmbVDT');
+  // ── 13. FILTROS (VDT e Ano) ───────────────────────────────────
+  // Os <select id="cmbVDT"/"cmbAno"> são nativos: por natureza só
+  // permitem escolher 1 valor por vez (não são multi-select), então "o
+  // usuário é obrigado a escolher apenas um valor" já é garantido pelo
+  // próprio elemento. Aqui só populamos as opções com dados reais
+  // (vindos de /api/filtros-vdt e /api/filtros-ano) e garantimos que
+  // eles SEMPRE nascem com um valor selecionado (o primeiro da lista),
+  // nunca em branco.
+  async function loadOptionsFiltro(selectId, url, rowKey, logTag) {
+    const select = document.getElementById(selectId);
     if (!select) return;
 
     try {
-      const res = await fetch('/api/filtros-vdt');
+      const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const rows = await res.json();
 
-      // server.js devolve linhas no formato { NM_VDT: '...' }
       const valores = (Array.isArray(rows) ? rows : [])
-        .map((r) => r && r.NM_VDT)
+        .map((r) => r && r[rowKey])
         .filter((v) => v != null && String(v).trim() !== '');
 
       if (valores.length === 0) {
-        console.warn('[VDT] /api/filtros-vdt não retornou valores; mantendo opções fixas do HTML.');
+        console.warn(`[${logTag}] ${url} não retornou valores; mantendo opções fixas do HTML.`);
         return;
       }
 
@@ -802,14 +805,19 @@ const fmtLobp = formatValuePlain(
         .map((v) => `<option value="${v}">${v}</option>`)
         .join('');
 
-      // Sempre inicia com o primeiro valor da lista selecionado.
+      // Sempre inicia com o primeiro valor da lista selecionado (no
+      // filtro de Ano, a lista já vem ordenada decrescente — logo o
+      // primeiro é o ano mais recente).
       select.value = valores[0];
     } catch (err) {
       // Falhou a busca da lista de filtros: mantém as opções fixas que
       // já vieram no HTML (fallback), pra tela não ficar sem nenhuma opção.
-      console.error('[VDT] Erro ao carregar lista de VDTs, mantendo opções fixas do HTML:', err);
+      console.error(`[${logTag}] Erro ao carregar lista, mantendo opções fixas do HTML:`, err);
     }
   }
+
+  const loadVDTFiltros = () => loadOptionsFiltro('cmbVDT', '/api/filtros-vdt', 'NM_VDT', 'VDT');
+  const loadAnoFiltros = () => loadOptionsFiltro('cmbAno', '/api/filtros-ano', 'ANO', 'Ano');
 
   function showViewportError(msg) {
     clearViewportError();
@@ -823,14 +831,14 @@ const fmtLobp = formatValuePlain(
     if (box) box.remove();
   }
 
-  // Liga o filtro (VDT): ao trocar a opção do combo, já busca de novo
-  // os dados (agora com o NM_VDT selecionado) e reconstrói a árvore do
-  // zero — sem precisar de um botão "Aplicar Filtro" separado. O select
-  // em si fica oculto (ver .vdt-dropdown); quem dá feedback visual de
-  // "carregando" pro usuário é o botão-gatilho.
-  function attachFilterEvents() {
-    const select  = document.getElementById('cmbVDT');
-    const trigger = document.getElementById('vdtTrigger');
+  // Liga um filtro (VDT ou Ano): ao trocar a opção do combo, já busca
+  // de novo os dados (fetchTreeData lê cmbVDT/cmbAno diretamente) e
+  // reconstrói a árvore do zero — sem precisar de um botão "Aplicar
+  // Filtro" separado. O select em si fica oculto (ver .vdt-dropdown);
+  // quem dá feedback visual de "carregando" pro usuário é o botão-gatilho.
+  function attachSelectReload(selectId, triggerId) {
+    const select  = document.getElementById(selectId);
+    const trigger = document.getElementById(triggerId);
     if (!select) return;
 
     select.addEventListener('change', async () => {
@@ -846,55 +854,37 @@ const fmtLobp = formatValuePlain(
     });
   }
 
-  // ── 13.0.5 DROPDOWN CUSTOMIZADO DO FILTRO VDT ────────────────
-  // O <select id="cmbVDT"> continua sendo a fonte de dados/eventos
-  // (loadVDTFiltros/attachFilterEvents não mudam nada); este bloco só
-  // desenha por cima um botão + lista customizados, cuja lista aberta
-  // omite a VDT atualmente aplicada — algo impossível com um <select>
-  // nativo puro, já que o rótulo fechado dele é sempre também um item
-  // da própria lista.
-  // Também atualiza a faixa "Árvore selecionada" (#treeTitleText) — as
-  // duas cópias do nome do VDT (botão do filtro + faixa de título)
-  // precisam refletir sempre o mesmo valor real do <select>. Antes cada
-  // uma tinha sua própria sincronização (uma em app.js, outra num
-  // <script> solto no index.html); só a daqui era rechamada depois de
-  // loadVDTFiltros() trocar as opções pelas reais, deixando a faixa de
-  // título presa no valor fixo do HTML (bug).
-  function syncVdtTriggerLabel() {
-    const select = document.getElementById('cmbVDT');
-    if (!select) return;
-    const opt  = select.options[select.selectedIndex];
-    const text = (opt && opt.text.trim()) || select.value;
-    const label = document.getElementById('vdtTriggerLabel');
-    const title = document.getElementById('treeTitleText');
-    if (label) label.textContent = text;
-    if (title) title.textContent = text;
-  }
+  const attachFilterEvents    = () => attachSelectReload('cmbVDT', 'vdtTrigger');
+  const attachAnoFilterEvents = () => attachSelectReload('cmbAno', 'anoTrigger');
 
-  // Monta a lista só com as opções DIFERENTES da atualmente selecionada
-  // — chamado sempre de novo a cada abertura, pra refletir trocas feitas
-  // por loadVDTFiltros() entretanto.
-  function renderVdtDropdownList() {
-    const select = document.getElementById('cmbVDT');
-    const list   = document.getElementById('vdtDropdownList');
-    if (!select || !list) return;
-    const current = select.value;
-    list.innerHTML = Array.from(select.options)
-      .filter((opt) => opt.value !== current)
-      .map((opt) => `<li class="vdt-option" role="option" tabindex="0" data-value="${opt.value.replace(/"/g, '&quot;')}">${opt.text}</li>`)
-      .join('');
-  }
-
-  function attachVdtDropdownEvents() {
-    const select   = document.getElementById('cmbVDT');
-    const dropdown = document.getElementById('vdtDropdown');
-    const trigger  = document.getElementById('vdtTrigger');
-    const list     = document.getElementById('vdtDropdownList');
+  // ── 13.0.5 DROPDOWN CUSTOMIZADO (VDT e Ano) ──────────────────
+  // Os <select id="cmbVDT"/"cmbAno"> continuam sendo a fonte de dados/
+  // eventos (loadOptionsFiltro/attachSelectReload não mudam nada); esta
+  // fábrica só desenha por cima um botão + lista customizados — cuja
+  // lista aberta omite o valor atualmente aplicado, algo impossível com
+  // um <select> nativo puro, já que o rótulo fechado dele é sempre
+  // também um item da própria lista. Mesma lógica pros dois filtros,
+  // só trocando os IDs.
+  function setupCustomDropdown(selectId, dropdownId, triggerId, listId) {
+    const select   = document.getElementById(selectId);
+    const dropdown = document.getElementById(dropdownId);
+    const trigger  = document.getElementById(triggerId);
+    const list     = document.getElementById(listId);
     if (!select || !dropdown || !trigger || !list) return;
 
+    // Monta a lista só com as opções DIFERENTES da atualmente
+    // selecionada — chamada sempre de novo a cada abertura, pra
+    // refletir trocas feitas por loadOptionsFiltro() entretanto.
+    function renderList() {
+      const current = select.value;
+      list.innerHTML = Array.from(select.options)
+        .filter((opt) => opt.value !== current)
+        .map((opt) => `<li class="vdt-option" role="option" tabindex="0" data-value="${opt.value.replace(/"/g, '&quot;')}">${opt.text}</li>`)
+        .join('');
+    }
     function openList() {
       if (trigger.disabled) return;
-      renderVdtDropdownList();
+      renderList();
       list.hidden = false;
       trigger.setAttribute('aria-expanded', 'true');
       dropdown.classList.add('open');
@@ -908,7 +898,7 @@ const fmtLobp = formatValuePlain(
       if (!value || value === select.value) { closeList(); return; }
       select.value = value;
       // dispatchEvent (não .click()) já dispara o listener 'change' de
-      // attachFilterEvents() normalmente — mesmo caminho de sempre pra
+      // attachSelectReload() normalmente — mesmo caminho de sempre pra
       // recarregar a árvore, sem duplicar lógica aqui.
       select.dispatchEvent(new Event('change', { bubbles: true }));
       closeList();
@@ -938,8 +928,45 @@ const fmtLobp = formatValuePlain(
         trigger.focus();
       }
     });
+  }
 
-    select.addEventListener('change', syncVdtTriggerLabel);
+  // Também atualiza a faixa "Árvore selecionada" (#treeTitleText/
+  // #treeTitleYear) — as duas cópias de cada valor (botão do filtro +
+  // faixa de título) precisam refletir sempre o mesmo valor real do
+  // <select>. Antes cada uma tinha sua própria sincronização (uma em
+  // app.js, outra num <script> solto no index.html); só a daqui era
+  // rechamada depois de loadVDTFiltros() trocar as opções pelas reais,
+  // deixando a faixa de título presa no valor fixo do HTML (bug).
+  function syncVdtTriggerLabel() {
+    const select = document.getElementById('cmbVDT');
+    if (!select) return;
+    const opt  = select.options[select.selectedIndex];
+    const text = (opt && opt.text.trim()) || select.value;
+    const label = document.getElementById('vdtTriggerLabel');
+    const title = document.getElementById('treeTitleText');
+    if (label) label.textContent = text;
+    if (title) title.textContent = text;
+  }
+
+  function syncAnoTriggerLabel() {
+    const select = document.getElementById('cmbAno');
+    if (!select) return;
+    const opt  = select.options[select.selectedIndex];
+    const text = (opt && opt.text.trim()) || select.value;
+    const label = document.getElementById('anoTriggerLabel');
+    const year  = document.getElementById('treeTitleYear');
+    if (label) label.textContent = text;
+    if (year) year.textContent = text;
+  }
+
+  function attachVdtDropdownEvents() {
+    setupCustomDropdown('cmbVDT', 'vdtDropdown', 'vdtTrigger', 'vdtDropdownList');
+    document.getElementById('cmbVDT').addEventListener('change', syncVdtTriggerLabel);
+  }
+
+  function attachAnoDropdownEvents() {
+    setupCustomDropdown('cmbAno', 'anoDropdown', 'anoTrigger', 'anoDropdownList');
+    document.getElementById('cmbAno').addEventListener('change', syncAnoTriggerLabel);
   }
 
   // ── 13.1 PAINEL "PERDAS & GANHOS" ─────────────────────────────
@@ -1241,14 +1268,19 @@ const fmtLobp = formatValuePlain(
     attachEvents();
     setupConnectorHighlight();
 
-    // Popula o combo com os valores reais de NM_VDT vindos do backend
-    // (com fallback pras opções fixas do HTML se a busca falhar) e já
-    // deixa o 1º valor selecionado.
-    await loadVDTFiltros();
+    // Popula os combos com os valores reais de NM_VDT/ANO vindos do
+    // backend (com fallback pras opções fixas do HTML se a busca
+    // falhar) e já deixa o 1º valor de cada um selecionado. Os dois
+    // são independentes (VDT não depende do ano nem vice-versa), então
+    // buscam em paralelo.
+    await Promise.all([loadVDTFiltros(), loadAnoFiltros()]);
 
     attachFilterEvents();
+    attachAnoFilterEvents();
     attachVdtDropdownEvents();
+    attachAnoDropdownEvents();
     syncVdtTriggerLabel(); // reflete o valor real definido por loadVDTFiltros()
+    syncAnoTriggerLabel(); // reflete o valor real definido por loadAnoFiltros()
     attachLossPanelEvents();
 
     await loadTreeAndRender();

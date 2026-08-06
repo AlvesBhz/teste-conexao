@@ -40,7 +40,7 @@ async function createSession() {
   return { client, session };
 }
 
-async function getTreeData(nmVDT = null) {
+async function getTreeData(nmVDT = null, ano = null) {
 
   const { client, session } = await createSession();
 
@@ -67,11 +67,13 @@ async function getTreeData(nmVDT = null) {
       FROM ${catalog}.${schema}.${table}
     `;
 
-    if (nmVDT) {
-      sql += `
-        WHERE NM_VDT = '${nmVDT.replace(/'/g, "''")}'
-      `;
-    }
+    // nmVDT é escapado (é texto livre); ano só chega aqui já validado
+    // como inteiro por app.get("/api/tree") — nunca interpolado como
+    // string, então não precisa (nem faz sentido) de escaping de aspas.
+    const where = [];
+    if (nmVDT) where.push(`NM_VDT = '${nmVDT.replace(/'/g, "''")}'`);
+    if (ano !== null) where.push(`YEAR(DT_REF) = ${ano}`);
+    if (where.length) sql += `WHERE ${where.join(" AND ")}\n`;
 
     sql += `
       ORDER BY ID_ORDEM
@@ -136,12 +138,56 @@ async function getListaVDT() {
   }
 }
 
+// Anos distintos da coluna DT_REF, mais recente primeiro — usado pra
+// popular o combo "Selecione o Ano" (ver /api/filtros-ano). YEAR(...)
+// já extrai o ano de qualquer DATE/TIMESTAMP, e o DISTINCT antes do
+// ORDER BY elimina duplicidade de datas do mesmo ano.
+async function getListaAnos() {
+
+  const { client, session } = await createSession();
+
+  const catalog = process.env.CATALOG_NAME || "franquia_bmsa_insight";
+  const schema = process.env.SCHEMA_NAME || "default";
+  const table = process.env.TABLE_NAME || "estrutura_salobo_mill_production";
+
+  try {
+
+    const query = await session.executeStatement(`
+      SELECT DISTINCT YEAR(DT_REF) AS ANO
+      FROM ${catalog}.${schema}.${table}
+      WHERE DT_REF IS NOT NULL
+      ORDER BY ANO DESC
+    `);
+
+    const rows = await query.fetchAll();
+
+    await query.close();
+
+    return rows;
+
+  } finally {
+
+    await session.close();
+    await client.close();
+
+  }
+}
+
 app.get("/api/tree", async (req, res) => {
   try {
 
     const nmVDT = req.query.nm_vdt || null;
 
-    const data = await getTreeData(nmVDT);
+    // Ano é sempre validado como inteiro antes de ir pro SQL (ver
+    // getTreeData) — qualquer valor não numérico é ignorado, nunca
+    // interpolado direto na query.
+    let ano = null;
+    if (req.query.ano !== undefined && req.query.ano !== "") {
+      const parsed = parseInt(req.query.ano, 10);
+      if (!Number.isNaN(parsed)) ano = parsed;
+    }
+
+    const data = await getTreeData(nmVDT, ano);
 
     res.json(data);
 
@@ -166,6 +212,24 @@ app.get("/api/filtros-vdt", async (req, res) => {
   try {
 
     const dados = await getListaVDT();
+
+    res.json(dados);
+
+  } catch (err) {
+
+    console.error(err);
+
+    res.status(500).json({
+      error: err.message
+    });
+
+  }
+});
+
+app.get("/api/filtros-ano", async (req, res) => {
+  try {
+
+    const dados = await getListaAnos();
 
     res.json(dados);
 

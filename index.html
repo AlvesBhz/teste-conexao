@@ -43,31 +43,54 @@
     </div>
 
     <div class="filter-container">
-      <label for="vdtTrigger" data-i18n="filter.label">VDT:</label>
+      <div class="filter-group">
+        <label for="vdtTrigger" data-i18n="filter.label">VDT:</label>
 
-      <!-- Dropdown customizado: ao abrir, a lista mostra só as OUTRAS
-           VDTs (a atualmente aplicada não se repete dentro da própria
-           lista — já está exibida no botão fechado). O <select> nativo
-           abaixo continua sendo a fonte única de verdade dos dados/
-           eventos (loadVDTFiltros/attachFilterEvents em app.js não
-           mudam nada); o usuário só interage com o botão + lista. -->
-      <div class="vdt-dropdown" id="vdtDropdown">
-        <button type="button" id="vdtTrigger" class="vdt-trigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="vdtDropdownList">
-          <span id="vdtTriggerLabel">Mill Production - Salobo</span>
-          <svg width="10" height="10" viewBox="0 0 16 16" fill="none" class="vdt-trigger-caret"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
-        </button>
-        <ul id="vdtDropdownList" class="vdt-dropdown-list" role="listbox" aria-label="Selecionar VDT" hidden></ul>
+        <!-- Dropdown customizado: ao abrir, a lista mostra só as OUTRAS
+             VDTs (a atualmente aplicada não se repete dentro da própria
+             lista — já está exibida no botão fechado). O <select> nativo
+             abaixo continua sendo a fonte única de verdade dos dados/
+             eventos (loadVDTFiltros/attachFilterEvents em app.js não
+             mudam nada); o usuário só interage com o botão + lista. -->
+        <div class="vdt-dropdown" id="vdtDropdown">
+          <button type="button" id="vdtTrigger" class="vdt-trigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="vdtDropdownList">
+            <span id="vdtTriggerLabel">Mill Production - Salobo</span>
+            <svg width="10" height="10" viewBox="0 0 16 16" fill="none" class="vdt-trigger-caret"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
+          </button>
+          <ul id="vdtDropdownList" class="vdt-dropdown-list" role="listbox" aria-label="Selecionar VDT" hidden></ul>
+        </div>
+
+        <select id="cmbVDT" class="vdt-native-select" tabindex="-1" aria-hidden="true">
+          <option value="Mill Production - Salobo">
+            Mill Production - Salobo
+          </option>
+
+          <option value="Mine Production - Salobo">
+            Mine Production - Salobo
+          </option>
+        </select>
       </div>
 
-      <select id="cmbVDT" class="vdt-native-select" tabindex="-1" aria-hidden="true">
-        <option value="Mill Production - Salobo">
-          Mill Production - Salobo
-        </option>
+      <div class="filter-group">
+        <label for="anoTrigger" data-i18n="filter.yearLabel">Ano:</label>
 
-        <option value="Mine Production - Salobo">
-          Mine Production - Salobo
-        </option>
-      </select>
+        <!-- Mesmo componente/comportamento do dropdown de VDT (ver
+             comentário acima) — reaproveita as classes .vdt-dropdown/
+             .vdt-trigger/.vdt-dropdown-list, só trocando o <select>
+             nativo por trás (cmbAno) e os dados (loadAnoFiltros em
+             app.js, populados a partir de DT_REF). -->
+        <div class="vdt-dropdown" id="anoDropdown">
+          <button type="button" id="anoTrigger" class="vdt-trigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="anoDropdownList">
+            <span id="anoTriggerLabel">2026</span>
+            <svg width="10" height="10" viewBox="0 0 16 16" fill="none" class="vdt-trigger-caret"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
+          </button>
+          <ul id="anoDropdownList" class="vdt-dropdown-list" role="listbox" aria-label="Selecionar Ano" hidden></ul>
+        </div>
+
+        <select id="cmbAno" class="vdt-native-select" tabindex="-1" aria-hidden="true">
+          <option value="2026">2026</option>
+        </select>
+      </div>
     </div>
   </header>
 
@@ -130,6 +153,7 @@
     <div class="tree-title-badge" id="treeTitleBar">
       <span class="tree-title-eyebrow" data-i18n="treeTitle.eyebrow">Árvore selecionada</span>
       <h2 id="treeTitleText">Mill Production - Salobo</h2>
+      <span id="treeTitleYear"></span>
     </div>
 
     <!-- Painel "Perdas & Ganhos" — fixo à esquerda do viewport (irmão de
@@ -266,6 +290,7 @@
         'lbl.vs': 'vs',
         'lbl.bud': 'Bdgt',
         'filter.label': 'VDT:',
+        'filter.yearLabel': 'Ano:',
         'treeTitle.eyebrow': 'Árvore selecionada',
         'loss.title': 'Perdas & Ganhos',
         'loss.cmp.fcstBdgt': 'Fcst x Bdgt',
@@ -301,6 +326,7 @@
         'lbl.vs': 'vs',
         'lbl.bud': 'Bdgt',
         'filter.label': 'VDT:',
+        'filter.yearLabel': 'Year:',
         'treeTitle.eyebrow': 'Selected tree',
         'loss.title': 'Losses & Gains',
         'loss.cmp.fcstBdgt': 'Fcst x Bdgt',
