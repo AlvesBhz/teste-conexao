@@ -204,22 +204,10 @@
   <script src="d3.v7.min.js"></script>
   <script src="app.js"></script>
   <script>
-  // Faixa de título da árvore — reflete o VDT atualmente selecionado
-  // (nome do <option> selecionado). Sincroniza no carregamento e a
-  // cada troca do filtro (o filtro se aplica sozinho ao mudar).
-  (function () {
-    var select = document.getElementById('cmbVDT');
-    var titleEl = document.getElementById('treeTitleText');
-    if (!select || !titleEl) return;
-
-    function syncTitle() {
-      var opt = select.options[select.selectedIndex];
-      titleEl.textContent = (opt && opt.text.trim()) || select.value;
-    }
-
-    syncTitle();
-    select.addEventListener('change', syncTitle);
-  })();
+  // Faixa de título da árvore (#treeTitleText) — sincronizada junto com
+  // o botão do filtro VDT por syncVdtTriggerLabel() em app.js (chamada
+  // após loadVDTFiltros() carregar os valores reais e a cada troca do
+  // <select>), pra evitar duas fontes de verdade divergindo entre si.
 
   // Painel de configurações — abre/fecha via engrenagem, fecha no backdrop/✕/Esc.
   (function () {

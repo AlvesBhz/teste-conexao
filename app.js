@@ -47,6 +47,11 @@
 
     // Escala usada na abertura, ao centralizar o nó raiz na página
     INITIAL_SCALE: 0.85,
+
+    // Escala usada ao focar um nó específico (clique num item do painel
+    // "Perdas & Ganhos") — mais próxima que INITIAL_SCALE pra facilitar
+    // a identificação do card em destaque.
+    FOCUS_SCALE: 1.2,
   };
 
   // ── 1. DADOS: busca da tabela Databricks via /api/tree ──────
@@ -675,7 +680,7 @@ const fmtLobp = formatValuePlain(
     CURRENT_POS = pos;
     applyPositions(pos);
     drawConnectors(pos);
-    centerNode(id, CFG.INITIAL_SCALE, true);
+    centerNode(id, CFG.FOCUS_SCALE, true);
   }
 
   // ── 11. EVENTOS ─────────────────────────────────────────────
@@ -848,12 +853,22 @@ const fmtLobp = formatValuePlain(
   // omite a VDT atualmente aplicada — algo impossível com um <select>
   // nativo puro, já que o rótulo fechado dele é sempre também um item
   // da própria lista.
+  // Também atualiza a faixa "Árvore selecionada" (#treeTitleText) — as
+  // duas cópias do nome do VDT (botão do filtro + faixa de título)
+  // precisam refletir sempre o mesmo valor real do <select>. Antes cada
+  // uma tinha sua própria sincronização (uma em app.js, outra num
+  // <script> solto no index.html); só a daqui era rechamada depois de
+  // loadVDTFiltros() trocar as opções pelas reais, deixando a faixa de
+  // título presa no valor fixo do HTML (bug).
   function syncVdtTriggerLabel() {
     const select = document.getElementById('cmbVDT');
-    const label  = document.getElementById('vdtTriggerLabel');
-    if (!select || !label) return;
-    const opt = select.options[select.selectedIndex];
-    label.textContent = (opt && opt.text.trim()) || select.value;
+    if (!select) return;
+    const opt  = select.options[select.selectedIndex];
+    const text = (opt && opt.text.trim()) || select.value;
+    const label = document.getElementById('vdtTriggerLabel');
+    const title = document.getElementById('treeTitleText');
+    if (label) label.textContent = text;
+    if (title) title.textContent = text;
   }
 
   // Monta a lista só com as opções DIFERENTES da atualmente selecionada
