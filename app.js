@@ -218,8 +218,8 @@ const fmtLobp = formatValuePlain(
     // quando o texto for truncado com reticências pelo CSS
     //
     // Layout "3 · Data-Dense Elegante" (propostas_cards_vdt_v2.html):
-    // grade de 3 valores (LOBP/Budget/Forecast) + deltas centralizados
-    // "vs BUD" / "vs LOBP", sem dot de status nem chip único combinado.
+    // grade de 3 valores (LOBP/Bdgt/Fcst) + deltas centralizados
+    // "vs Bdgt" / "vs LOBP", sem dot de status nem chip único combinado.
     el.innerHTML = `
       <div class="${cardClass}">
         <div class="card-header">
@@ -238,17 +238,17 @@ const fmtLobp = formatValuePlain(
             <span class="num-v">${fmtLobp}</span>
           </div>
           <div class="vg">
-            <em data-i18n="lbl.budget">Budget</em>
+            <em data-i18n="lbl.budget">Bdgt</em>
             <span class="num-v">${fmtOrc}</span>
           </div>
           <div class="vg">
-            <em data-i18n="lbl.forecast">Forecast</em>
+            <em data-i18n="lbl.forecast">Fcst</em>
             <span class="num-v">${fmtReal}</span>
           </div>
         </div>
         <div class="drow">
           <span class="drow-item"><i data-i18n="lbl.vs">vs</i><span data-i18n="lbl.lobp">LOBP</span><span class="delta ${lobpClass}">${lobpArrow}${lobpPct}</span></span>
-          <span class="drow-item"><i data-i18n="lbl.vs">vs</i><span data-i18n="lbl.bud">BUD</span><span class="delta ${orcClass}">${orcArrow}${orcPct}</span></span>
+          <span class="drow-item"><i data-i18n="lbl.vs">vs</i><span data-i18n="lbl.bud">Bdgt</span><span class="delta ${orcClass}">${orcArrow}${orcPct}</span></span>
         </div>
       </div>
     `;
@@ -525,13 +525,31 @@ const fmtLobp = formatValuePlain(
   }
 
   /**
+   * Largura (px) ocupada pelo painel "Top 15 Perdas" à esquerda do
+   * viewport (+ respiro), lida em tempo real do layout renderizado —
+   * sem constante fixa, então acompanha sozinha as larguras responsivas
+   * definidas no CSS. Usada pra centralizar/enquadrar a árvore só no
+   * espaço "livre" à direita do painel, evitando nascer escondida atrás
+   * dele. Retorna 0 se o painel não existir ou estiver oculto (mobile).
+   */
+  function getReservedLeftPx() {
+    const panel = document.getElementById('lossPanel');
+    const vp = document.getElementById('treeViewport');
+    if (!panel || !vp || window.getComputedStyle(panel).display === 'none') return 0;
+    const panelRect = panel.getBoundingClientRect();
+    const vpRect = vp.getBoundingClientRect();
+    return Math.max(0, panelRect.right - vpRect.left + 16);
+  }
+
+  /**
    * Reenquadra a viewport para conter (e centralizar) o bounding box `b`.
    * A escala respeita FIT_MAX_SCALE (não aproxima demais) e ZOOM_MIN.
    */
   function zoomToBounds(b, animate = true) {
     if (!isFinite(b.minX)) return;
     const vp = document.getElementById('treeViewport');
-    const vw = vp.clientWidth;
+    const reserved = getReservedLeftPx();
+    const vw = vp.clientWidth - reserved;
     const vh = vp.clientHeight;
     const bw = Math.max(1, b.maxX - b.minX);
     const bh = Math.max(1, b.maxY - b.minY);
@@ -542,7 +560,7 @@ const fmtLobp = formatValuePlain(
     );
     k = Math.max(CFG.ZOOM_MIN, Math.min(CFG.FIT_MAX_SCALE, k));
 
-    const tx = vw / 2 - k * (b.minX + bw / 2);
+    const tx = reserved + vw / 2 - k * (b.minX + bw / 2);
     const ty = vh / 2 - k * (b.minY + bh / 2);
     const t  = d3.zoomIdentity.translate(tx, ty).scale(k);
 
@@ -569,10 +587,12 @@ const fmtLobp = formatValuePlain(
     const p = CURRENT_POS[id];
     if (!p) { fitAll(animate); return; }
     const vp = document.getElementById('treeViewport');
+    const reserved = getReservedLeftPx();
+    const availW = vp.clientWidth - reserved;
     const cx = p.x + CFG.CARD_W / 2;
     const cy = p.y + CFG.CARD_H / 2;
     const t  = d3.zoomIdentity
-      .translate(vp.clientWidth / 2 - k * cx, vp.clientHeight / 2 - k * cy)
+      .translate(reserved + availW / 2 - k * cx, vp.clientHeight / 2 - k * cy)
       .scale(k);
     if (animate) {
       viewportSel.transition().duration(CFG.ZOOM_ANIM_MS).ease(d3.easeCubicInOut)
@@ -777,6 +797,88 @@ const fmtLobp = formatValuePlain(
     });
   }
 
+  // ── 13.1 PAINEL "TOP 15 PERDAS" ──────────────────────────────
+  // Painel fixo à esquerda do tree-viewport (não sofre o pan/zoom da
+  // árvore — é irmão de .tree-world, igual ao badge de título). Reusa
+  // os mesmos dados já buscados pra árvore (TREE_MAP), já filtrados
+  // pelo VDT selecionado: nenhuma consulta nova ao Databricks é feita
+  // aqui. O combo de comparação (Fcst×Bdgt / Fcst×LOBP / Bdgt×LOBP)
+  // só recalcula este painel — os cards da árvore continuam mostrando
+  // os dois deltas fixos de sempre (vs LOBP / vs Bdgt).
+  const LOSS_COMPARE_DEFS = {
+    fcst_bdgt: { actualKey: 'VL_PROJ', referenceKey: 'VL_ORC' },
+    fcst_lobp: { actualKey: 'VL_PROJ', referenceKey: 'VL_LOBP' },
+    bdgt_lobp: { actualKey: 'VL_ORC', referenceKey: 'VL_LOBP' },
+  };
+  const LOSS_TOP_N = 15;
+  let lossCompareKey = 'fcst_bdgt';
+
+  // "Perda" = nó-folha com variação desfavorável (calcVariation, a
+  // mesma função usada nos cards — inclusive a heurística higherIsBad)
+  // na comparação ativa. Ordenado pela maior diferença absoluta.
+  function computeTopLosses(map, compareKey) {
+    const def = LOSS_COMPARE_DEFS[compareKey] || LOSS_COMPARE_DEFS.fcst_bdgt;
+
+    return Object.values(map)
+      .filter((node) => node && node.children.length === 0)
+      .map((node) => {
+        const actual    = Number(node[def.actualKey])    || 0;
+        const reference = Number(node[def.referenceKey]) || 0;
+        const variation = calcVariation(actual, reference, node.NodeID);
+        const rawDelta  = Math.abs(actual - reference);
+        return { node, actual, reference, variation, rawDelta };
+      })
+      .filter((entry) => !entry.variation.favorable && entry.rawDelta > 0)
+      .sort((a, b) => b.rawDelta - a.rawDelta)
+      .slice(0, LOSS_TOP_N);
+  }
+
+  function renderLossPanel() {
+    const list = document.getElementById('lossList');
+    if (!list || !ROOT_ID) return;
+
+    const losses = computeTopLosses(TREE_MAP, lossCompareKey);
+
+    if (losses.length === 0) {
+      list.innerHTML = `<div class="loss-empty" data-i18n="loss.empty">Nenhuma perda neste comparativo.</div>`;
+      return;
+    }
+
+    const maxDelta = losses[0].rawDelta;
+
+    list.innerHTML = losses.map(({ node, actual, reference, variation, rawDelta }) => {
+      const fmtDelta     = formatValuePlain(rawDelta,   node.NodeType, node.VL_FATOR, node.SG_DECIMAL);
+      const fmtActual    = formatValuePlain(actual,     node.NodeType, node.VL_FATOR, node.SG_DECIMAL);
+      const fmtReference = formatValuePlain(reference,  node.NodeType, node.VL_FATOR, node.SG_DECIMAL);
+      const pctText   = (variation.pct >= 0 ? '+' : '') + variation.pct.toFixed(1) + '%';
+      const widthPct  = maxDelta > 0 ? Math.max(4, (rawDelta / maxDelta) * 100) : 0;
+      const tooltip = `${node.IndicatorName}\n${fmtActual} vs ${fmtReference} (${pctText})\nDiferença: ${fmtDelta}`
+        .replace(/"/g, '&quot;');
+
+      return `
+        <div class="loss-row" title="${tooltip}">
+          <div class="loss-row-top">
+            <span class="loss-row-name">${node.IndicatorName}</span>
+            <span class="loss-row-value">${fmtDelta}</span>
+          </div>
+          <div class="loss-row-bar-track">
+            <div class="loss-row-bar" style="width:${widthPct}%"></div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function attachLossPanelEvents() {
+    const select = document.getElementById('lossCompareSelect');
+    if (!select) return;
+    select.value = lossCompareKey;
+    select.addEventListener('change', () => {
+      lossCompareKey = select.value;
+      renderLossPanel();
+    });
+  }
+
   // ── 14. INIT ────────────────────────────────────────────────
   let TREE_MAP = {};
   let ROOT_ID  = null;
@@ -814,6 +916,10 @@ const fmtLobp = formatValuePlain(
     const { map, rootId } = buildTree(rawData);
     TREE_MAP = map;
     ROOT_ID  = rootId;
+
+    // Recalcula o painel "Top 15 Perdas" com os dados recém-carregados
+    // (já filtrados pelo VDT atual) e o comparativo ativo no combo.
+    renderLossPanel();
 
     // Estado inicial de expansão limitado a CFG.INITIAL_DEPTH níveis
     const queue = [{ id: rootId, d: 0 }];
@@ -870,6 +976,7 @@ const fmtLobp = formatValuePlain(
     await loadVDTFiltros();
 
     attachFilterEvents();
+    attachLossPanelEvents();
 
     await loadTreeAndRender();
   }

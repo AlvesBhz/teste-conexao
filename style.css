@@ -525,6 +525,151 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
   .tree-title-badge { max-width: calc(100% - 32px); }
 }
 
+/* ---- PAINEL "TOP 15 PERDAS" (fixo à esquerda do tree-viewport) ----
+   Irmão de .tree-world dentro de .tree-viewport (position:relative):
+   fica em absolute e por isso NÃO recebe o transform de pan/zoom da
+   árvore — permanece sempre visível, no mesmo lugar, enquanto o
+   usuário navega. Cartão sólido (não pill translúcida) porque carrega
+   conteúdo denso (select + lista rolável), não só um rótulo curto. */
+.loss-panel {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  bottom: 16px;
+  width: 300px;
+  max-width: calc(100% - 32px);
+  display: flex;
+  flex-direction: column;
+  background: rgba(255,255,255,.92);
+  border: 1px solid var(--border-light);
+  border-radius: 14px;
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+  z-index: 12;
+}
+@supports (backdrop-filter: blur(1px)) {
+  .loss-panel { backdrop-filter: blur(10px) saturate(140%); -webkit-backdrop-filter: blur(10px) saturate(140%); }
+}
+
+.loss-panel-head {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--border-light);
+  flex-shrink: 0;
+}
+.loss-panel-head h3 {
+  font-family: var(--font-poppins);
+  font-weight: 700;
+  font-size: .92rem;
+  letter-spacing: -.01em;
+  color: var(--vbm-blue-deep);
+}
+
+.loss-compare-select-wrap { position: relative; }
+.loss-compare-select {
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: .42rem 1.8rem .42rem .7rem;
+  font-family: var(--font-poppins);
+  font-size: .72rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: border-color .2s, box-shadow .2s;
+}
+.loss-compare-select:hover { border-color: var(--vbm-blue-light); }
+.loss-compare-select:focus {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(60,181,229,.15);
+}
+.loss-compare-caret {
+  position: absolute;
+  right: .65rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.loss-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.loss-row { display: flex; flex-direction: column; gap: 5px; cursor: default; }
+.loss-row-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.loss-row-name {
+  font-family: var(--font-poppins);
+  font-weight: 600;
+  font-size: .72rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.loss-row-value {
+  font-family: var(--font-poppins);
+  font-weight: 700;
+  font-size: .72rem;
+  color: var(--red-dark);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.loss-row-bar-track {
+  height: 6px;
+  border-radius: 100px;
+  background: var(--red-light);
+  overflow: hidden;
+}
+.loss-row-bar {
+  height: 100%;
+  border-radius: 100px;
+  background: linear-gradient(90deg, var(--red), var(--red-dark));
+  transition: width .4s var(--ease-out);
+}
+
+.loss-empty {
+  padding: 20px 4px;
+  text-align: center;
+  font-family: var(--font-poppins);
+  font-size: .74rem;
+  color: var(--text-muted);
+}
+
+@media (max-width: 880px) {
+  /* Em telas estreitas o título centralizado (.tree-title-badge) fica
+     proporcionalmente mais largo que o viewport — desce o painel pra
+     abaixo dele em vez de tentar dividir a mesma faixa horizontal.
+     Continua ao lado da árvore (não empilhado) pra getReservedLeftPx()
+     em app.js seguir reservando só largura, sem precisar de lógica
+     extra pra reserva vertical. */
+  .loss-panel { width: 200px; top: 76px; }
+  .loss-panel-head { padding: 11px 12px 10px; }
+  .loss-list { padding: 10px 11px 12px; gap: 9px; }
+}
+
+@media (max-width: 460px) {
+  .loss-panel { width: 160px; }
+  .loss-row-name, .loss-row-value { font-size: .66rem; }
+}
+
 /* ---- LEGEND (fixa dentro do tree-viewport, canto superior esquerdo) ---- */
 .tree-legend {
   position: absolute;
@@ -746,7 +891,7 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
 /* ---- CARD — "Dense Row" (opção 3) ----
    Máxima compactação: título em 1 linha com dot de status,
    os 3 números numa faixa sem caixas (separados por traço) e
-   um único chip combinando os deltas vs. Budget e vs. LOBP. */
+   um único chip combinando os deltas vs. Bdgt e vs. LOBP. */
 .card {
   background: var(--surface);
   border: 1.5px solid var(--border-light);
@@ -843,9 +988,9 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
   transform: rotate(-90deg);
 }
 
-/* ---- VALS (grade LOBP · Budget · Forecast, em caixas — "3 · Data-Dense Elegante") ----
+/* ---- VALS (grade LOBP · Bdgt · Fcst, em caixas — "3 · Data-Dense Elegante") ----
    Portado de propostas_cards_vdt_v2.html (.p3 .vals/.vg): grid de 3 células
-   com bordas, sem destaque de cor no Forecast — os três valores têm o
+   com bordas, sem destaque de cor no Fcst — os três valores têm o
    mesmo peso visual, a leitura do desvio fica a cargo do .drow abaixo. */
 .vals {
   display: flex;
@@ -882,7 +1027,7 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
   text-transform: uppercase;
   margin-bottom: 2px;
 }
-/* Os três valores (LOBP/Budget/Forecast) compartilham o mesmo peso visual */
+/* Os três valores (LOBP/Bdgt/Fcst) compartilham o mesmo peso visual */
 .vg .num-v {
   display: block;
   font-family: var(--mono);
@@ -984,6 +1129,8 @@ body.theme-ready .topbar,
 body.theme-ready .tree-viewport,
 body.theme-ready #treeTitleText,
 body.theme-ready .tree-title-eyebrow,
+body.theme-ready .loss-panel,
+body.theme-ready .loss-compare-select,
 body.theme-ready .legend-item,
 body.theme-ready .zoom-btn,
 body.theme-ready .viewport-hint,
@@ -1042,6 +1189,27 @@ body[data-bg="dark"] {
 [data-bg="dark"] .legend-item:hover { border-color: var(--vbm-blue-light); background: rgba(60,181,229,.16); }
 [data-bg="dark"] .zoom-btn:hover { background: var(--vbm-blue); color: #fff; }
 
+/* Painel "Top 15 Perdas" — vidro escuro, mesmo princípio do .card */
+[data-bg="dark"] .loss-panel {
+  background: rgba(20,32,48,.88);
+  border-color: rgba(255,255,255,.1);
+  box-shadow: 0 8px 28px rgba(0,0,0,.35);
+}
+[data-bg="dark"] .loss-panel-head { border-bottom-color: rgba(255,255,255,.09); }
+[data-bg="dark"] .loss-panel-head h3 { color: #fff; }
+[data-bg="dark"] .loss-compare-select {
+  background: rgba(255,255,255,.06);
+  border-color: rgba(255,255,255,.16);
+  color: #fff;
+}
+[data-bg="dark"] .loss-compare-select:hover { border-color: var(--vbm-blue-light); }
+[data-bg="dark"] .loss-compare-select option { background: var(--vbm-blue-deep); color: #fff; }
+[data-bg="dark"] .loss-compare-caret { color: rgba(255,255,255,.5); }
+[data-bg="dark"] .loss-row-name { color: rgba(255,255,255,.85); }
+[data-bg="dark"] .loss-row-value { color: #f87171; }
+[data-bg="dark"] .loss-row-bar-track { background: rgba(255,255,255,.08); }
+[data-bg="dark"] .loss-empty { color: rgba(255,255,255,.4); }
+
 /* Cards da árvore — vidro escuro (kpi-card do DS em modo Business).
    AJUSTE (perf): sem backdrop-filter — com 100+ cards na tela, o blur
    por elemento é o efeito mais caro para o navegador recompor a cada
@@ -1071,7 +1239,7 @@ body[data-bg="dark"] {
   border-color: rgba(60,181,229,.4);
 }
 
-/* Grade de valores (LOBP · Budget · Forecast) */
+/* Grade de valores (LOBP · Bdgt · Fcst) */
 [data-bg="dark"] .vg { background: rgba(255,255,255,.05); }
 [data-bg="dark"] .vg,
 [data-bg="dark"] .vals,

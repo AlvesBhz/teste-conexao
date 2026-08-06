@@ -118,6 +118,27 @@
       <h2 id="treeTitleText">Mill Production - Salobo</h2>
     </div>
 
+    <!-- Painel "Top 15 Perdas" — fixo à esquerda do viewport (irmão de
+         .tree-world: não sofre pan/zoom da árvore). Usa os mesmos dados
+         já buscados pra árvore (respeita o filtro VDT atual); o combo de
+         comparação só recalcula este painel, não mexe nos cards. -->
+    <aside class="loss-panel" id="lossPanel">
+      <div class="loss-panel-head">
+        <h3 data-i18n="loss.title">Top 15 Perdas</h3>
+        <div class="loss-compare-select-wrap">
+          <select id="lossCompareSelect" class="loss-compare-select">
+            <option value="fcst_bdgt" data-i18n="loss.cmp.fcstBdgt">Fcst x Bdgt</option>
+            <option value="fcst_lobp" data-i18n="loss.cmp.fcstLobp">Fcst x LOBP</option>
+            <option value="bdgt_lobp" data-i18n="loss.cmp.bdgtLobp">Bdgt x LOBP</option>
+          </select>
+          <svg width="9" height="9" viewBox="0 0 16 16" fill="none" class="loss-compare-caret"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
+        </div>
+      </div>
+      <div class="loss-list" id="lossList">
+        <div class="loss-empty" data-i18n="loss.loading">Carregando…</div>
+      </div>
+    </aside>
+
     <!-- Legenda fixa (positivo/negativo) -->
     <div class="tree-legend">
       <span class="legend-item"><span class="dot green"></span> <span data-i18n="legend.favorable">Positivo</span></span>
@@ -217,12 +238,18 @@
         'zoom.out': 'Afastar',
         'zoom.fit': 'Enquadrar tudo',
         'lbl.lobp': 'LOBP',
-        'lbl.budget': 'Orçamento',
-        'lbl.forecast': 'Previsão',
+        'lbl.budget': 'Bdgt',
+        'lbl.forecast': 'Fcst',
         'lbl.vs': 'vs',
-        'lbl.bud': 'ORÇ',
+        'lbl.bud': 'Bdgt',
         'filter.label': 'VDT:',
         'treeTitle.eyebrow': 'Árvore selecionada',
+        'loss.title': 'Top 15 Perdas',
+        'loss.cmp.fcstBdgt': 'Fcst x Bdgt',
+        'loss.cmp.fcstLobp': 'Fcst x LOBP',
+        'loss.cmp.bdgtLobp': 'Bdgt x LOBP',
+        'loss.empty': 'Nenhuma perda neste comparativo.',
+        'loss.loading': 'Carregando…',
       },
       'en': {
         'settings.btnTitle': 'Settings',
@@ -240,12 +267,18 @@
         'zoom.out': 'Zoom out',
         'zoom.fit': 'Fit all',
         'lbl.lobp': 'LOBP',
-        'lbl.budget': 'Budget',
-        'lbl.forecast': 'Forecast',
+        'lbl.budget': 'Bdgt',
+        'lbl.forecast': 'Fcst',
         'lbl.vs': 'vs',
-        'lbl.bud': 'BUD',
+        'lbl.bud': 'Bdgt',
         'filter.label': 'VDT:',
         'treeTitle.eyebrow': 'Selected tree',
+        'loss.title': 'Top 15 Losses',
+        'loss.cmp.fcstBdgt': 'Fcst x Bdgt',
+        'loss.cmp.fcstLobp': 'Fcst x LOBP',
+        'loss.cmp.bdgtLobp': 'Bdgt x LOBP',
+        'loss.empty': 'No losses in this comparison.',
+        'loss.loading': 'Loading…',
       }
     };
 
@@ -283,7 +316,7 @@
 
     // Os cards da árvore são montados pelo app.js no DOMContentLoaded (ainda
     // não existem quando este script roda). Reaplica a tradução depois que
-    // eles nascerem, para os labels fixos (LOBP/Budget/Forecast/vs/BUD)
+    // eles nascerem, para os labels fixos (LOBP/Bdgt/Fcst/vs)
     // saírem já no idioma certo.
     document.addEventListener('DOMContentLoaded', function () {
       translatePage(document.documentElement.lang);
