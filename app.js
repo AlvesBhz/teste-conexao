@@ -860,9 +860,17 @@ const fmtLobp = formatValuePlain(
     // continua proporcionalmente correta independente da direção de
     // ordenação escolhida pelo usuário.
     const maxDelta = Math.max(...entries.map((e) => e.rawDelta));
-    const sorted = [...entries].sort((a, b) =>
-      lossSortDir === 'asc' ? a.rawDelta - b.rawDelta : b.rawDelta - a.rawDelta
-    );
+
+    // Perdas e ganhos nunca se misturam na lista: perdas sempre formam
+    // o primeiro bloco, ganhos o segundo — só a ordem DENTRO de cada
+    // bloco inverte com o toggle (crescente = menor impacto primeiro,
+    // decrescente = maior impacto primeiro, igual nos dois blocos).
+    const byImpact = lossSortDir === 'asc'
+      ? (a, b) => a.rawDelta - b.rawDelta
+      : (a, b) => b.rawDelta - a.rawDelta;
+    const perdas = entries.filter((e) => !e.variation.favorable).sort(byImpact);
+    const ganhos = entries.filter((e) => e.variation.favorable).sort(byImpact);
+    const sorted = [...perdas, ...ganhos];
 
     list.innerHTML = sorted.map(({ node, actual, reference, variation, rawDelta }) => {
       const fmtDelta     = formatValuePlain(rawDelta,   node.NodeType, node.VL_FATOR, node.SG_DECIMAL);

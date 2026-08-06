@@ -536,7 +536,7 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
   top: 16px;
   left: 16px;
   bottom: 16px;
-  width: 300px;
+  width: var(--loss-panel-w);
   max-width: calc(100% - 32px);
   display: flex;
   flex-direction: column;
@@ -649,7 +649,18 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
   display: flex;
   flex-direction: column;
   gap: 11px;
+  /* Barra de rolagem fina e discreta (Firefox) — trilho invisível,
+     polegar no tom do próprio painel em vez do scrollbar bruto do SO. */
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 }
+.loss-list::-webkit-scrollbar { width: 6px; }
+.loss-list::-webkit-scrollbar-track { background: transparent; }
+.loss-list::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 100px;
+}
+.loss-list::-webkit-scrollbar-thumb:hover { background: var(--vbm-blue-light); }
 
 .loss-row { display: flex; flex-direction: column; gap: 5px; cursor: default; }
 .loss-row-top {
@@ -710,13 +721,14 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
      Continua ao lado da árvore (não empilhado) pra getReservedLeftPx()
      em app.js seguir reservando só largura, sem precisar de lógica
      extra pra reserva vertical. */
-  .loss-panel { width: 200px; top: 76px; }
+  .tree-viewport { --loss-panel-w: 200px; }
+  .loss-panel { top: 76px; }
   .loss-panel-head { padding: 11px 12px 10px; }
   .loss-list { padding: 10px 11px 12px; gap: 9px; }
 }
 
 @media (max-width: 460px) {
-  .loss-panel { width: 160px; }
+  .tree-viewport { --loss-panel-w: 160px; }
   .loss-row-name, .loss-row-value { font-size: .66rem; }
 }
 
@@ -828,6 +840,11 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
    ============================================================ */
 
 .tree-viewport {
+  /* Largura do painel "Perdas & Ganhos", num único lugar — .loss-panel
+     e .viewport-hint (que precisa desviar dele) leem daqui em vez de
+     duplicar o valor em dois seletores. Ajustada nos mesmos breakpoints
+     do painel logo abaixo. */
+  --loss-panel-w: 300px;
   position: relative;
   margin: 20px 36px 28px;
   height: calc(100vh - 112px);   /* AJUSTE: era calc(100vh - 178px) — sem a faixa de toolbar, sobra mais altura */
@@ -922,7 +939,10 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
 
 .viewport-hint {
   position: absolute;
-  left: 14px;
+  /* Começa logo depois do painel "Perdas & Ganhos" (mesma variável que
+     define a largura dele) — nunca fica atrás/embaixo do painel,
+     independente do breakpoint. */
+  left: calc(16px + var(--loss-panel-w) + 16px);
   bottom: 14px;
   font-size: 10.5px;
   font-weight: 500;
@@ -1257,6 +1277,11 @@ body[data-bg="dark"] {
   border-color: rgba(255,255,255,.1);
   box-shadow: 0 8px 28px rgba(0,0,0,.35);
 }
+/* Scrollbar clara translúcida sobre o vidro escuro — sem isso o
+   scrollbar padrão do SO (cinza/branco chapado) destoa muito do painel. */
+[data-bg="dark"] .loss-list { scrollbar-color: rgba(255,255,255,.18) transparent; }
+[data-bg="dark"] .loss-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,.18); }
+[data-bg="dark"] .loss-list::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.32); }
 [data-bg="dark"] .loss-panel-head { border-bottom-color: rgba(255,255,255,.09); }
 [data-bg="dark"] .loss-panel-head h3 { color: #fff; }
 [data-bg="dark"] .loss-compare-select {
