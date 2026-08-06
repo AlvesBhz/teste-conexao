@@ -781,9 +781,8 @@ const fmtLobp = formatValuePlain(
   // usuário é obrigado a escolher apenas um valor" já é garantido pelo
   // próprio elemento. Aqui só populamos as opções com dados reais
   // (vindos de /api/filtros-vdt e /api/filtros-ano) e garantimos que
-  // eles SEMPRE nascem com um valor selecionado (o primeiro da lista),
-  // nunca em branco.
-  async function loadOptionsFiltro(selectId, url, rowKey, logTag) {
+  // eles SEMPRE nascem com um valor selecionado.
+  async function loadOptionsFiltro(selectId, url, rowKey, logTag, preferredValue) {
     const select = document.getElementById(selectId);
     if (!select) return;
 
@@ -805,10 +804,14 @@ const fmtLobp = formatValuePlain(
         .map((v) => `<option value="${v}">${v}</option>`)
         .join('');
 
-      // Sempre inicia com o primeiro valor da lista selecionado (no
-      // filtro de Ano, a lista já vem ordenada decrescente — logo o
-      // primeiro é o ano mais recente).
-      select.value = valores[0];
+      // Preferência de valor inicial (ex.: VDT default "Mine Production
+      // - Salobo") só é aplicada se ela realmente existir na lista
+      // vinda do backend; senão cai no 1º valor (no filtro de Ano a
+      // lista já vem ordenada decrescente — logo o 1º é o ano mais
+      // recente daquela VDT).
+      select.value = (preferredValue != null && valores.some((v) => String(v) === String(preferredValue)))
+        ? preferredValue
+        : valores[0];
     } catch (err) {
       // Falhou a busca da lista de filtros: mantém as opções fixas que
       // já vieram no HTML (fallback), pra tela não ficar sem nenhuma opção.
@@ -816,8 +819,25 @@ const fmtLobp = formatValuePlain(
     }
   }
 
-  const loadVDTFiltros = () => loadOptionsFiltro('cmbVDT', '/api/filtros-vdt', 'NM_VDT', 'VDT');
-  const loadAnoFiltros = () => loadOptionsFiltro('cmbAno', '/api/filtros-ano', 'ANO', 'Ano');
+  const loadVDTFiltros = () =>
+    loadOptionsFiltro('cmbVDT', '/api/filtros-vdt', 'NM_VDT', 'VDT', 'Mine Production - Salobo');
+
+  // O Ano é um recorte da VDT selecionada (VDT é o filtro mandatório):
+  // a lista de anos vem escopada pra VDT atual (?nm_vdt=...) — troque
+  // de VDT e a lista de anos é buscada de novo (ver attachFilterEvents).
+  const loadAnoFiltros = (nmVDT) =>
+    loadOptionsFiltro('cmbAno', `/api/filtros-ano?nm_vdt=${encodeURIComponent(nmVDT || '')}`, 'ANO', 'Ano');
+
+  // Se a VDT atual só tiver 1 ano disponível, não faz sentido abrir um
+  // dropdown com uma lista vazia (a lista já omite o valor selecionado
+  // — ver renderList em setupCustomDropdown) — trava o botão-gatilho
+  // nesse caso, igual ao estado de "carregando" (trigger.disabled).
+  function updateAnoTriggerAvailability() {
+    const select  = document.getElementById('cmbAno');
+    const trigger = document.getElementById('anoTrigger');
+    if (!select || !trigger) return;
+    trigger.disabled = select.options.length <= 1;
+  }
 
   function showViewportError(msg) {
     clearViewportError();
@@ -836,7 +856,7 @@ const fmtLobp = formatValuePlain(
   // reconstrói a árvore do zero — sem precisar de um botão "Aplicar
   // Filtro" separado. O select em si fica oculto (ver .vdt-dropdown);
   // quem dá feedback visual de "carregando" pro usuário é o botão-gatilho.
-  function attachSelectReload(selectId, triggerId) {
+  function attachSelectReload(selectId, triggerId, onBeforeReload) {
     const select  = document.getElementById(selectId);
     const trigger = document.getElementById(triggerId);
     if (!select) return;
@@ -846,6 +866,7 @@ const fmtLobp = formatValuePlain(
       select.disabled = true;
       if (trigger) trigger.disabled = true;
       try {
+        if (onBeforeReload) await onBeforeReload();
         await loadTreeAndRender({ isReload: true });
       } finally {
         select.disabled = false;
@@ -854,7 +875,17 @@ const fmtLobp = formatValuePlain(
     });
   }
 
-  const attachFilterEvents    = () => attachSelectReload('cmbVDT', 'vdtTrigger');
+  // VDT é o filtro mandatório e o de Ano é sempre um recorte dela (ver
+  // loadAnoFiltros): trocar de VDT precisa re-escopar a lista de anos
+  // pra ela ANTES de recarregar a árvore, já que fetchTreeData lê
+  // cmbAno.value pra montar a query — e travar (ou destravar) o botão
+  // de Ano se a nova VDT só tiver 1 ano disponível (ver
+  // updateAnoTriggerAvailability).
+  const attachFilterEvents = () => attachSelectReload('cmbVDT', 'vdtTrigger', async () => {
+    await loadAnoFiltros(document.getElementById('cmbVDT').value);
+    syncAnoTriggerLabel();
+    updateAnoTriggerAvailability();
+  });
   const attachAnoFilterEvents = () => attachSelectReload('cmbAno', 'anoTrigger');
 
   // ── 13.0.5 DROPDOWN CUSTOMIZADO (VDT e Ano) ──────────────────
@@ -1268,12 +1299,13 @@ const fmtLobp = formatValuePlain(
     attachEvents();
     setupConnectorHighlight();
 
-    // Popula os combos com os valores reais de NM_VDT/ANO vindos do
-    // backend (com fallback pras opções fixas do HTML se a busca
-    // falhar) e já deixa o 1º valor de cada um selecionado. Os dois
-    // são independentes (VDT não depende do ano nem vice-versa), então
-    // buscam em paralelo.
-    await Promise.all([loadVDTFiltros(), loadAnoFiltros()]);
+    // Popula o combo de VDT primeiro (default "Mine Production -
+    // Salobo" se existir na lista real) e só then o de Ano, já
+    // escopado pra essa VDT — o Ano é sempre um recorte da VDT
+    // (filtro mandatório), nunca o contrário, então não dá pra buscar
+    // os dois em paralelo aqui.
+    await loadVDTFiltros();
+    await loadAnoFiltros(document.getElementById('cmbVDT').value);
 
     attachFilterEvents();
     attachAnoFilterEvents();
@@ -1281,6 +1313,7 @@ const fmtLobp = formatValuePlain(
     attachAnoDropdownEvents();
     syncVdtTriggerLabel(); // reflete o valor real definido por loadVDTFiltros()
     syncAnoTriggerLabel(); // reflete o valor real definido por loadAnoFiltros()
+    updateAnoTriggerAvailability(); // trava o combo de Ano se a VDT default só tiver 1 ano
     attachLossPanelEvents();
 
     await loadTreeAndRender();

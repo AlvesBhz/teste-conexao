@@ -142,7 +142,12 @@ async function getListaVDT() {
 // popular o combo "Selecione o Ano" (ver /api/filtros-ano). YEAR(...)
 // já extrai o ano de qualquer DATE/TIMESTAMP, e o DISTINCT antes do
 // ORDER BY elimina duplicidade de datas do mesmo ano.
-async function getListaAnos() {
+// A VDT é o filtro mandatório: o Ano é sempre um RECORTE da VDT
+// selecionada (nunca o contrário), então a lista de anos só traz os
+// anos que aquela VDT específica realmente possui — se a VDT só tiver
+// dado em 2026, a lista devolvida tem 1 item só, e o combo de Ano fica
+// travado nesse único valor (ver app.js).
+async function getListaAnos(nmVDT = null) {
 
   const { client, session } = await createSession();
 
@@ -152,12 +157,19 @@ async function getListaAnos() {
 
   try {
 
-    const query = await session.executeStatement(`
+    let sql = `
       SELECT DISTINCT YEAR(DT_REF) AS ANO
       FROM ${catalog}.${schema}.${table}
       WHERE DT_REF IS NOT NULL
-      ORDER BY ANO DESC
-    `);
+    `;
+
+    if (nmVDT) {
+      sql += ` AND NM_VDT = '${nmVDT.replace(/'/g, "''")}'\n`;
+    }
+
+    sql += ` ORDER BY ANO DESC`;
+
+    const query = await session.executeStatement(sql);
 
     const rows = await query.fetchAll();
 
@@ -229,7 +241,9 @@ app.get("/api/filtros-vdt", async (req, res) => {
 app.get("/api/filtros-ano", async (req, res) => {
   try {
 
-    const dados = await getListaAnos();
+    const nmVDT = req.query.nm_vdt || null;
+
+    const dados = await getListaAnos(nmVDT);
 
     res.json(dados);
 

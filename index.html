@@ -54,19 +54,22 @@
              mudam nada); o usuário só interage com o botão + lista. -->
         <div class="vdt-dropdown" id="vdtDropdown">
           <button type="button" id="vdtTrigger" class="vdt-trigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="vdtDropdownList">
-            <span id="vdtTriggerLabel">Mill Production - Salobo</span>
+            <span id="vdtTriggerLabel">Mine Production - Salobo</span>
             <svg width="10" height="10" viewBox="0 0 16 16" fill="none" class="vdt-trigger-caret"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
           </button>
           <ul id="vdtDropdownList" class="vdt-dropdown-list" role="listbox" aria-label="Selecionar VDT" hidden></ul>
         </div>
 
+        <!-- "Mine Production - Salobo" primeiro: default esperado ao
+             carregar a página (ver preferredValue em loadVDTFiltros,
+             app.js) — também serve de fallback se /api/filtros-vdt falhar. -->
         <select id="cmbVDT" class="vdt-native-select" tabindex="-1" aria-hidden="true">
-          <option value="Mill Production - Salobo">
-            Mill Production - Salobo
-          </option>
-
           <option value="Mine Production - Salobo">
             Mine Production - Salobo
+          </option>
+
+          <option value="Mill Production - Salobo">
+            Mill Production - Salobo
           </option>
         </select>
       </div>
@@ -152,7 +155,7 @@
          enquanto o usuário navega. -->
     <div class="tree-title-badge" id="treeTitleBar">
       <span class="tree-title-eyebrow" data-i18n="treeTitle.eyebrow">Árvore selecionada</span>
-      <h2 id="treeTitleText">Mill Production - Salobo</h2>
+      <h2 id="treeTitleText">Mine Production - Salobo</h2>
       <span id="treeTitleYear"></span>
     </div>
 

@@ -315,7 +315,10 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
   border-color: var(--blue);
   box-shadow: 0 0 0 3px rgba(60,181,229,.15);
 }
-.vdt-trigger:disabled { opacity: .55; cursor: wait; pointer-events: none; }
+/* :disabled cobre 2 casos: carregando (temporário) e sem alternativa
+   pra oferecer (ex.: Ano quando a VDT selecionada só tem 1 ano — ver
+   updateAnoTriggerAvailability em app.js) — "not-allowed" serve pros dois. */
+.vdt-trigger:disabled { opacity: .55; cursor: not-allowed; pointer-events: none; }
 .vdt-dropdown.open .vdt-trigger { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(60,181,229,.15); }
 .vdt-dropdown.open .vdt-trigger-caret { transform: rotate(180deg); }
 
