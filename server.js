@@ -90,11 +90,26 @@ async function closeSessionQuietly() {
 // client compartilhado traria.
 let queue = Promise.resolve();
 
+// Instrumentação: separa o tempo de OBTER a sessão (handshake OAuth +
+// abertura — pago só na 1ª consulta do processo) do tempo de EXECUTAR a
+// consulta (que inclui a partida do SQL Warehouse, se ele estiver
+// auto-suspenso). Sem essa separação é impossível saber, em produção,
+// se o primeiro carregamento lento é conexão, warehouse frio ou a query
+// em si. Aparece no log da app como [sql].
 async function executeOnSession(sql) {
+  const tSession = Date.now();
   const { session } = await getSession();
+  const msSession = Date.now() - tSession;
+
+  const tQuery = Date.now();
   const query = await session.executeStatement(sql);
   try {
-    return await query.fetchAll();
+    const rows = await query.fetchAll();
+    const primeiraLinha = sql.trim().split("\n")[0].trim().slice(0, 48);
+    console.log(
+      `[sql] sessão=${msSession}ms query=${Date.now() - tQuery}ms linhas=${rows.length} :: ${primeiraLinha}`
+    );
+    return rows;
   } finally {
     await query.close();
   }
@@ -164,7 +179,12 @@ async function getTreeData(nmVDT = null, ano = null) {
   // string, então não precisa (nem faz sentido) de escaping de aspas.
   const where = [];
   if (nmVDT) where.push(`NM_VDT = '${nmVDT.replace(/'/g, "''")}'`);
-  if (ano !== null) where.push(`YEAR(DT_REF) = ${ano}`);
+  // Intervalo em vez de YEAR(DT_REF) = ano: aplicar função na coluna
+  // torna o predicado não-sargável e impede o Delta/Spark de podar
+  // partições e pular arquivos pelas estatísticas de min/max — o motor
+  // acaba lendo a tabela inteira para depois descartar. A comparação
+  // por faixa preserva exatamente o mesmo conjunto de linhas.
+  if (ano !== null) where.push(`DT_REF >= '${ano}-01-01' AND DT_REF < '${ano + 1}-01-01'`);
   if (where.length) sql += `WHERE ${where.join(" AND ")}\n`;
 
   sql += `
@@ -196,6 +216,34 @@ async function getListaVDT() {
     WHERE NM_VDT IS NOT NULL
     ORDER BY NM_VDT
   `));
+}
+
+// Matriz de filtros: TODOS os pares (VDT, ano) existentes numa consulta
+// só. Antes eram duas idas ao warehouse — lista de VDTs e lista de anos
+// da VDT escolhida — e a de anos ainda era refeita a cada troca de VDT.
+// O resultado é minúsculo (nº de VDTs × nº de anos), então trazer tudo
+// de uma vez sai mais barato que buscar por partes: o boot economiza uma
+// consulta e a troca de VDT no front passa a não precisar de requisição
+// nenhuma para montar o combo de Ano.
+async function getFilterMatrix() {
+  return withCache("filter-matrix", async () => {
+    const rows = await runQuery(`
+      SELECT DISTINCT NM_VDT, YEAR(DT_REF) AS ANO
+      FROM ${tableRef()}
+      WHERE NM_VDT IS NOT NULL AND DT_REF IS NOT NULL
+      ORDER BY NM_VDT, ANO DESC
+    `);
+
+    const anosPorVdt = {};
+    rows.forEach((r) => {
+      if (r.NM_VDT == null || r.ANO == null) return;
+      (anosPorVdt[r.NM_VDT] = anosPorVdt[r.NM_VDT] || []).push(Number(r.ANO));
+    });
+    // Mais recente primeiro (não confia só no ORDER BY do motor).
+    Object.values(anosPorVdt).forEach((anos) => anos.sort((a, b) => b - a));
+
+    return { vdts: Object.keys(anosPorVdt).sort(), anosPorVdt };
+  });
 }
 
 // Anos distintos da coluna DT_REF, mais recente primeiro — usado pra
@@ -307,12 +355,11 @@ app.get("/api/filtros-ano", async (req, res) => {
 app.get("/api/bootstrap", async (req, res) => {
   try {
 
+    const tTotal = Date.now();
     const preferida = req.query.vdt_preferido || null;
 
-    const vdtRows = await getListaVDT();
-    const vdts = vdtRows
-      .map((r) => r && r.NM_VDT)
-      .filter((v) => v != null && String(v).trim() !== "");
+    // 1 consulta (cacheada) resolve VDTs E anos de todas elas.
+    const { vdts, anosPorVdt } = await getFilterMatrix();
 
     const vdtSelecionada =
       (preferida && vdts.includes(preferida)) ? preferida : (vdts[0] || null);
@@ -320,20 +367,21 @@ app.get("/api/bootstrap", async (req, res) => {
     // Sem nenhuma VDT na tabela não há o que carregar — devolve a
     // estrutura vazia e deixa o front exibir a mensagem de "sem dados".
     if (!vdtSelecionada) {
-      return res.json({ vdts: [], vdtSelecionada: null, anos: [], anoSelecionado: null, arvore: [] });
+      return res.json({ vdts: [], anosPorVdt: {}, vdtSelecionada: null, anos: [], anoSelecionado: null, arvore: [] });
     }
 
-    const anoRows = await getListaAnos(vdtSelecionada);
-    const anos = anoRows
-      .map((r) => r && r.ANO)
-      .filter((v) => v != null);
-
     // Lista já vem ordenada decrescente: o 1º é o ano mais recente.
+    const anos = anosPorVdt[vdtSelecionada] || [];
     const anoSelecionado = anos.length ? anos[0] : null;
 
     const arvore = await getTreeData(vdtSelecionada, anoSelecionado);
 
-    res.json({ vdts, vdtSelecionada, anos, anoSelecionado, arvore });
+    console.log(`[api] /api/bootstrap total=${Date.now() - tTotal}ms nos=${arvore.length}`);
+
+    // anosPorVdt vai junto de propósito: com a matriz inteira em mãos,
+    // trocar de VDT no front não precisa de requisição nenhuma para
+    // remontar o combo de Ano.
+    res.json({ vdts, anosPorVdt, vdtSelecionada, anos, anoSelecionado, arvore });
 
   } catch (err) {
 

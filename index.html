@@ -19,6 +19,24 @@
   <script>/* Anti-flash: restaura o tema Business antes do 1º paint */
   (function(){try{if(localStorage.getItem('vdt-theme')==='dark'){document.documentElement.style.background='linear-gradient(145deg,#1a1a1a 0%,#0d2640 100%)'}}catch(e){}})();
   </script>
+  <script>
+  /* Dispara a consulta inicial JÁ, em paralelo com o download de
+     d3.v7.min.js (273KB) e app.js. Sem isto o fetch só saía depois de
+     todo o JS ter baixado e parseado — medido em ~570ms de espera antes
+     do request sequer partir, tempo que soma direto no primeiro
+     carregamento e que é puro desperdício: a consulta não depende de
+     nenhum código da página. app.js consome esta promise em vez de
+     refazer o fetch (ver init()). */
+  (function () {
+    var vdt = 'Mine Production - Salobo'; // VDT default da tela
+    window.__VDT_DEFAULT = vdt;
+    try {
+      window.__VDT_BOOT = fetch('/api/bootstrap?vdt_preferido=' + encodeURIComponent(vdt))
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .catch(function () { return null; }); // app.js cai no caminho em etapas
+    } catch (e) { /* sem fetch: app.js segue pelo caminho antigo */ }
+  })();
+  </script>
 </head>
 
 <body>
@@ -27,7 +45,11 @@
   <header class="topbar">
     <div class="topbar-left">
       <a href="#" class="logo">
-        <img src="assets/vale-logo.svg" alt="Vale" class="logo-img" />
+        <!-- O arquivo assets/vale-logo.svg não existe no repositório e
+             retorna 404 em todo carregamento. Enquanto ele não for
+             adicionado, o onerror esconde o ícone de imagem quebrada em
+             vez de exibi-lo ao usuário. -->
+        <img src="assets/vale-logo.svg" alt="Vale" class="logo-img" onerror="this.style.display='none'" />
       </a>
       <span class="header-divider"></span>
       <h1 class="header-title">Value Driver Tree</h1>

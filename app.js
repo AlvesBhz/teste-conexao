@@ -86,7 +86,10 @@
 
   // VDT que a tela tenta selecionar ao abrir (só é aplicada se existir
   // de fato na lista real vinda do backend — ver /api/bootstrap).
-  const DEFAULT_VDT = 'Mine Production - Salobo';
+  // Definida no <head> do index.html, que precisa dela para disparar a
+  // consulta inicial antes deste arquivo sequer ter baixado; aqui só
+  // lemos de volta, mantendo um único lugar de definição.
+  const DEFAULT_VDT = window.__VDT_DEFAULT || 'Mine Production - Salobo';
 
   // Normalização das linhas cruas da API — mesma para /api/tree e para
   // a árvore que vem embutida em /api/bootstrap, então mora num lugar só.
@@ -912,8 +915,19 @@ const fmtLobp = formatValuePlain(
   // cmbAno.value pra montar a query. O combo de Ano continua sempre
   // clicável — só mostra os anos que aquela VDT realmente tem (mesmo
   // que seja 1 único).
+  // Anos disponíveis por VDT, entregues inteiros pelo /api/bootstrap.
+  // Com isso trocar de VDT remonta o combo de Ano em memória, sem ida
+  // ao servidor (antes cada troca custava uma consulta a /api/filtros-ano).
+  let ANOS_POR_VDT = null;
+
   const attachFilterEvents = () => attachSelectReload('cmbVDT', 'vdtTrigger', async () => {
-    await loadAnoFiltros(document.getElementById('cmbVDT').value);
+    const nmVDT = document.getElementById('cmbVDT').value;
+    const anosLocais = ANOS_POR_VDT && ANOS_POR_VDT[nmVDT];
+    if (anosLocais && anosLocais.length) {
+      fillSelect('cmbAno', anosLocais);
+    } else {
+      await loadAnoFiltros(nmVDT); // fallback: matriz indisponível
+    }
     syncAnoTriggerLabel();
   });
   const attachAnoFilterEvents = () => attachSelectReload('cmbAno', 'anoTrigger');
@@ -1342,11 +1356,14 @@ const fmtLobp = formatValuePlain(
     // VDTs → anos daquela VDT → árvore), somando 3 latências de rede
     // antes do 1º card aparecer — e as duas primeiras só existiam pra
     // descobrir QUAL VDT/ano carregar, coisa que o servidor resolve.
+    // A requisição já foi disparada no <head> (window.__VDT_BOOT), em
+    // paralelo com o download do JS — aqui só aguardamos a resposta.
     let boot = null;
     try {
-      const res = await fetch(`/api/bootstrap?vdt_preferido=${encodeURIComponent(DEFAULT_VDT)}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      boot = await res.json();
+      boot = window.__VDT_BOOT
+        ? await window.__VDT_BOOT
+        : await fetch(`/api/bootstrap?vdt_preferido=${encodeURIComponent(DEFAULT_VDT)}`)
+            .then((r) => (r.ok ? r.json() : null));
     } catch (err) {
       console.error('[VDT] /api/bootstrap indisponível; caindo no carregamento em etapas:', err);
     }
@@ -1354,6 +1371,7 @@ const fmtLobp = formatValuePlain(
     const bootOk = !!(boot && Array.isArray(boot.vdts) && boot.vdts.length);
 
     if (bootOk) {
+      ANOS_POR_VDT = boot.anosPorVdt || null;
       fillSelect('cmbVDT', boot.vdts, boot.vdtSelecionada);
       fillSelect('cmbAno', boot.anos || [], boot.anoSelecionado);
     } else {
