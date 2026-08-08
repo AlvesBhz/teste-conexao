@@ -13,7 +13,25 @@ try {
   console.warn("[perf] middleware 'compression' indisponível; servindo sem gzip.");
 }
 
-app.use(express.static(__dirname, { maxAge: "1d", etag: true }));
+// SEM maxAge: este projeto não tem cache-busting (nomes de arquivo sem
+// hash/versão) e ainda está em desenvolvimento ativo, com deploys
+// frequentes. Um maxAge alto aqui já causou um bug real em produção —
+// como express.static serve index.html automaticamente pra "/" (antes
+// da rota explícita abaixo), o Cache-Control de 1 dia pegava o PRÓPRIO
+// HTML de entrada; o navegador ficava até 24h preso numa versão antiga,
+// às vezes misturando HTML novo com JS/CSS velhos (ou vice-versa) —
+// exatamente o tipo de bug "fantasma" que não existe em nenhum commit
+// real. etag:true já garante requisição condicional (304 quando nada
+// mudou), o que é suficiente pra performance sem esse risco.
+//
+// index:false é o outro lado dessa correção: por padrão o express.static
+// responde SOZINHO a "GET /" servindo index.html (comportamento de
+// "diretório com index"), antes mesmo da rota explícita abaixo rodar —
+// então o Cache-Control:no-store definido ali nunca era de fato
+// aplicado (confirmado testando: sem index:false, "/" respondia com
+// "public, max-age=0" do middleware, e a rota explícita nunca era
+// alcançada). Com index:false, "/" cai direto na rota explícita.
+app.use(express.static(__dirname, { etag: true, index: false }));
 
 async function createSession() {
   const client = new DBSQLClient();
@@ -440,6 +458,11 @@ app.get("/api/test-auth", async (req, res) => {
 });
 
 app.get("/", (req, res) => {
+  // Cache-Control explícito: garante que o HTML de entrada NUNCA fique
+  // em cache no navegador do usuário, mesmo que o middleware acima
+  // mude no futuro — é o arquivo que referencia todo o resto (JS/CSS),
+  // então ele precisa ser sempre buscado fresco a cada visita.
+  res.set("Cache-Control", "no-store");
   res.sendFile(path.join(__dirname, "index.html"));
 });
 
