@@ -624,10 +624,10 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
 /* ---- CARD DE ACESSO A "PERDAS & GANHOS" ----
    Fica exatamente onde o painel completo ficava (canto superior
    esquerdo do viewport): o painel não aparece mais por padrão, só este
-   card compacto — e o painel completo abre NO MESMO LUGAR, como gaveta,
-   ao clicar nele. Formato quadrado (não pill) com o mesmo raio de
-   canto do painel (14px, ver .loss-panel) — mesma linguagem visual do
-   card que ele substitui, só recolhido. */
+   card compacto — e o painel completo abre NO MESMO LUGAR ao clicar
+   nele. Cantos quadrados (não pill) com o mesmo raio do painel (14px,
+   ver .loss-panel); ícone e texto lado a lado, mesma linguagem visual
+   do card que ele substitui, só recolhido. */
 .loss-trigger {
   position: absolute;
   top: 16px;
@@ -636,12 +636,11 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
      centralizado alcança a faixa do card e passaria por cima dele. */
   z-index: 16;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  justify-content: center;
-  gap: 9px;
-  width: 100px;
-  padding: 16px 10px;
+  gap: 11px;
+  width: 176px;
+  padding: 12px 14px;
   background: var(--surface);
   border: 1px solid var(--border-light);
   border-radius: 14px;
@@ -649,10 +648,10 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
   cursor: pointer;
   font-family: var(--font-poppins);
   font-weight: 600;
-  font-size: .68rem;
+  font-size: .74rem;
   line-height: 1.25;
   color: var(--vbm-blue-deep);
-  text-align: center;
+  text-align: left;
   transition: transform .25s var(--ease-spring), box-shadow .25s var(--ease-out),
               border-color .25s var(--ease-out), background .25s var(--ease-out);
 }
@@ -955,14 +954,14 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
 }
 
 @media (max-width: 880px) {
-  /* Gaveta sobreposta: não divide espaço com a árvore, então em telas
-     estreitas ela pode ocupar quase toda a largura em vez de encolher.
-     O card de acesso é pequeno e quadrado por natureza (100px):
-     continua com a mesma apresentação, só um pouco mais compacto. */
+  /* Painel sobreposto: não divide espaço com a árvore, então em telas
+     estreitas ele pode ocupar quase toda a largura em vez de encolher.
+     O card de acesso (ícone + texto lado a lado) continua com a mesma
+     apresentação, só um pouco mais compacto. */
   .tree-viewport { --loss-panel-w: min(86vw, 320px); }
   .loss-panel-head { padding: 11px 12px 10px; }
   .loss-list { padding: 10px 11px 12px; gap: 9px; }
-  .loss-trigger { width: 86px; padding: 12px 8px; gap: 7px; }
+  .loss-trigger { width: 152px; padding: 10px 12px; gap: 9px; }
   .loss-trigger-icon { width: 30px; height: 30px; }
 }
 
@@ -1531,12 +1530,16 @@ body[data-bg="dark"] {
   border-color: rgba(255,255,255,.1);
   box-shadow: 0 8px 28px rgba(0,0,0,.4);
 }
+/* Fundo SÓLIDO (não translúcido) — o card fica sobre a faixa de título
+   da árvore em telas estreitas; um fundo translúcido deixava o título
+   "vazar" por trás do texto do card. Mesma cor do .loss-panel que ele
+   abre, por consistência. */
 [data-bg="dark"] .loss-trigger {
-  background: rgba(255,255,255,.07);
+  background: #16202e;
   border-color: rgba(255,255,255,.14);
   color: #fff;
 }
-[data-bg="dark"] .loss-trigger:hover { border-color: var(--vbm-blue-light); background: rgba(255,255,255,.12); }
+[data-bg="dark"] .loss-trigger:hover { border-color: var(--vbm-blue-light); background: #1c2b3d; }
 [data-bg="dark"] .loss-trigger-icon { background: rgba(60,181,229,.22); color: var(--vbm-blue-light); }
 [data-bg="dark"] .loss-trigger:hover .loss-trigger-icon { background: var(--vbm-blue); color: #fff; }
 [data-bg="dark"] .loss-backdrop { background: rgba(0,0,0,.45); }
