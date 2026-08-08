@@ -7,11 +7,35 @@
   <title>Árvore de Direcionadores de Valor</title>
   <link href="https://fonts.googleapis.com" rel="preconnect"/>
   <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap" rel="stylesheet"/>
+  <!-- A fonte Poppins NÃO é carregada aqui: um <link rel="stylesheet">
+       no <head> entra no conjunto de folhas pendentes que bloqueiam a
+       EXECUÇÃO de <script src> clássicos — e app.js é um deles. Com o
+       fonts.googleapis.com inacessível (proxy corporativo, por exemplo)
+       a árvore só aparecia quando o request expirava: ~13s medidos,
+       contra ~0,3s com a fonte respondendo. Ela é injetada por JS no
+       fim do <body>, fora do caminho crítico. -->
   <link rel="stylesheet" href="style.css" />
   <!-- Estilo dos conectores e do tema Branco/Business vivem em style.css -->
   <script>/* Anti-flash: restaura o tema Business antes do 1º paint */
   (function(){try{if(localStorage.getItem('vdt-theme')==='dark'){document.documentElement.style.background='linear-gradient(145deg,#1a1a1a 0%,#0d2640 100%)'}}catch(e){}})();
+  </script>
+  <script>
+  /* Dispara a consulta inicial JÁ, em paralelo com o download de
+     d3.v7.min.js (273KB) e app.js. Sem isto o fetch só saía depois de
+     todo o JS ter baixado e parseado — medido em ~570ms de espera antes
+     do request sequer partir, tempo que soma direto no primeiro
+     carregamento e que é puro desperdício: a consulta não depende de
+     nenhum código da página. app.js consome esta promise em vez de
+     refazer o fetch (ver init()). */
+  (function () {
+    var vdt = 'Mine Production - Salobo'; // VDT default da tela
+    window.__VDT_DEFAULT = vdt;
+    try {
+      window.__VDT_BOOT = fetch('/api/bootstrap?vdt_preferido=' + encodeURIComponent(vdt))
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .catch(function () { return null; }); // app.js cai no caminho em etapas
+    } catch (e) { /* sem fetch: app.js segue pelo caminho antigo */ }
+  })();
   </script>
 </head>
 
@@ -21,7 +45,11 @@
   <header class="topbar">
     <div class="topbar-left">
       <a href="#" class="logo">
-        <img src="assets/vale-logo.svg" alt="Vale" class="logo-img" />
+        <!-- O arquivo assets/vale-logo.svg não existe no repositório e
+             retorna 404 em todo carregamento. Enquanto ele não for
+             adicionado, o onerror esconde o ícone de imagem quebrada em
+             vez de exibi-lo ao usuário. -->
+        <img src="assets/vale-logo.svg" alt="Vale" class="logo-img" onerror="this.style.display='none'" />
       </a>
       <span class="header-divider"></span>
       <h1 class="header-title">Value Driver Tree</h1>
@@ -43,43 +71,59 @@
     </div>
 
     <div class="filter-container">
-      <label for="cmbVDT" data-i18n="filter.label">VDT:</label>
+      <div class="filter-group">
+        <label for="vdtTrigger" data-i18n="filter.label">VDT:</label>
 
-      <select id="cmbVDT">
-        <option value="Mill Production - Salobo">
-          Mill Production - Salobo
-        </option>
+        <!-- Dropdown customizado: ao abrir, a lista mostra só as OUTRAS
+             VDTs (a atualmente aplicada não se repete dentro da própria
+             lista — já está exibida no botão fechado). O <select> nativo
+             abaixo continua sendo a fonte única de verdade dos dados/
+             eventos (loadVDTFiltros/attachFilterEvents em app.js não
+             mudam nada); o usuário só interage com o botão + lista. -->
+        <div class="vdt-dropdown" id="vdtDropdown">
+          <button type="button" id="vdtTrigger" class="vdt-trigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="vdtDropdownList">
+            <span id="vdtTriggerLabel">Mine Production - Salobo</span>
+            <svg width="10" height="10" viewBox="0 0 16 16" fill="none" class="vdt-trigger-caret"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
+          </button>
+          <ul id="vdtDropdownList" class="vdt-dropdown-list" role="listbox" aria-label="Selecionar VDT" hidden></ul>
+        </div>
 
-        <option value="Mine Production - Salobo">
-          Mine Production - Salobo
-        </option>
-      </select>
+        <!-- "Mine Production - Salobo" primeiro: default esperado ao
+             carregar a página (ver preferredValue em loadVDTFiltros,
+             app.js) — também serve de fallback se /api/filtros-vdt falhar. -->
+        <select id="cmbVDT" class="vdt-native-select" tabindex="-1" aria-hidden="true">
+          <option value="Mine Production - Salobo">
+            Mine Production - Salobo
+          </option>
 
-      <button id="btnAplicar" type="button">
-        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <path d="M3 4h10M5 8h6M7 12h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
-        </svg>
-        <span data-i18n="filter.apply">Aplicar Filtro</span>
-      </button>
+          <option value="Mill Production - Salobo">
+            Mill Production - Salobo
+          </option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label for="anoTrigger" data-i18n="filter.yearLabel">Ano:</label>
+
+        <!-- Mesmo componente/comportamento do dropdown de VDT (ver
+             comentário acima) — reaproveita as classes .vdt-dropdown/
+             .vdt-trigger/.vdt-dropdown-list, só trocando o <select>
+             nativo por trás (cmbAno) e os dados (loadAnoFiltros em
+             app.js, populados a partir de DT_REF). -->
+        <div class="vdt-dropdown" id="anoDropdown">
+          <button type="button" id="anoTrigger" class="vdt-trigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="anoDropdownList">
+            <span id="anoTriggerLabel">2026</span>
+            <svg width="10" height="10" viewBox="0 0 16 16" fill="none" class="vdt-trigger-caret"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
+          </button>
+          <ul id="anoDropdownList" class="vdt-dropdown-list" role="listbox" aria-label="Selecionar Ano" hidden></ul>
+        </div>
+
+        <select id="cmbAno" class="vdt-native-select" tabindex="-1" aria-hidden="true">
+          <option value="2026">2026</option>
+        </select>
+      </div>
     </div>
   </header>
-
-  <!-- FAIXA DE TÍTULO — nome da árvore atualmente aplicada, fixa entre
-       o header e a janela da árvore (atualiza ao clicar "Aplicar Filtro") -->
-  <div class="tree-title-bar" id="treeTitleBar">
-    <span class="tree-title-icon" aria-hidden="true">
-      <svg width="15" height="15" viewBox="0 0 20 20" fill="none">
-        <circle cx="6" cy="5" r="2.4" stroke="currentColor" stroke-width="1.5" />
-        <circle cx="14.5" cy="9.5" r="2.4" stroke="currentColor" stroke-width="1.5" />
-        <circle cx="14.5" cy="15.2" r="2.4" stroke="currentColor" stroke-width="1.5" />
-        <path d="M8 6.2h2.2c1 0 1.8.8 1.8 1.8v.2M12 9.5H8.4M12 15.2H8.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-      </svg>
-    </span>
-    <div class="tree-title-text">
-      <span class="tree-title-eyebrow" data-i18n="treeTitle.eyebrow">Árvore selecionada</span>
-      <h2 id="treeTitleText">Mill Production - Salobo</h2>
-    </div>
-  </div>
 
   <!-- PAINEL LATERAL DE CONFIGURAÇÕES (Theme + Language) -->
   <div class="settings-backdrop" id="settingsBackdrop"></div>
@@ -133,6 +177,88 @@
       <div class="tree-canvas" id="treeCanvas"></div>
     </div>
 
+    <!-- Título da árvore selecionada — badge fixo e centralizado no topo
+         do viewport. É irmão de .tree-world (não filho), então não sofre
+         o pan/zoom da árvore: fica sempre visível, no mesmo lugar,
+         enquanto o usuário navega. -->
+    <div class="tree-title-badge" id="treeTitleBar">
+      <span class="tree-title-eyebrow" data-i18n="treeTitle.eyebrow">Árvore selecionada</span>
+      <h2 id="treeTitleText">Mine Production - Salobo</h2>
+      <span id="treeTitleYear"></span>
+    </div>
+
+    <!-- Card de acesso ao painel "Perdas & Ganhos". O painel deixou de
+         ocupar a lateral esquerda do viewport: agora a árvore nasce com
+         a tela inteira e o painel só entra sob demanda, como gaveta. -->
+    <button type="button" class="loss-trigger" id="lossTrigger" aria-haspopup="dialog" aria-expanded="false" aria-controls="lossPanel">
+      <span class="loss-trigger-icon" aria-hidden="true">
+        <svg width="19" height="19" viewBox="0 0 20 20" fill="none">
+          <path d="M7 5h9M7 10h9M7 15h9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          <circle cx="3.4" cy="5" r="1.3" fill="currentColor"/>
+          <circle cx="3.4" cy="10" r="1.3" fill="currentColor"/>
+          <circle cx="3.4" cy="15" r="1.3" fill="currentColor"/>
+        </svg>
+      </span>
+      <span class="loss-trigger-text" data-i18n="loss.trigger">Visualizar Perdas &amp; Ganhos</span>
+    </button>
+
+    <!-- Fundo escurecido da gaveta — fecha ao clicar fora. -->
+    <div class="loss-backdrop" id="lossBackdrop"></div>
+
+    <!-- Painel "Perdas & Ganhos" — agora uma gaveta lateral direita
+         (irmão de .tree-world: não sofre pan/zoom da árvore). Usa os
+         mesmos dados já buscados pra árvore (respeita o filtro VDT
+         atual); combo de comparação e ordenação só recalculam este
+         painel, não mexem nos cards. Mostra TODOS os itens com dado
+         calculável (sem cap de quantidade) — itens com valor-base ou
+         valor-comparação nulo não entram na lista. -->
+    <aside class="loss-panel" id="lossPanel" role="dialog" aria-modal="false" aria-label="Perdas e Ganhos" aria-hidden="true">
+      <div class="loss-panel-head">
+        <div class="loss-panel-titlebar">
+          <h3 data-i18n="loss.title">Perdas &amp; Ganhos</h3>
+          <button type="button" class="loss-close" id="lossClose" aria-label="Fechar" data-i18n-aria="settings.close">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        <div class="loss-compare-select-wrap">
+          <select id="lossCompareSelect" class="loss-compare-select">
+            <option value="fcst_bdgt" data-i18n="loss.cmp.fcstBdgt">Fcst x Bdgt</option>
+            <option value="fcst_lobp" data-i18n="loss.cmp.fcstLobp">Fcst x LOBP</option>
+            <option value="bdgt_lobp" data-i18n="loss.cmp.bdgtLobp">Bdgt x LOBP</option>
+          </select>
+          <svg width="9" height="9" viewBox="0 0 16 16" fill="none" class="loss-compare-caret"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
+        </div>
+        <div class="loss-toolbar">
+          <span class="loss-toolbar-label" data-i18n="loss.timeFilter.label">Indicadores de tempo</span>
+          <div class="theme-toggle" role="group" aria-label="Apresentar indicadores de tempo">
+            <button type="button" class="theme-toggle-btn loss-time-btn active" data-time="show" data-i18n="loss.timeFilter.yes">Sim</button>
+            <button type="button" class="theme-toggle-btn loss-time-btn" data-time="hide" data-i18n="loss.timeFilter.no">Não</button>
+          </div>
+        </div>
+        <div class="loss-toolbar">
+          <span class="loss-toolbar-label" data-i18n="loss.sort.label">Ordenar por impacto</span>
+          <div class="loss-sort-group" role="group" aria-label="Ordenar por impacto">
+            <button type="button" class="loss-sort-btn active" data-sort="asc" title="Maiores perdas primeiro" data-i18n-title="loss.sort.ascTitle" aria-label="Maiores perdas primeiro" data-i18n-aria="loss.sort.ascTitle">
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 13V3M4 7l4-4 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button type="button" class="loss-sort-btn" data-sort="desc" title="Maiores ganhos primeiro" data-i18n-title="loss.sort.descTitle" aria-label="Maiores ganhos primeiro" data-i18n-aria="loss.sort.descTitle">
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M4 9l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <!-- Skeleton: fica visível enquanto o painel ainda não foi
+           calculado (a árvore tem prioridade — ver scheduleLossPanelRender
+           em app.js). Trocado pela lista real assim que ela renderiza. -->
+      <div class="loss-list" id="lossList">
+        <div class="loss-skeleton" aria-hidden="true">
+          <div class="loss-skel-row"></div><div class="loss-skel-row"></div>
+          <div class="loss-skel-row"></div><div class="loss-skel-row"></div>
+          <div class="loss-skel-row"></div><div class="loss-skel-row"></div>
+        </div>
+      </div>
+    </aside>
+
     <!-- Legenda fixa (positivo/negativo) -->
     <div class="tree-legend">
       <span class="legend-item"><span class="dot green"></span> <span data-i18n="legend.favorable">Positivo</span></span>
@@ -163,23 +289,35 @@
   <script src="d3.v7.min.js"></script>
   <script src="app.js"></script>
   <script>
-  // Faixa de título da árvore — reflete o VDT atualmente APLICADO
-  // (nome do <option> selecionado), não o que está só sendo escolhido
-  // no combo. Sincroniza no carregamento e a cada clique em "Aplicar Filtro".
+  /* Fonte Poppins injetada aqui, DEPOIS de app.js já ter sido executado
+     (ver comentário no <head>): assim ela nunca entra no caminho crítico
+     de renderização. A tela pinta imediatamente com a fonte de sistema
+     do fallback (--font-poppins em style.css) e o Poppins assume assim
+     que chegar — a URL já usa display=swap, então não há texto invisível
+     durante a troca. Se o Google Fonts estiver bloqueado na rede, a
+     aplicação simplesmente segue na fonte de sistema, sem travar. */
   (function () {
-    var select = document.getElementById('cmbVDT');
-    var titleEl = document.getElementById('treeTitleText');
-    var applyBtn = document.getElementById('btnAplicar');
-    if (!select || !titleEl) return;
-
-    function syncTitle() {
-      var opt = select.options[select.selectedIndex];
-      titleEl.textContent = (opt && opt.text.trim()) || select.value;
+    function carregarFonte() {
+      var l = document.createElement('link');
+      l.rel = 'stylesheet';
+      l.href = 'https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap';
+      document.head.appendChild(l);
     }
-
-    syncTitle();
-    applyBtn && applyBtn.addEventListener('click', syncTitle);
+    // Só DEPOIS do DOMContentLoaded: uma folha de estilo injetada
+    // enquanto o documento ainda está sendo parseado continua atrasando
+    // o próprio DOMContentLoaded — e é nele que app.js monta a árvore.
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', carregarFonte);
+    } else {
+      carregarFonte();
+    }
   })();
+  </script>
+  <script>
+  // Faixa de título da árvore (#treeTitleText) — sincronizada junto com
+  // o botão do filtro VDT por syncVdtTriggerLabel() em app.js (chamada
+  // após loadVDTFiltros() carregar os valores reais e a cada troca do
+  // <select>), pra evitar duas fontes de verdade divergindo entre si.
 
   // Painel de configurações — abre/fecha via engrenagem, fecha no backdrop/✕/Esc.
   (function () {
@@ -233,13 +371,26 @@
         'zoom.out': 'Afastar',
         'zoom.fit': 'Enquadrar tudo',
         'lbl.lobp': 'LOBP',
-        'lbl.budget': 'Orçamento',
-        'lbl.forecast': 'Previsão',
+        'lbl.budget': 'Bdgt',
+        'lbl.forecast': 'Fcst',
         'lbl.vs': 'vs',
-        'lbl.bud': 'ORÇ',
+        'lbl.bud': 'Bdgt',
         'filter.label': 'VDT:',
-        'filter.apply': 'Aplicar Filtro',
+        'filter.yearLabel': 'Ano:',
         'treeTitle.eyebrow': 'Árvore selecionada',
+        'loss.title': 'Perdas & Ganhos',
+        'loss.trigger': 'Visualizar Perdas & Ganhos',
+        'loss.cmp.fcstBdgt': 'Fcst x Bdgt',
+        'loss.cmp.fcstLobp': 'Fcst x LOBP',
+        'loss.cmp.bdgtLobp': 'Bdgt x LOBP',
+        'loss.empty': 'Nenhuma perda ou ganho neste comparativo.',
+        'loss.loading': 'Carregando…',
+        'loss.timeFilter.label': 'Indicadores de tempo',
+        'loss.timeFilter.yes': 'Sim',
+        'loss.timeFilter.no': 'Não',
+        'loss.sort.label': 'Ordenar por impacto',
+        'loss.sort.ascTitle': 'Maiores perdas primeiro',
+        'loss.sort.descTitle': 'Maiores ganhos primeiro',
       },
       'en': {
         'settings.btnTitle': 'Settings',
@@ -257,13 +408,26 @@
         'zoom.out': 'Zoom out',
         'zoom.fit': 'Fit all',
         'lbl.lobp': 'LOBP',
-        'lbl.budget': 'Budget',
-        'lbl.forecast': 'Forecast',
+        'lbl.budget': 'Bdgt',
+        'lbl.forecast': 'Fcst',
         'lbl.vs': 'vs',
-        'lbl.bud': 'BUD',
+        'lbl.bud': 'Bdgt',
         'filter.label': 'VDT:',
-        'filter.apply': 'Apply Filter',
+        'filter.yearLabel': 'Year:',
         'treeTitle.eyebrow': 'Selected tree',
+        'loss.title': 'Losses & Gains',
+        'loss.trigger': 'View Losses & Gains',
+        'loss.cmp.fcstBdgt': 'Fcst x Bdgt',
+        'loss.cmp.fcstLobp': 'Fcst x LOBP',
+        'loss.cmp.bdgtLobp': 'Bdgt x LOBP',
+        'loss.empty': 'No losses or gains in this comparison.',
+        'loss.loading': 'Loading…',
+        'loss.timeFilter.label': 'Time indicators',
+        'loss.timeFilter.yes': 'Yes',
+        'loss.timeFilter.no': 'No',
+        'loss.sort.label': 'Sort by impact',
+        'loss.sort.ascTitle': 'Biggest losses first',
+        'loss.sort.descTitle': 'Biggest gains first',
       }
     };
 
@@ -301,7 +465,7 @@
 
     // Os cards da árvore são montados pelo app.js no DOMContentLoaded (ainda
     // não existem quando este script roda). Reaplica a tradução depois que
-    // eles nascerem, para os labels fixos (LOBP/Budget/Forecast/vs/BUD)
+    // eles nascerem, para os labels fixos (LOBP/Bdgt/Fcst/vs)
     // saírem já no idioma certo.
     document.addEventListener('DOMContentLoaded', function () {
       translatePage(document.documentElement.lang);

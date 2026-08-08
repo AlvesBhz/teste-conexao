@@ -47,6 +47,11 @@
 
     // Escala usada na abertura, ao centralizar o nó raiz na página
     INITIAL_SCALE: 0.85,
+
+    // Escala usada ao focar um nó específico (clique num item do painel
+    // "Perdas & Ganhos") — mais próxima que INITIAL_SCALE pra facilitar
+    // a identificação do card em destaque.
+    FOCUS_SCALE: 1.2,
   };
 
   // ── 1. DADOS: busca da tabela Databricks via /api/tree ──────
@@ -67,15 +72,28 @@
 
   
 
-  async function fetchTreeData() {
-    const nmVDT = document.getElementById("cmbVDT").value;
-    const res= await fetch(`/api/tree?nm_vdt=${encodeURIComponent(nmVDT)}`);
-    if (!res.ok) {
-      let detail = '';
-      try { detail = (await res.json()).error || ''; } catch (e) {}
-      throw new Error(`Falha ao buscar /api/tree (HTTP ${res.status}) ${detail}`);
-    }
-    const rows = await res.json();
+  // Converte pra número preservando a ausência de dado: null/undefined/''
+  // viram `null` (sem informação), nunca 0 — só um 0 vindo da fonte de
+  // dados vira o número 0. É a base de toda a regra "nulo vs. zero"
+  // (ver formatValuePlain/calcVariation): tudo que é "sem dado" precisa
+  // continuar null até a hora de exibir, nunca ser silenciosamente
+  // convertido em zero no meio do caminho.
+  function toNullableNumber(value) {
+    if (value === null || value === undefined || value === '') return null;
+    const n = Number(value);
+    return Number.isNaN(n) ? null : n;
+  }
+
+  // VDT que a tela tenta selecionar ao abrir (só é aplicada se existir
+  // de fato na lista real vinda do backend — ver /api/bootstrap).
+  // Definida no <head> do index.html, que precisa dela para disparar a
+  // consulta inicial antes deste arquivo sequer ter baixado; aqui só
+  // lemos de volta, mantendo um único lugar de definição.
+  const DEFAULT_VDT = window.__VDT_DEFAULT || 'Mine Production - Salobo';
+
+  // Normalização das linhas cruas da API — mesma para /api/tree e para
+  // a árvore que vem embutida em /api/bootstrap, então mora num lugar só.
+  function mapTreeRows(rows) {
     return rows.map((r) => ({
       NodeID: r.NodeID,
       ParentID: r.ParentID,
@@ -85,46 +103,67 @@
       SG_DECIMAL: r.SG_DECIMAL,
       NodeType: inferNodeType(r.IndicatorName),
       DisplayOrder: r.DisplayOrder,
-      VL_PROJ: Number(r.VL_PROJ) || 0,
-      VL_ORC: Number(r.VL_ORC) || 0,
-      VL_LOBP: Number(r.VL_LOBP) || 0,
+      VL_PROJ: toNullableNumber(r.VL_PROJ),
+      VL_ORC: toNullableNumber(r.VL_ORC),
+      VL_LOBP: toNullableNumber(r.VL_LOBP),
     }));
   }
 
+  async function fetchTreeData() {
+    const nmVDT = document.getElementById("cmbVDT").value;
+    const anoSelect = document.getElementById("cmbAno");
+    const params = new URLSearchParams({ nm_vdt: nmVDT });
+    if (anoSelect && anoSelect.value) params.set('ano', anoSelect.value);
+    const res = await fetch(`/api/tree?${params.toString()}`);
+    if (!res.ok) {
+      let detail = '';
+      try { detail = (await res.json()).error || ''; } catch (e) {}
+      throw new Error(`Falha ao buscar /api/tree (HTTP ${res.status}) ${detail}`);
+    }
+    return mapTreeRows(await res.json());
+  }
 
-  // ── 2. FORMATAÇÃO DE VALORES (inalterado) ───────────────────
+
+  // ── 2. FORMATAÇÃO DE VALORES ─────────────────────────────────
   // Valor "só número" — sem prefixo (R$), sufixo (M) ou símbolo (%).
   // A unidade já fica implícita no título do indicador (ex.: "(tpa)", "(%)").
+  //
+  // Regra nulo vs. zero: `value === null` (sem informação na fonte) SEMPRE
+  // exibe "-", nunca "0" e nunca entra em conta alguma. Um 0 de verdade
+  // (número, não null) é formatado e tratado normalmente.
   function formatValuePlain(value, type, factor = 1, decimalFlag = 1) {
-    const finalValue = Number(value || 0) * Number(factor || 1);
-    const decimals = decimalFlag 
-
-    if (type === 'percentage') {
-        return finalValue.toLocaleString('pt-BR', {
-            minimumFractionDigits: decimals,
-            maximumFractionDigits: decimals
-        });
-    }
-
-    if (type === 'currency') {
-        return finalValue.toLocaleString('pt-BR', {
-            minimumFractionDigits: decimals,
-            maximumFractionDigits: decimals
-        });
-    }
-
+    if (value === null || value === undefined) return '-';
+    const finalValue = Number(value) * Number(factor || 1);
     return finalValue.toLocaleString('pt-BR', {
-        minimumFractionDigits: decimals,
-        maximumFractionDigits: decimals
+      minimumFractionDigits: decimalFlag,
+      maximumFractionDigits: decimalFlag,
     });
-}
+  }
 
+  // Percentual formatado no locale da aplicação (pt-BR: vírgula decimal),
+  // com sinal explícito — mesma base de cálculo de calcVariation.pct.
+  // `null`/`noData` vira "-", nunca "0%" nem um percentual inventado.
+  function formatPercentPtBR(pct) {
+    if (pct === null || pct === undefined) return '-';
+    const sign = pct >= 0 ? '+' : '';
+    return sign + pct.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
+  }
+
+  // Regra nulo vs. zero: se o valor base OU o de comparação for null (sem
+  // dado), não há variação calculável — retorna noData:true (quem
+  // consome isto deve exibir "-" no delta, sem seta/cor de favorável ou
+  // desfavorável, e excluir o item de rankings). Um 0 real (não-null)
+  // segue participando do cálculo normalmente — inclusive como
+  // referência (mantém o guard existente contra divisão por zero).
   function calcVariation(actual, reference, nodeId) {
-    if (!reference || reference === 0) return { pct: 0, favorable: true };
+    if (actual === null || actual === undefined || reference === null || reference === undefined) {
+      return { pct: null, favorable: null, noData: true };
+    }
+    if (!reference || reference === 0) return { pct: 0, favorable: true, noData: false };
     const pct = ((actual - reference) / Math.abs(reference)) * 100;
     const higherIsBad = [3, 5];
     const favorable = higherIsBad.includes(nodeId) ? pct <= 0 : pct >= 0;
-    return { pct, favorable };
+    return { pct, favorable, noData: false };
   }
 
   // ── 3. CONSTRUÇÃO DA ÁRVORE (inalterado) ────────────────────
@@ -192,15 +231,16 @@ const fmtLobp = formatValuePlain(
 );
 
     // Cor de cada delta segue a favorabilidade real (higherIsBad-aware);
-    // a seta (↑/↓) segue o sinal bruto da variação.
-    const orcClass  = vsOrc.favorable  ? 'fav' : 'unfav';
-    const lobpClass = vsLobp.favorable ? 'fav' : 'unfav';
+    // a seta (↑/↓) segue o sinal bruto da variação. Sem dado (noData) não
+    // tem favorável/desfavorável — nem seta, nem %, só "-" em cinza.
+    const orcClass  = vsOrc.noData  ? 'nodata' : (vsOrc.favorable  ? 'fav' : 'unfav');
+    const lobpClass = vsLobp.noData ? 'nodata' : (vsLobp.favorable ? 'fav' : 'unfav');
 
-    const orcPct  = (vsOrc.pct  >= 0 ? '+' : '') + vsOrc.pct.toFixed(1)  + '%';
-    const lobpPct = (vsLobp.pct >= 0 ? '+' : '') + vsLobp.pct.toFixed(1) + '%';
+    const orcPct  = vsOrc.noData  ? '-' : (vsOrc.pct  >= 0 ? '+' : '') + vsOrc.pct.toFixed(1)  + '%';
+    const lobpPct = vsLobp.noData ? '-' : (vsLobp.pct >= 0 ? '+' : '') + vsLobp.pct.toFixed(1) + '%';
 
-    const orcArrow  = svgArrow(vsOrc.pct  > 0);
-    const lobpArrow = svgArrow(vsLobp.pct > 0);
+    const orcArrow  = vsOrc.noData  ? '' : svgArrow(vsOrc.pct  > 0);
+    const lobpArrow = vsLobp.noData ? '' : svgArrow(vsLobp.pct > 0);
 
     const toggleBtn = isLeaf
       ? `<button class="toggle-btn" disabled>${svgRight()}</button>`
@@ -218,8 +258,8 @@ const fmtLobp = formatValuePlain(
     // quando o texto for truncado com reticências pelo CSS
     //
     // Layout "3 · Data-Dense Elegante" (propostas_cards_vdt_v2.html):
-    // grade de 3 valores (LOBP/Budget/Forecast) + deltas centralizados
-    // "vs BUD" / "vs LOBP", sem dot de status nem chip único combinado.
+    // grade de 3 valores (LOBP/Bdgt/Fcst) + deltas centralizados
+    // "vs Bdgt" / "vs LOBP", sem dot de status nem chip único combinado.
     el.innerHTML = `
       <div class="${cardClass}">
         <div class="card-header">
@@ -238,20 +278,29 @@ const fmtLobp = formatValuePlain(
             <span class="num-v">${fmtLobp}</span>
           </div>
           <div class="vg">
-            <em data-i18n="lbl.budget">Budget</em>
+            <em data-i18n="lbl.budget">Bdgt</em>
             <span class="num-v">${fmtOrc}</span>
           </div>
           <div class="vg">
-            <em data-i18n="lbl.forecast">Forecast</em>
+            <em data-i18n="lbl.forecast">Fcst</em>
             <span class="num-v">${fmtReal}</span>
           </div>
         </div>
         <div class="drow">
           <span class="drow-item"><i data-i18n="lbl.vs">vs</i><span data-i18n="lbl.lobp">LOBP</span><span class="delta ${lobpClass}">${lobpArrow}${lobpPct}</span></span>
-          <span class="drow-item"><i data-i18n="lbl.vs">vs</i><span data-i18n="lbl.bud">BUD</span><span class="delta ${orcClass}">${orcArrow}${orcPct}</span></span>
+          <span class="drow-item"><i data-i18n="lbl.vs">vs</i><span data-i18n="lbl.bud">Bdgt</span><span class="delta ${orcClass}">${orcArrow}${orcPct}</span></span>
         </div>
       </div>
     `;
+
+    // Guarda as referências no próprio nó: o card é criado UMA vez e
+    // nunca sai do DOM (só ganha/perde .hidden), então applyPositions
+    // pode reusá-las em vez de refazer document.getElementById duas
+    // vezes por nó a cada expandir/colapsar/troca de filtro.
+    // O botão só é guardado para nós COM filhos — nas folhas ele existe
+    // mas é apenas um placeholder desabilitado, que nunca recebe estado.
+    node.el = el;
+    node.toggleBtnEl = isLeaf ? null : el.querySelector('.toggle-btn');
 
     return el;
   }
@@ -309,33 +358,39 @@ const fmtLobp = formatValuePlain(
     return p;
   }
 
+  // Passada ÚNICA sobre os nós (antes eram duas, cada uma refazendo
+  // document.getElementById por nó), usando as referências já guardadas
+  // em createNodeElement. Numa árvore de algumas centenas de cards isso
+  // tirava centenas de buscas no DOM de cada re-layout.
   function applyPositions(pos) {
-    Object.keys(TREE_MAP).forEach((idStr) => {
-      const id = Number(idStr);
-      const el = document.getElementById('node-' + id);
+    Object.values(TREE_MAP).forEach((node) => {
+      const el = node.el;
       if (!el) return;
 
-      if (pos[id]) {
-        el.classList.remove('hidden');
-        el.style.left = pos[id].x + 'px';
-        el.style.top  = pos[id].y + 'px';
-      } else {
+      const own = pos[node.NodeID];
+      let target = own;
+      if (!own) {
         // Nó oculto: anima "para dentro" do ancestral visível mais
         // próximo — efeito de colapso/compactação
-        el.classList.add('hidden');
-        const anc = nearestVisibleAncestor(id, pos);
-        if (anc != null && pos[anc]) {
-          el.style.left = pos[anc].x + 'px';
-          el.style.top  = pos[anc].y + 'px';
-        }
+        const anc = nearestVisibleAncestor(node.NodeID, pos);
+        target = anc != null ? pos[anc] : null;
       }
-    });
 
-    // Atualiza ícones dos botões toggle
-    Object.values(TREE_MAP).forEach((node) => {
-      if (node.children.length === 0) return;
-      const btn = document.getElementById('btn-' + node.NodeID);
-      if (btn) btn.classList.toggle('collapsed', !node.expanded);
+      el.classList.toggle('hidden', !own);
+
+      // Só escreve no style quando a posição realmente mudou: num
+      // expandir/colapsar a maioria dos cards continua exatamente onde
+      // estava, e reescrever left/top neles invalidaria o layout à toa.
+      if (target && (node._x !== target.x || node._y !== target.y)) {
+        node._x = target.x;
+        node._y = target.y;
+        el.style.left = target.x + 'px';
+        el.style.top  = target.y + 'px';
+      }
+
+      if (node.toggleBtnEl) {
+        node.toggleBtnEl.classList.toggle('collapsed', !node.expanded);
+      }
     });
   }
 
@@ -367,6 +422,12 @@ const fmtLobp = formatValuePlain(
     return roundedElbowPath(sx, sy, tx, ty, 10);
   }
 
+  // Índice link-id -> elemento <path>, reconstruído só quando os
+  // conectores mudam (aqui, o único lugar que os cria/remove). O
+  // destaque de hover lê deste Map em vez de refazer um
+  // querySelectorAll no SVG inteiro a cada movimento do mouse.
+  const connectorElsById = new Map();
+
   function drawConnectors(pos) {
     const links = [];
     Object.keys(pos).forEach((idStr) => {
@@ -393,7 +454,7 @@ const fmtLobp = formatValuePlain(
       .style('opacity', 1);
 
     // Entrada: nasce colapsado na borda do pai e "cresce" até o filho
-    sel.enter()
+    const entered = sel.enter()
       .append('path')
       .attr('class', 'connector-line')
       .attr('data-link-id', (d) => d.id)
@@ -404,10 +465,17 @@ const fmtLobp = formatValuePlain(
         const sy = pos[d.s].y + CFG.CARD_H / 2;
         return roundedElbowPath(sx, sy, sx, sy, 10);
       })
-      .style('opacity', 0)
+      .style('opacity', 0);
+
+    entered
       .transition().duration(CFG.ANIM_MS).ease(d3.easeCubicInOut)
       .attr('d', (d) => connectorPath(pos, d))
       .style('opacity', 1);
+
+    // Só os conectores que permanecem (entrada + atualização) entram no
+    // índice — os de saída estão sumindo e serão removidos do DOM.
+    connectorElsById.clear();
+    entered.merge(sel).each(function (d) { connectorElsById.set(d.id, this); });
   }
 
   // ── 7.1 DESTAQUE DE TRAJETÓRIA (hover) ───────────────────────
@@ -432,24 +500,23 @@ const fmtLobp = formatValuePlain(
     const activeIds = new Set(ancestorChainLinks(nodeId));
     node.children.forEach((cid) => activeIds.add(nodeId + '-' + cid));
 
-    document.querySelectorAll('#connectorsSvg path.connector-line').forEach((p) => {
-      const isActive = activeIds.has(p.getAttribute('data-link-id'));
-      p.classList.toggle('is-active', isActive);
-      p.classList.toggle('is-dimmed', !isActive);
-    });
-
+    // Uma passada só sobre o índice em memória (antes: duas varreduras
+    // completas do SVG a cada mouseover).
     // SVG pinta na ordem do DOM: uma linha ativa que veio antes no
     // documento pode ficar por baixo de uma linha esmaecida vizinha,
-    // criando um "gap" onde elas se aproximam/cruzam. Reenvia cada
-    // trecho ativo para o fim do <svg> para garantir que a trajetória
+    // criando um "gap" onde elas se aproximam/cruzam. Reenviar cada
+    // trecho ativo para o fim do <svg> garante que a trajetória
     // destacada sempre fique por cima de tudo o que está dimmed.
-    document.querySelectorAll('#connectorsSvg path.connector-line.is-active').forEach((p) => {
-      p.parentNode.appendChild(p);
+    connectorElsById.forEach((p, linkId) => {
+      const isActive = activeIds.has(linkId);
+      p.classList.toggle('is-active', isActive);
+      p.classList.toggle('is-dimmed', !isActive);
+      if (isActive && p.parentNode) p.parentNode.appendChild(p);
     });
   }
 
   function clearConnectorHighlight() {
-    document.querySelectorAll('#connectorsSvg path.connector-line').forEach((p) => {
+    connectorElsById.forEach((p) => {
       p.classList.remove('is-active', 'is-dimmed');
     });
   }
@@ -530,6 +597,9 @@ const fmtLobp = formatValuePlain(
    */
   function zoomToBounds(b, animate = true) {
     if (!isFinite(b.minX)) return;
+    // Sem reserva lateral: o painel "Perdas & Ganhos" virou gaveta
+    // sobreposta e não disputa mais largura com a árvore, que passa a
+    // usar o viewport inteiro.
     const vp = document.getElementById('treeViewport');
     const vw = vp.clientWidth;
     const vh = vp.clientHeight;
@@ -617,6 +687,25 @@ const fmtLobp = formatValuePlain(
     }
 
     update(id);
+  }
+
+  // Expande todos os ancestrais de `id` (sem mexer no próprio nó nem
+  // nos irmãos) e reenquadra a viewport nele — usado pelo clique num
+  // item do painel "Perdas & Ganhos" pra abrir a árvore até aquele nó.
+  // Reaproveita o mesmo layout/centerNode já usados no boot e no
+  // toggle de nós, sem duplicar lógica de posicionamento/zoom.
+  function openTreeToNode(id) {
+    let parentId = TREE_MAP[id] && TREE_MAP[id].ParentID;
+    while (parentId !== null && parentId !== undefined && TREE_MAP[parentId]) {
+      TREE_MAP[parentId].expanded = true;
+      parentId = TREE_MAP[parentId].ParentID;
+    }
+
+    const pos = computeLayout();
+    CURRENT_POS = pos;
+    applyPositions(pos);
+    drawConnectors(pos);
+    centerNode(id, CFG.FOCUS_SCALE, true);
   }
 
   // ── 11. EVENTOS ─────────────────────────────────────────────
@@ -708,44 +797,64 @@ const fmtLobp = formatValuePlain(
     }));
   }
 
-  // ── 13. FILTRO (VDT) ─────────────────────────────────────────
-  // O <select id="cmbVDT"> é nativo: por natureza só permite escolher
-  // 1 valor por vez (não é multi-select), então "o usuário é obrigado
-  // a escolher apenas um valor" já é garantido pelo próprio elemento.
-  // Aqui só populamos as opções com dados reais (vindos de
-  // /api/filtros-vdt) e garantimos que ele SEMPRE nasce com um valor
-  // selecionado (o primeiro da lista), nunca em branco.
-  async function loadVDTFiltros() {
-    const select = document.getElementById('cmbVDT');
-    if (!select) return;
+  // ── 13. FILTROS (VDT e Ano) ───────────────────────────────────
+  // Os <select id="cmbVDT"/"cmbAno"> são nativos: por natureza só
+  // permitem escolher 1 valor por vez (não são multi-select), então "o
+  // usuário é obrigado a escolher apenas um valor" já é garantido pelo
+  // próprio elemento. Aqui só populamos as opções com dados reais
+  // (vindos de /api/filtros-vdt e /api/filtros-ano) e garantimos que
+  // eles SEMPRE nascem com um valor selecionado.
+  // Preenche um <select> com a lista de valores e deixa um deles
+  // selecionado. A preferência (ex.: DEFAULT_VDT) só é aplicada se
+  // existir de fato na lista; senão cai no 1º valor (no filtro de Ano a
+  // lista já vem ordenada decrescente — logo o 1º é o mais recente).
+  // Usada tanto pelo bootstrap quanto pelas recargas de filtro.
+  function fillSelect(selectId, valores, preferredValue) {
+    const select = document.getElementById(selectId);
+    if (!select || !valores.length) return false;
+
+    select.innerHTML = valores
+      .map((v) => `<option value="${v}">${v}</option>`)
+      .join('');
+
+    select.value = (preferredValue != null && valores.some((v) => String(v) === String(preferredValue)))
+      ? preferredValue
+      : valores[0];
+    return true;
+  }
+
+  function extractValues(rows, rowKey) {
+    return (Array.isArray(rows) ? rows : [])
+      .map((r) => r && r[rowKey])
+      .filter((v) => v != null && String(v).trim() !== '');
+  }
+
+  async function loadOptionsFiltro(selectId, url, rowKey, logTag, preferredValue) {
+    if (!document.getElementById(selectId)) return;
 
     try {
-      const res = await fetch('/api/filtros-vdt');
+      const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const rows = await res.json();
 
-      // server.js devolve linhas no formato { NM_VDT: '...' }
-      const valores = (Array.isArray(rows) ? rows : [])
-        .map((r) => r && r.NM_VDT)
-        .filter((v) => v != null && String(v).trim() !== '');
-
-      if (valores.length === 0) {
-        console.warn('[VDT] /api/filtros-vdt não retornou valores; mantendo opções fixas do HTML.');
-        return;
+      const valores = extractValues(await res.json(), rowKey);
+      if (!fillSelect(selectId, valores, preferredValue)) {
+        console.warn(`[${logTag}] ${url} não retornou valores; mantendo opções fixas do HTML.`);
       }
-
-      select.innerHTML = valores
-        .map((v) => `<option value="${v}">${v}</option>`)
-        .join('');
-
-      // Sempre inicia com o primeiro valor da lista selecionado.
-      select.value = valores[0];
     } catch (err) {
       // Falhou a busca da lista de filtros: mantém as opções fixas que
       // já vieram no HTML (fallback), pra tela não ficar sem nenhuma opção.
-      console.error('[VDT] Erro ao carregar lista de VDTs, mantendo opções fixas do HTML:', err);
+      console.error(`[${logTag}] Erro ao carregar lista, mantendo opções fixas do HTML:`, err);
     }
   }
+
+  const loadVDTFiltros = () =>
+    loadOptionsFiltro('cmbVDT', '/api/filtros-vdt', 'NM_VDT', 'VDT', DEFAULT_VDT);
+
+  // O Ano é um recorte da VDT selecionada (VDT é o filtro mandatório):
+  // a lista de anos vem escopada pra VDT atual (?nm_vdt=...) — troque
+  // de VDT e a lista de anos é buscada de novo (ver attachFilterEvents).
+  const loadAnoFiltros = (nmVDT) =>
+    loadOptionsFiltro('cmbAno', `/api/filtros-ano?nm_vdt=${encodeURIComponent(nmVDT || '')}`, 'ANO', 'Ano');
 
   function showViewportError(msg) {
     clearViewportError();
@@ -759,26 +868,469 @@ const fmtLobp = formatValuePlain(
     if (box) box.remove();
   }
 
-  // Liga o botão "Aplicar Filtro": busca de novo os dados (agora com o
-  // NM_VDT selecionado no combo) e reconstrói a árvore do zero.
-  function attachFilterEvents() {
-    const btn = document.getElementById('btnAplicar');
-    const select = document.getElementById('cmbVDT');
-    if (!btn || !select) return;
+  // Liga um filtro (VDT ou Ano): ao trocar a opção do combo, já busca
+  // de novo os dados (fetchTreeData lê cmbVDT/cmbAno diretamente) e
+  // reconstrói a árvore do zero — sem precisar de um botão "Aplicar
+  // Filtro" separado. O select em si fica oculto (ver .vdt-dropdown);
+  // quem dá feedback visual de "carregando" pro usuário é o botão-gatilho.
+  function attachSelectReload(selectId, triggerId, onBeforeReload) {
+    const select  = document.getElementById(selectId);
+    const trigger = document.getElementById(triggerId);
+    if (!select) return;
 
-    btn.addEventListener('click', async () => {
-      if (btn.disabled) return;
-      btn.disabled = true;
+    select.addEventListener('change', async () => {
+      if (select.disabled) return;
       select.disabled = true;
-      const originalLabel = btn.textContent;
-      btn.textContent = '...';
+      if (trigger) trigger.disabled = true;
       try {
+        if (onBeforeReload) await onBeforeReload();
         await loadTreeAndRender({ isReload: true });
       } finally {
-        btn.disabled = false;
         select.disabled = false;
-        btn.textContent = originalLabel;
+        if (trigger) trigger.disabled = false;
       }
+    });
+  }
+
+  // VDT é o filtro mandatório e o de Ano é sempre um recorte dela (ver
+  // loadAnoFiltros): trocar de VDT precisa re-escopar a lista de anos
+  // pra ela ANTES de recarregar a árvore, já que fetchTreeData lê
+  // cmbAno.value pra montar a query. O combo de Ano continua sempre
+  // clicável — só mostra os anos que aquela VDT realmente tem (mesmo
+  // que seja 1 único).
+  // Anos disponíveis por VDT, entregues inteiros pelo /api/bootstrap.
+  // Com isso trocar de VDT remonta o combo de Ano em memória, sem ida
+  // ao servidor (antes cada troca custava uma consulta a /api/filtros-ano).
+  let ANOS_POR_VDT = null;
+
+  const attachFilterEvents = () => attachSelectReload('cmbVDT', 'vdtTrigger', async () => {
+    const nmVDT = document.getElementById('cmbVDT').value;
+    const anosLocais = ANOS_POR_VDT && ANOS_POR_VDT[nmVDT];
+    if (anosLocais && anosLocais.length) {
+      fillSelect('cmbAno', anosLocais);
+    } else {
+      await loadAnoFiltros(nmVDT); // fallback: matriz indisponível
+    }
+    syncAnoTriggerLabel();
+  });
+  const attachAnoFilterEvents = () => attachSelectReload('cmbAno', 'anoTrigger');
+
+  // ── 13.0.5 DROPDOWN CUSTOMIZADO (VDT e Ano) ──────────────────
+  // Os <select id="cmbVDT"/"cmbAno"> continuam sendo a fonte de dados/
+  // eventos (loadOptionsFiltro/attachSelectReload não mudam nada); esta
+  // fábrica só desenha por cima um botão + lista customizados — cuja
+  // lista aberta omite o valor atualmente aplicado, algo impossível com
+  // um <select> nativo puro, já que o rótulo fechado dele é sempre
+  // também um item da própria lista. Mesma lógica pros dois filtros,
+  // só trocando os IDs.
+  function setupCustomDropdown(selectId, dropdownId, triggerId, listId) {
+    const select   = document.getElementById(selectId);
+    const dropdown = document.getElementById(dropdownId);
+    const trigger  = document.getElementById(triggerId);
+    const list     = document.getElementById(listId);
+    if (!select || !dropdown || !trigger || !list) return;
+
+    // Monta a lista só com as opções DIFERENTES da atualmente
+    // selecionada — chamada sempre de novo a cada abertura, pra
+    // refletir trocas feitas por loadOptionsFiltro() entretanto.
+    function renderList() {
+      const current = select.value;
+      list.innerHTML = Array.from(select.options)
+        .filter((opt) => opt.value !== current)
+        .map((opt) => `<li class="vdt-option" role="option" tabindex="0" data-value="${opt.value.replace(/"/g, '&quot;')}">${opt.text}</li>`)
+        .join('');
+    }
+    function openList() {
+      if (trigger.disabled) return;
+      renderList();
+      list.hidden = false;
+      trigger.setAttribute('aria-expanded', 'true');
+      dropdown.classList.add('open');
+    }
+    function closeList() {
+      list.hidden = true;
+      trigger.setAttribute('aria-expanded', 'false');
+      dropdown.classList.remove('open');
+    }
+    function selectValue(value) {
+      if (!value || value === select.value) { closeList(); return; }
+      select.value = value;
+      // dispatchEvent (não .click()) já dispara o listener 'change' de
+      // attachSelectReload() normalmente — mesmo caminho de sempre pra
+      // recarregar a árvore, sem duplicar lógica aqui.
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      closeList();
+      trigger.focus();
+    }
+
+    trigger.addEventListener('click', () => {
+      dropdown.classList.contains('open') ? closeList() : openList();
+    });
+
+    list.addEventListener('click', (e) => {
+      const li = e.target.closest('.vdt-option');
+      if (li) selectValue(li.dataset.value);
+    });
+    list.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const li = e.target.closest('.vdt-option');
+      if (li) { e.preventDefault(); selectValue(li.dataset.value); }
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!dropdown.contains(e.target)) closeList();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && dropdown.classList.contains('open')) {
+        closeList();
+        trigger.focus();
+      }
+    });
+  }
+
+  // Também atualiza a faixa "Árvore selecionada" (#treeTitleText/
+  // #treeTitleYear) — as duas cópias de cada valor (botão do filtro +
+  // faixa de título) precisam refletir sempre o mesmo valor real do
+  // <select>. Antes cada uma tinha sua própria sincronização (uma em
+  // app.js, outra num <script> solto no index.html); só a daqui era
+  // rechamada depois de loadVDTFiltros() trocar as opções pelas reais,
+  // deixando a faixa de título presa no valor fixo do HTML (bug).
+  function syncVdtTriggerLabel() {
+    const select = document.getElementById('cmbVDT');
+    if (!select) return;
+    const opt  = select.options[select.selectedIndex];
+    const text = (opt && opt.text.trim()) || select.value;
+    const label = document.getElementById('vdtTriggerLabel');
+    const title = document.getElementById('treeTitleText');
+    if (label) label.textContent = text;
+    if (title) title.textContent = text;
+  }
+
+  function syncAnoTriggerLabel() {
+    const select = document.getElementById('cmbAno');
+    if (!select) return;
+    const opt  = select.options[select.selectedIndex];
+    const text = (opt && opt.text.trim()) || select.value;
+    const label = document.getElementById('anoTriggerLabel');
+    const year  = document.getElementById('treeTitleYear');
+    if (label) label.textContent = text;
+    if (year) year.textContent = text;
+  }
+
+  function attachVdtDropdownEvents() {
+    setupCustomDropdown('cmbVDT', 'vdtDropdown', 'vdtTrigger', 'vdtDropdownList');
+    document.getElementById('cmbVDT').addEventListener('change', syncVdtTriggerLabel);
+  }
+
+  function attachAnoDropdownEvents() {
+    setupCustomDropdown('cmbAno', 'anoDropdown', 'anoTrigger', 'anoDropdownList');
+    document.getElementById('cmbAno').addEventListener('change', syncAnoTriggerLabel);
+  }
+
+  // ── 13.1 PAINEL "PERDAS & GANHOS" ─────────────────────────────
+  // Painel fixo à esquerda do tree-viewport (não sofre o pan/zoom da
+  // árvore — é irmão de .tree-world, igual ao badge de título). Reusa
+  // os mesmos dados já buscados pra árvore (TREE_MAP), já filtrados
+  // pelo VDT selecionado: nenhuma consulta nova ao Databricks é feita
+  // aqui. O combo de comparação (Fcst×Bdgt / Fcst×LOBP / Bdgt×LOBP) e a
+  // ordenação (maior/menor impacto) só recalculam este painel — os
+  // cards da árvore continuam mostrando os dois deltas fixos de sempre
+  // (vs LOBP / vs Bdgt).
+  const LOSS_COMPARE_DEFS = {
+    fcst_bdgt: { actualKey: 'VL_PROJ', referenceKey: 'VL_ORC' },
+    fcst_lobp: { actualKey: 'VL_PROJ', referenceKey: 'VL_LOBP' },
+    bdgt_lobp: { actualKey: 'VL_ORC', referenceKey: 'VL_LOBP' },
+  };
+  let lossCompareKey = 'fcst_bdgt';
+  // 'asc' (padrão) = maiores perdas → menores perdas → menores ganhos →
+  // maiores ganhos (transição contínua cruzando o zero — é a leitura
+  // "natural" do painel: começa no problema mais grave, termina no
+  // melhor resultado). 'desc' = espelho exato dessa sequência.
+  let lossSortDir = 'asc';
+  // Indicadores de tempo ficam visíveis por padrão (troca de filtro é
+  // opt-in: adicionar o filtro não deve mudar o que já aparecia antes
+  // dele existir).
+  let lossShowTimeIndicators = true;
+
+  // Nomes dos até `maxLevels` ancestrais de `node` na árvore, do pai
+  // mais próximo pro mais distante (ex.: ["Copper Concentrate",
+  // "Copper Concentrate (Dry)", "Copper Contained", "Run of Plant"]) —
+  // dá contexto de onde um indicador-folha se encaixa na hierarquia,
+  // sem precisar abrir/navegar a árvore pra descobrir.
+  function getAncestorPath(node, maxLevels) {
+    const path = [];
+    let parentId = node && node.ParentID;
+    while (path.length < maxLevels && parentId !== null && parentId !== undefined) {
+      const parent = TREE_MAP[parentId];
+      if (!parent) break;
+      path.push(parent.IndicatorName);
+      parentId = parent.ParentID;
+    }
+    return path;
+  }
+
+  // Remove parênteses externos de uma unidade, se houver — a coluna
+  // Unit no Databricks às vezes já vem como "(h/y)"/"(%)" prontos, então
+  // qualquer lugar que precise do texto "cru" da unidade (pra comparar
+  // ou pra remontar o parêntese na exibição) passa por aqui primeiro.
+  function stripUnitParens(unit) {
+    const trimmed = String(unit || '').trim();
+    return trimmed.replace(/^\(([\s\S]*)\)$/, '$1').trim();
+  }
+
+  // Fonte única da verdade pra "é indicador de tempo?": a unidade de
+  // medida (node.Unit) que já vem do Databricks — nenhuma lista fixa de
+  // nomes de indicador no front-end, válida igual em qualquer VDT (a
+  // regra não depende de qual árvore está selecionada). Cobre:
+  //   - "hora"/"horas" por extenso, em qualquer posição (ex.: "Horas/Ano")
+  //   - abreviação isolada: h, hh, hr, hrs
+  //   - taxa com hora no numerador: h/y, hr/y, hrs/mês, h/d... (com ou
+  //     sem espaço ao redor da barra)
+  //   - taxa com hora no denominador: un/h, 1/hr...
+  function isTimeIndicator(node) {
+    const unit = stripUnitParens(node && node.Unit).toLowerCase();
+    if (!unit) return false;
+    if (unit.includes('hora')) return true;
+    if (/^h{1,2}(r|rs)?$/.test(unit)) return true;
+    if (/^h(r|rs)?\s*\//.test(unit)) return true;
+    if (/\/\s*h(r|rs)?$/.test(unit)) return true;
+    return false;
+  }
+
+  // Todo nó-folha com variação CALCULÁVEL (nem valor-base nem
+  // valor-comparação nulos — calcVariation.noData) na comparação ativa
+  // entra na lista, seja perda (desfavorável) ou ganho (favorável). Item
+  // sem dado suficiente simplesmente não aparece (não é "perda zero").
+  // Indicador de tempo some por completo (lista, ranking e gráfico)
+  // quando o filtro "Apresentar Indicadores de Tempo" está em "Não".
+  function computeVarianceEntries(map, compareKey) {
+    const def = LOSS_COMPARE_DEFS[compareKey] || LOSS_COMPARE_DEFS.fcst_bdgt;
+
+    return Object.values(map)
+      .filter((node) => node && node.children.length === 0)
+      .filter((node) => lossShowTimeIndicators || !isTimeIndicator(node))
+      .map((node) => {
+        const actual    = node[def.actualKey];
+        const reference = node[def.referenceKey];
+        const variation = calcVariation(actual, reference, node.NodeID);
+        const rawDelta  = variation.noData ? null : Math.abs(actual - reference);
+        return { node, actual, reference, variation, rawDelta };
+      })
+      .filter((entry) => !entry.variation.noData && entry.rawDelta > 0);
+  }
+
+  // ── Renderização DIFERIDA do painel ─────────────────────────
+  // O painel é derivado do TREE_MAP (nenhuma requisição própria), mas
+  // montá-lo custa: percorre todos os nós, calcula variação, ordena e
+  // gera o HTML de todas as linhas. Antes isso rodava ANTES dos cards
+  // da árvore serem criados, atrasando o que o usuário realmente espera
+  // ver primeiro. Agora a árvore renderiza e fica interativa, e só
+  // depois — em tempo ocioso do navegador — o painel é montado.
+  let lossPanelDirty = true;   // dados novos: precisa recalcular
+  let lossIdleHandle = null;
+
+  function cancelLossPanelRender() {
+    if (lossIdleHandle == null) return;
+    (window.cancelIdleCallback || window.clearTimeout)(lossIdleHandle);
+    lossIdleHandle = null;
+  }
+
+  // Marca o painel como desatualizado (troca de VDT/ano) e devolve o
+  // skeleton, sem calcular nada ainda.
+  function invalidateLossPanel() {
+    lossPanelDirty = true;
+    cancelLossPanelRender();
+    const list = document.getElementById('lossList');
+    if (list) {
+      list.innerHTML =
+        '<div class="loss-skeleton" aria-hidden="true">' +
+        '<div class="loss-skel-row"></div>'.repeat(6) +
+        '</div>';
+    }
+  }
+
+  // Agenda a montagem para quando o navegador estiver ocioso — assim
+  // ela nunca disputa frame com a renderização/interação da árvore.
+  // O timeout garante que o painel não fique adiado indefinidamente
+  // numa aba muito ocupada.
+  function scheduleLossPanelRender() {
+    if (!lossPanelDirty) return;
+    cancelLossPanelRender();
+    const run = () => { lossIdleHandle = null; renderLossPanel(); };
+    lossIdleHandle = window.requestIdleCallback
+      ? window.requestIdleCallback(run, { timeout: 1500 })
+      : setTimeout(run, 120);
+  }
+
+  // Chamado ao abrir a gaveta: se o usuário chegou antes do tempo
+  // ocioso, monta na hora em vez de deixá-lo olhando o skeleton.
+  function ensureLossPanelRendered() {
+    if (!lossPanelDirty) return;
+    cancelLossPanelRender();
+    renderLossPanel();
+  }
+
+  function renderLossPanel() {
+    const list = document.getElementById('lossList');
+    if (!list || !ROOT_ID) return;
+
+    const entries = computeVarianceEntries(TREE_MAP, lossCompareKey);
+    lossPanelDirty = false;
+
+    if (entries.length === 0) {
+      list.innerHTML = `<div class="loss-empty" data-i18n="loss.empty">Nenhuma perda ou ganho neste comparativo.</div>`;
+      return;
+    }
+
+    // Classificação (ordenação + tamanho da barra) é sempre pelo
+    // PERCENTUAL, não pelo valor bruto: a lista mistura indicadores de
+    // unidades muito diferentes (h/y, g/t, %, t...), então comparar
+    // magnitude bruta entre eles não tem significado — 1.777 h/y não é
+    // "maior impacto" que -52% de recuperação só por ter mais dígitos.
+    // O percentual é a única medida comparável entre indicadores.
+    const maxPct = Math.max(...entries.map((e) => Math.abs(e.variation.pct)));
+
+    // Ordenação por percentual COM SINAL (perda = negativo, ganho =
+    // positivo, seguindo a favorabilidade real — não o sinal bruto do
+    // pct, que se inverte pra nós com a heurística higherIsBad).
+    // Crescente (asc): maiores perdas % → menores perdas % → menores
+    // ganhos % → maiores ganhos %, transição contínua cruzando o zero.
+    // Decrescente (desc) é o espelho exato.
+    const sorted = [...entries].sort((a, b) => {
+      const signedA = a.variation.favorable ? Math.abs(a.variation.pct) : -Math.abs(a.variation.pct);
+      const signedB = b.variation.favorable ? Math.abs(b.variation.pct) : -Math.abs(b.variation.pct);
+      return lossSortDir === 'asc' ? signedA - signedB : signedB - signedA;
+    });
+
+    list.innerHTML = sorted.map(({ node, actual, reference, variation, rawDelta }) => {
+      const fmtDelta     = formatValuePlain(rawDelta,   node.NodeType, node.VL_FATOR, node.SG_DECIMAL);
+      const fmtActual    = formatValuePlain(actual,     node.NodeType, node.VL_FATOR, node.SG_DECIMAL);
+      const fmtReference = formatValuePlain(reference,  node.NodeType, node.VL_FATOR, node.SG_DECIMAL);
+      const pctText   = formatPercentPtBR(variation.pct);
+      const widthPct  = maxPct > 0 ? Math.max(4, (Math.abs(variation.pct) / maxPct) * 100) : 0;
+      const kindClass = variation.favorable ? 'is-gain' : 'is-loss';
+      const sign      = variation.favorable ? '+' : '−';
+      // Nome + unidade cadastrada no Databricks (node.Unit) — sem unidade
+      // cadastrada, mostra só o nome do indicador. A unidade às vezes já
+      // vem com parênteses da própria base ("(h/y)"); stripUnitParens
+      // evita duplicar ("((h/y))") reaproveitando sempre um único par.
+      // Termina com o ID do nó ("N16") — referência rápida pra localizar
+      // o registro exato na tabela do Databricks.
+      const unitLabel  = stripUnitParens(node.Unit);
+      const displayName = `${unitLabel ? `${node.IndicatorName} (${unitLabel})` : node.IndicatorName} - N${node.NodeID}`;
+
+      // Caminho até 5 níveis acima na árvore (pai mais próximo primeiro),
+      // dá contexto de ONDE esse indicador-folha está — só nomes, sem
+      // unidade/ID, pra não poluir o tooltip.
+      const ancestors = getAncestorPath(node, 5);
+      const breadcrumb = ancestors.length ? `\n${ancestors.join(' >> ')}` : '';
+
+      const tooltip = `${displayName}${breadcrumb}\n${fmtActual} vs ${fmtReference} (${pctText})\nDiferença: ${fmtDelta}`
+        .replace(/"/g, '&quot;');
+
+      return `
+        <div class="loss-row ${kindClass}" title="${tooltip}" data-node="${node.NodeID}">
+          <div class="loss-row-top">
+            <span class="loss-row-name">${displayName}</span>
+            <span class="loss-row-value">${sign}${fmtDelta} <span class="loss-row-pct">(${pctText})</span></span>
+          </div>
+          <div class="loss-row-bar-track">
+            <div class="loss-row-bar" style="width:${widthPct}%"></div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function attachLossPanelEvents() {
+    const select = document.getElementById('lossCompareSelect');
+    if (select) {
+      select.value = lossCompareKey;
+      select.addEventListener('change', () => {
+        lossCompareKey = select.value;
+        renderLossPanel();
+      });
+    }
+
+    const sortBtns = Array.from(document.querySelectorAll('.loss-sort-btn'));
+    sortBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (btn.dataset.sort === lossSortDir) return;
+        lossSortDir = btn.dataset.sort;
+        sortBtns.forEach((b) => b.classList.toggle('active', b.dataset.sort === lossSortDir));
+        renderLossPanel();
+      });
+    });
+
+    const timeBtns = Array.from(document.querySelectorAll('.loss-time-btn'));
+    timeBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const show = btn.dataset.time === 'show';
+        if (show === lossShowTimeIndicators) return;
+        lossShowTimeIndicators = show;
+        timeBtns.forEach((b) => b.classList.toggle('active', b.dataset.time === (show ? 'show' : 'hide')));
+        renderLossPanel();
+      });
+    });
+
+    // Clique num item da lista: abre a árvore até o nó dele (mesma
+    // delegação de evento no container — a lista é reconstruída a cada
+    // renderLossPanel(), então o listener precisa ficar no pai fixo).
+    const list = document.getElementById('lossList');
+    if (list) {
+      list.addEventListener('click', (e) => {
+        const row = e.target.closest('.loss-row');
+        if (!row) return;
+        const nodeId = Number(row.dataset.node);
+        if (Number.isFinite(nodeId)) openTreeToNode(nodeId);
+        // Navegar até o nó é o objetivo do clique: fecha a gaveta pra
+        // liberar a visão da árvore, que é o que o usuário quer ver.
+        closeLossPanel();
+      });
+    }
+
+    attachLossDrawerEvents();
+  }
+
+  // ── Gaveta "Perdas & Ganhos" ─────────────────────────────────
+  // O painel deixou de ocupar a lateral do viewport: agora entra sob
+  // demanda pelo card de acesso. Toda a lógica interna (comparativo,
+  // ordenação, filtro de tempo, clique numa linha) segue idêntica —
+  // isto aqui só controla visibilidade.
+  function openLossPanel() {
+    const vp = document.getElementById('treeViewport');
+    if (!vp) return;
+    ensureLossPanelRendered(); // não deixa o usuário olhando o skeleton
+    vp.classList.add('loss-open');
+    const panel = document.getElementById('lossPanel');
+    const trigger = document.getElementById('lossTrigger');
+    if (panel) panel.setAttribute('aria-hidden', 'false');
+    if (trigger) trigger.setAttribute('aria-expanded', 'true');
+    const close = document.getElementById('lossClose');
+    if (close) close.focus();
+  }
+
+  function closeLossPanel() {
+    const vp = document.getElementById('treeViewport');
+    if (!vp || !vp.classList.contains('loss-open')) return;
+    vp.classList.remove('loss-open');
+    const panel = document.getElementById('lossPanel');
+    const trigger = document.getElementById('lossTrigger');
+    if (panel) panel.setAttribute('aria-hidden', 'true');
+    if (trigger) { trigger.setAttribute('aria-expanded', 'false'); trigger.focus(); }
+  }
+
+  function attachLossDrawerEvents() {
+    const trigger  = document.getElementById('lossTrigger');
+    const close    = document.getElementById('lossClose');
+    const backdrop = document.getElementById('lossBackdrop');
+
+    if (trigger)  trigger.addEventListener('click', openLossPanel);
+    if (close)    close.addEventListener('click', closeLossPanel);
+    if (backdrop) backdrop.addEventListener('click', closeLossPanel);
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeLossPanel();
     });
   }
 
@@ -789,18 +1341,24 @@ const fmtLobp = formatValuePlain(
   /**
    * Busca os dados (respeitando o NM_VDT selecionado no combo) e
    * (re)constrói a árvore inteira. Usada tanto no boot inicial quanto
-   * toda vez que o usuário clica em "Aplicar Filtro".
+   * toda vez que o usuário troca o filtro VDT.
    */
-  async function loadTreeAndRender({ isReload = false } = {}) {
+  async function loadTreeAndRender({ isReload = false, rows = null } = {}) {
     const canvas = document.getElementById('treeCanvas');
 
     let rawData;
-    try {
-      rawData = await fetchTreeData();
-    } catch (err) {
-      console.error('[VDT] Erro ao carregar dados da tabela:', err);
-      showViewportError(`Erro ao carregar dados da tabela: ${err.message}`);
-      return false;
+    if (rows) {
+      // Árvore já veio embutida em /api/bootstrap — nenhuma requisição
+      // extra é necessária no carregamento inicial.
+      rawData = rows;
+    } else {
+      try {
+        rawData = await fetchTreeData();
+      } catch (err) {
+        console.error('[VDT] Erro ao carregar dados da tabela:', err);
+        showViewportError(`Erro ao carregar dados da tabela: ${err.message}`);
+        return false;
+      }
     }
 
     if (!Array.isArray(rawData) || rawData.length === 0) {
@@ -813,12 +1371,23 @@ const fmtLobp = formatValuePlain(
 
     // Ao reaplicar o filtro, descarta os cards/conectores da árvore
     // anterior antes de montar a nova (o boot inicial já começa vazio).
+    // A classe de animação sai junto: o 1º posicionamento da árvore nova
+    // precisa ser instantâneo (senão os cards "voam" desde 0,0).
+    canvas.classList.remove('anim-ready');
     canvas.innerHTML = '';
+    connectorElsById.clear();
     d3.select('#connectorsSvg').selectAll('*').remove();
 
     const { map, rootId } = buildTree(rawData);
     TREE_MAP = map;
     ROOT_ID  = rootId;
+
+    // Painel "Perdas & Ganhos": só marca como desatualizado e mostra o
+    // skeleton. A montagem de verdade fica para DEPOIS da árvore estar
+    // na tela (ver o final desta função) — antes ela rodava aqui, ou
+    // seja, o usuário esperava o painel inteiro ser calculado antes do
+    // primeiro card aparecer.
+    invalidateLossPanel();
 
     // Estado inicial de expansão limitado a CFG.INITIAL_DEPTH níveis
     const queue = [{ id: rootId, d: 0 }];
@@ -847,15 +1416,17 @@ const fmtLobp = formatValuePlain(
     centerNode(ROOT_ID, CFG.INITIAL_SCALE, isReload);
 
     // Habilita as transições de posição APENAS após o 1º posicionamento
-    // já estar pintado. Duração sincronizada com CFG.ANIM_MS.
-    setTimeout(() => {
-      document.querySelectorAll('.tree-node').forEach((el) => {
-        el.style.transition =
-          `left ${CFG.ANIM_MS}ms cubic-bezier(0.65,0,0.35,1), ` +
-          `top ${CFG.ANIM_MS}ms cubic-bezier(0.65,0,0.35,1), ` +
-          `opacity 300ms ease, transform 300ms ease`;
-      });
-    }, 60);
+    // já estar pintado. Antes isso era feito escrevendo a mesma string
+    // de transition inline em CADA card (centenas de escritas de style);
+    // agora é uma classe só no canvas, com a duração vinda de CFG por
+    // custom property — CFG segue sendo a fonte única da verdade.
+    canvas.style.setProperty('--tree-anim', CFG.ANIM_MS + 'ms');
+    setTimeout(() => canvas.classList.add('anim-ready'), 60);
+
+    // A árvore já está posicionada, pintada e interativa. Só agora o
+    // painel "Perdas & Ganhos" é montado, em tempo ocioso do navegador,
+    // sem competir com o primeiro paint nem travar a interação.
+    scheduleLossPanelRender();
 
     return true;
   }
@@ -869,14 +1440,50 @@ const fmtLobp = formatValuePlain(
     attachEvents();
     setupConnectorHighlight();
 
-    // Popula o combo com os valores reais de NM_VDT vindos do backend
-    // (com fallback pras opções fixas do HTML se a busca falhar) e já
-    // deixa o 1º valor selecionado.
-    await loadVDTFiltros();
+    // Carga inicial numa ÚNICA ida e volta: /api/bootstrap já devolve a
+    // lista de VDTs, a VDT resolvida (respeitando DEFAULT_VDT), os anos
+    // dela e a árvore pronta. Antes eram 3 chamadas ENCADEADAS (lista de
+    // VDTs → anos daquela VDT → árvore), somando 3 latências de rede
+    // antes do 1º card aparecer — e as duas primeiras só existiam pra
+    // descobrir QUAL VDT/ano carregar, coisa que o servidor resolve.
+    // A requisição já foi disparada no <head> (window.__VDT_BOOT), em
+    // paralelo com o download do JS — aqui só aguardamos a resposta.
+    let boot = null;
+    try {
+      boot = window.__VDT_BOOT
+        ? await window.__VDT_BOOT
+        : await fetch(`/api/bootstrap?vdt_preferido=${encodeURIComponent(DEFAULT_VDT)}`)
+            .then((r) => (r.ok ? r.json() : null));
+    } catch (err) {
+      console.error('[VDT] /api/bootstrap indisponível; caindo no carregamento em etapas:', err);
+    }
+
+    const bootOk = !!(boot && Array.isArray(boot.vdts) && boot.vdts.length);
+
+    if (bootOk) {
+      ANOS_POR_VDT = boot.anosPorVdt || null;
+      fillSelect('cmbVDT', boot.vdts, boot.vdtSelecionada);
+      fillSelect('cmbAno', boot.anos || [], boot.anoSelecionado);
+    } else {
+      // Fallback pro caminho antigo em etapas — a tela continua
+      // funcionando mesmo se a rota de bootstrap falhar.
+      await loadVDTFiltros();
+      await loadAnoFiltros(document.getElementById('cmbVDT').value);
+    }
 
     attachFilterEvents();
+    attachAnoFilterEvents();
+    attachVdtDropdownEvents();
+    attachAnoDropdownEvents();
+    syncVdtTriggerLabel(); // reflete o valor real já definido nos combos
+    syncAnoTriggerLabel();
+    attachLossPanelEvents();
 
-    await loadTreeAndRender();
+    // Com o bootstrap OK a árvore já está em mãos: renderiza direto,
+    // sem uma segunda requisição.
+    await loadTreeAndRender({
+      rows: bootOk ? mapTreeRows(boot.arvore || []) : null,
+    });
   }
 
   // ── 14. BOOT ────────────────────────────────────────────────
