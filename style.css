@@ -625,7 +625,9 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
    Fica exatamente onde o painel completo ficava (canto superior
    esquerdo do viewport): o painel não aparece mais por padrão, só este
    card compacto — e o painel completo abre NO MESMO LUGAR, como gaveta,
-   ao clicar nele. */
+   ao clicar nele. Formato quadrado (não pill) com o mesmo raio de
+   canto do painel (14px, ver .loss-panel) — mesma linguagem visual do
+   card que ele substitui, só recolhido. */
 .loss-trigger {
   position: absolute;
   top: 16px;
@@ -634,19 +636,23 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
      centralizado alcança a faixa do card e passaria por cima dele. */
   z-index: 16;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 10px 16px 10px 13px;
+  justify-content: center;
+  gap: 9px;
+  width: 100px;
+  padding: 16px 10px;
   background: var(--surface);
   border: 1px solid var(--border-light);
-  border-radius: 100px;
+  border-radius: 14px;
   box-shadow: var(--card-shadow);
   cursor: pointer;
   font-family: var(--font-poppins);
   font-weight: 600;
-  font-size: .78rem;
+  font-size: .68rem;
+  line-height: 1.25;
   color: var(--vbm-blue-deep);
-  white-space: nowrap;
+  text-align: center;
   transition: transform .25s var(--ease-spring), box-shadow .25s var(--ease-out),
               border-color .25s var(--ease-out), background .25s var(--ease-out);
 }
@@ -661,14 +667,16 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
   border-color: var(--blue);
   box-shadow: 0 0 0 3px rgba(60,181,229,.25);
 }
+/* Ícone quadrado (não círculo), bordas levemente arredondadas — mesmo
+   raio pequeno (--radius-sm) usado nos demais ícones "quadrados" do app. */
 .loss-trigger-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 34px;
+  height: 34px;
   flex-shrink: 0;
-  border-radius: 50%;
+  border-radius: var(--radius-sm);
   background: var(--blue-light);
   color: var(--vbm-blue-dark);
   transition: background .25s var(--ease-out), color .25s var(--ease-out);
@@ -693,24 +701,26 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
 }
 .loss-open .loss-backdrop { opacity: 1; pointer-events: auto; }
 
-/* ---- PAINEL "PERDAS & GANHOS" (mesmo local do card: canto superior
-   esquerdo do viewport, expandido) ----
+/* ---- PAINEL "PERDAS & GANHOS" (mesmo formato/lugar do card original)
    Irmão de .tree-world dentro de .tree-viewport (position:relative):
    fica em absolute e por isso NÃO recebe o transform de pan/zoom da
-   árvore. Cartão sólido (não pill translúcida) porque carrega conteúdo
-   denso (select + lista rolável), não só um rótulo curto. */
+   árvore. Mesma geometria do card flutuante que sempre existiu aqui —
+   inset 16px em cima/baixo/esquerda, cantos arredondados nos 4 lados —
+   e não uma gaveta rente às bordas do viewport; só passou a nascer
+   colapsado (ver .loss-trigger) em vez de sempre visível. */
 .loss-panel {
   position: absolute;
-  top: 0;
-  left: 0;
-  bottom: 0;
+  top: 16px;
+  left: 16px;
+  bottom: 16px;
   width: var(--loss-panel-w);
-  max-width: calc(100% - 24px);
+  max-width: calc(100% - 32px);
   display: flex;
   flex-direction: column;
   background: var(--surface);
-  border-right: 1px solid var(--border-light);
-  box-shadow: 16px 0 48px rgba(9,20,34,.16);
+  border: 1px solid var(--border-light);
+  border-radius: 14px;
+  box-shadow: var(--card-shadow-hover);
   overflow: hidden;
   z-index: 21;
   transform: translateX(-100%);
@@ -947,13 +957,13 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
 @media (max-width: 880px) {
   /* Gaveta sobreposta: não divide espaço com a árvore, então em telas
      estreitas ela pode ocupar quase toda a largura em vez de encolher.
-     O card de acesso encurta pra só o ícone, evitando colidir com o
-     título centralizado. */
+     O card de acesso é pequeno e quadrado por natureza (100px):
+     continua com a mesma apresentação, só um pouco mais compacto. */
   .tree-viewport { --loss-panel-w: min(86vw, 320px); }
   .loss-panel-head { padding: 11px 12px 10px; }
   .loss-list { padding: 10px 11px 12px; gap: 9px; }
-  .loss-trigger { padding: 9px; gap: 0; }
-  .loss-trigger-text { display: none; }
+  .loss-trigger { width: 86px; padding: 12px 8px; gap: 7px; }
+  .loss-trigger-icon { width: 30px; height: 30px; }
 }
 
 @media (max-width: 460px) {
@@ -1515,11 +1525,11 @@ body[data-bg="dark"] {
 [data-bg="dark"] .legend-item:hover { border-color: var(--vbm-blue-light); background: rgba(60,181,229,.16); }
 [data-bg="dark"] .zoom-btn:hover { background: var(--vbm-blue); color: #fff; }
 
-/* Gaveta "Perdas & Ganhos" — fundo sólido escuro, mesmo princípio do .card */
+/* Painel "Perdas & Ganhos" — fundo sólido escuro, mesmo princípio do .card */
 [data-bg="dark"] .loss-panel {
   background: #16202e;
-  border-left-color: rgba(255,255,255,.1);
-  box-shadow: -16px 0 48px rgba(0,0,0,.45);
+  border-color: rgba(255,255,255,.1);
+  box-shadow: 0 8px 28px rgba(0,0,0,.4);
 }
 [data-bg="dark"] .loss-trigger {
   background: rgba(255,255,255,.07);
