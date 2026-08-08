@@ -592,31 +592,16 @@ const fmtLobp = formatValuePlain(
   }
 
   /**
-   * Largura (px) ocupada pelo painel "Top 15 Perdas" à esquerda do
-   * viewport (+ respiro), lida em tempo real do layout renderizado —
-   * sem constante fixa, então acompanha sozinha as larguras responsivas
-   * definidas no CSS. Usada pra centralizar/enquadrar a árvore só no
-   * espaço "livre" à direita do painel, evitando nascer escondida atrás
-   * dele. Retorna 0 se o painel não existir ou estiver oculto (mobile).
-   */
-  function getReservedLeftPx() {
-    const panel = document.getElementById('lossPanel');
-    const vp = document.getElementById('treeViewport');
-    if (!panel || !vp || window.getComputedStyle(panel).display === 'none') return 0;
-    const panelRect = panel.getBoundingClientRect();
-    const vpRect = vp.getBoundingClientRect();
-    return Math.max(0, panelRect.right - vpRect.left + 16);
-  }
-
-  /**
    * Reenquadra a viewport para conter (e centralizar) o bounding box `b`.
    * A escala respeita FIT_MAX_SCALE (não aproxima demais) e ZOOM_MIN.
    */
   function zoomToBounds(b, animate = true) {
     if (!isFinite(b.minX)) return;
+    // Sem reserva lateral: o painel "Perdas & Ganhos" virou gaveta
+    // sobreposta e não disputa mais largura com a árvore, que passa a
+    // usar o viewport inteiro.
     const vp = document.getElementById('treeViewport');
-    const reserved = getReservedLeftPx();
-    const vw = vp.clientWidth - reserved;
+    const vw = vp.clientWidth;
     const vh = vp.clientHeight;
     const bw = Math.max(1, b.maxX - b.minX);
     const bh = Math.max(1, b.maxY - b.minY);
@@ -627,7 +612,7 @@ const fmtLobp = formatValuePlain(
     );
     k = Math.max(CFG.ZOOM_MIN, Math.min(CFG.FIT_MAX_SCALE, k));
 
-    const tx = reserved + vw / 2 - k * (b.minX + bw / 2);
+    const tx = vw / 2 - k * (b.minX + bw / 2);
     const ty = vh / 2 - k * (b.minY + bh / 2);
     const t  = d3.zoomIdentity.translate(tx, ty).scale(k);
 
@@ -654,12 +639,10 @@ const fmtLobp = formatValuePlain(
     const p = CURRENT_POS[id];
     if (!p) { fitAll(animate); return; }
     const vp = document.getElementById('treeViewport');
-    const reserved = getReservedLeftPx();
-    const availW = vp.clientWidth - reserved;
     const cx = p.x + CFG.CARD_W / 2;
     const cy = p.y + CFG.CARD_H / 2;
     const t  = d3.zoomIdentity
-      .translate(reserved + availW / 2 - k * cx, vp.clientHeight / 2 - k * cy)
+      .translate(vp.clientWidth / 2 - k * cx, vp.clientHeight / 2 - k * cy)
       .scale(k);
     if (animate) {
       viewportSel.transition().duration(CFG.ZOOM_ANIM_MS).ease(d3.easeCubicInOut)
@@ -1136,11 +1119,63 @@ const fmtLobp = formatValuePlain(
       .filter((entry) => !entry.variation.noData && entry.rawDelta > 0);
   }
 
+  // ── Renderização DIFERIDA do painel ─────────────────────────
+  // O painel é derivado do TREE_MAP (nenhuma requisição própria), mas
+  // montá-lo custa: percorre todos os nós, calcula variação, ordena e
+  // gera o HTML de todas as linhas. Antes isso rodava ANTES dos cards
+  // da árvore serem criados, atrasando o que o usuário realmente espera
+  // ver primeiro. Agora a árvore renderiza e fica interativa, e só
+  // depois — em tempo ocioso do navegador — o painel é montado.
+  let lossPanelDirty = true;   // dados novos: precisa recalcular
+  let lossIdleHandle = null;
+
+  function cancelLossPanelRender() {
+    if (lossIdleHandle == null) return;
+    (window.cancelIdleCallback || window.clearTimeout)(lossIdleHandle);
+    lossIdleHandle = null;
+  }
+
+  // Marca o painel como desatualizado (troca de VDT/ano) e devolve o
+  // skeleton, sem calcular nada ainda.
+  function invalidateLossPanel() {
+    lossPanelDirty = true;
+    cancelLossPanelRender();
+    const list = document.getElementById('lossList');
+    if (list) {
+      list.innerHTML =
+        '<div class="loss-skeleton" aria-hidden="true">' +
+        '<div class="loss-skel-row"></div>'.repeat(6) +
+        '</div>';
+    }
+  }
+
+  // Agenda a montagem para quando o navegador estiver ocioso — assim
+  // ela nunca disputa frame com a renderização/interação da árvore.
+  // O timeout garante que o painel não fique adiado indefinidamente
+  // numa aba muito ocupada.
+  function scheduleLossPanelRender() {
+    if (!lossPanelDirty) return;
+    cancelLossPanelRender();
+    const run = () => { lossIdleHandle = null; renderLossPanel(); };
+    lossIdleHandle = window.requestIdleCallback
+      ? window.requestIdleCallback(run, { timeout: 1500 })
+      : setTimeout(run, 120);
+  }
+
+  // Chamado ao abrir a gaveta: se o usuário chegou antes do tempo
+  // ocioso, monta na hora em vez de deixá-lo olhando o skeleton.
+  function ensureLossPanelRendered() {
+    if (!lossPanelDirty) return;
+    cancelLossPanelRender();
+    renderLossPanel();
+  }
+
   function renderLossPanel() {
     const list = document.getElementById('lossList');
     if (!list || !ROOT_ID) return;
 
     const entries = computeVarianceEntries(TREE_MAP, lossCompareKey);
+    lossPanelDirty = false;
 
     if (entries.length === 0) {
       list.innerHTML = `<div class="loss-empty" data-i18n="loss.empty">Nenhuma perda ou ganho neste comparativo.</div>`;
@@ -1248,8 +1283,55 @@ const fmtLobp = formatValuePlain(
         if (!row) return;
         const nodeId = Number(row.dataset.node);
         if (Number.isFinite(nodeId)) openTreeToNode(nodeId);
+        // Navegar até o nó é o objetivo do clique: fecha a gaveta pra
+        // liberar a visão da árvore, que é o que o usuário quer ver.
+        closeLossPanel();
       });
     }
+
+    attachLossDrawerEvents();
+  }
+
+  // ── Gaveta "Perdas & Ganhos" ─────────────────────────────────
+  // O painel deixou de ocupar a lateral do viewport: agora entra sob
+  // demanda pelo card de acesso. Toda a lógica interna (comparativo,
+  // ordenação, filtro de tempo, clique numa linha) segue idêntica —
+  // isto aqui só controla visibilidade.
+  function openLossPanel() {
+    const vp = document.getElementById('treeViewport');
+    if (!vp) return;
+    ensureLossPanelRendered(); // não deixa o usuário olhando o skeleton
+    vp.classList.add('loss-open');
+    const panel = document.getElementById('lossPanel');
+    const trigger = document.getElementById('lossTrigger');
+    if (panel) panel.setAttribute('aria-hidden', 'false');
+    if (trigger) trigger.setAttribute('aria-expanded', 'true');
+    const close = document.getElementById('lossClose');
+    if (close) close.focus();
+  }
+
+  function closeLossPanel() {
+    const vp = document.getElementById('treeViewport');
+    if (!vp || !vp.classList.contains('loss-open')) return;
+    vp.classList.remove('loss-open');
+    const panel = document.getElementById('lossPanel');
+    const trigger = document.getElementById('lossTrigger');
+    if (panel) panel.setAttribute('aria-hidden', 'true');
+    if (trigger) { trigger.setAttribute('aria-expanded', 'false'); trigger.focus(); }
+  }
+
+  function attachLossDrawerEvents() {
+    const trigger  = document.getElementById('lossTrigger');
+    const close    = document.getElementById('lossClose');
+    const backdrop = document.getElementById('lossBackdrop');
+
+    if (trigger)  trigger.addEventListener('click', openLossPanel);
+    if (close)    close.addEventListener('click', closeLossPanel);
+    if (backdrop) backdrop.addEventListener('click', closeLossPanel);
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeLossPanel();
+    });
   }
 
   // ── 14. INIT ────────────────────────────────────────────────
@@ -1300,9 +1382,12 @@ const fmtLobp = formatValuePlain(
     TREE_MAP = map;
     ROOT_ID  = rootId;
 
-    // Recalcula o painel "Top 15 Perdas" com os dados recém-carregados
-    // (já filtrados pelo VDT atual) e o comparativo ativo no combo.
-    renderLossPanel();
+    // Painel "Perdas & Ganhos": só marca como desatualizado e mostra o
+    // skeleton. A montagem de verdade fica para DEPOIS da árvore estar
+    // na tela (ver o final desta função) — antes ela rodava aqui, ou
+    // seja, o usuário esperava o painel inteiro ser calculado antes do
+    // primeiro card aparecer.
+    invalidateLossPanel();
 
     // Estado inicial de expansão limitado a CFG.INITIAL_DEPTH níveis
     const queue = [{ id: rootId, d: 0 }];
@@ -1337,6 +1422,11 @@ const fmtLobp = formatValuePlain(
     // custom property — CFG segue sendo a fonte única da verdade.
     canvas.style.setProperty('--tree-anim', CFG.ANIM_MS + 'ms');
     setTimeout(() => canvas.classList.add('anim-ready'), 60);
+
+    // A árvore já está posicionada, pintada e interativa. Só agora o
+    // painel "Perdas & Ganhos" é montado, em tempo ocioso do navegador,
+    // sem competir com o primeiro paint nem travar a interação.
+    scheduleLossPanelRender();
 
     return true;
   }

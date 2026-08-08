@@ -187,16 +187,39 @@
       <span id="treeTitleYear"></span>
     </div>
 
-    <!-- Painel "Perdas & Ganhos" — fixo à esquerda do viewport (irmão de
-         .tree-world: não sofre pan/zoom da árvore). Usa os mesmos dados
-         já buscados pra árvore (respeita o filtro VDT atual); combo de
-         comparação e ordenação só recalculam este painel, não mexem nos
-         cards. Mostra TODOS os itens com dado calculável (sem cap de
-         quantidade) — itens com valor-base ou valor-comparação nulo não
-         entram na lista. -->
-    <aside class="loss-panel" id="lossPanel">
+    <!-- Card de acesso ao painel "Perdas & Ganhos". O painel deixou de
+         ocupar a lateral esquerda do viewport: agora a árvore nasce com
+         a tela inteira e o painel só entra sob demanda, como gaveta. -->
+    <button type="button" class="loss-trigger" id="lossTrigger" aria-haspopup="dialog" aria-expanded="false" aria-controls="lossPanel">
+      <span class="loss-trigger-icon" aria-hidden="true">
+        <svg width="17" height="17" viewBox="0 0 20 20" fill="none">
+          <path d="M7 5h9M7 10h9M7 15h9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          <circle cx="3.4" cy="5" r="1.3" fill="currentColor"/>
+          <circle cx="3.4" cy="10" r="1.3" fill="currentColor"/>
+          <circle cx="3.4" cy="15" r="1.3" fill="currentColor"/>
+        </svg>
+      </span>
+      <span class="loss-trigger-text" data-i18n="loss.trigger">Visualizar Perdas &amp; Ganhos</span>
+    </button>
+
+    <!-- Fundo escurecido da gaveta — fecha ao clicar fora. -->
+    <div class="loss-backdrop" id="lossBackdrop"></div>
+
+    <!-- Painel "Perdas & Ganhos" — agora uma gaveta lateral direita
+         (irmão de .tree-world: não sofre pan/zoom da árvore). Usa os
+         mesmos dados já buscados pra árvore (respeita o filtro VDT
+         atual); combo de comparação e ordenação só recalculam este
+         painel, não mexem nos cards. Mostra TODOS os itens com dado
+         calculável (sem cap de quantidade) — itens com valor-base ou
+         valor-comparação nulo não entram na lista. -->
+    <aside class="loss-panel" id="lossPanel" role="dialog" aria-modal="false" aria-label="Perdas e Ganhos" aria-hidden="true">
       <div class="loss-panel-head">
-        <h3 data-i18n="loss.title">Perdas &amp; Ganhos</h3>
+        <div class="loss-panel-titlebar">
+          <h3 data-i18n="loss.title">Perdas &amp; Ganhos</h3>
+          <button type="button" class="loss-close" id="lossClose" aria-label="Fechar" data-i18n-aria="settings.close">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          </button>
+        </div>
         <div class="loss-compare-select-wrap">
           <select id="lossCompareSelect" class="loss-compare-select">
             <option value="fcst_bdgt" data-i18n="loss.cmp.fcstBdgt">Fcst x Bdgt</option>
@@ -224,8 +247,15 @@
           </div>
         </div>
       </div>
+      <!-- Skeleton: fica visível enquanto o painel ainda não foi
+           calculado (a árvore tem prioridade — ver scheduleLossPanelRender
+           em app.js). Trocado pela lista real assim que ela renderiza. -->
       <div class="loss-list" id="lossList">
-        <div class="loss-empty" data-i18n="loss.loading">Carregando…</div>
+        <div class="loss-skeleton" aria-hidden="true">
+          <div class="loss-skel-row"></div><div class="loss-skel-row"></div>
+          <div class="loss-skel-row"></div><div class="loss-skel-row"></div>
+          <div class="loss-skel-row"></div><div class="loss-skel-row"></div>
+        </div>
       </div>
     </aside>
 
@@ -349,6 +379,7 @@
         'filter.yearLabel': 'Ano:',
         'treeTitle.eyebrow': 'Árvore selecionada',
         'loss.title': 'Perdas & Ganhos',
+        'loss.trigger': 'Visualizar Perdas & Ganhos',
         'loss.cmp.fcstBdgt': 'Fcst x Bdgt',
         'loss.cmp.fcstLobp': 'Fcst x LOBP',
         'loss.cmp.bdgtLobp': 'Bdgt x LOBP',
@@ -385,6 +416,7 @@
         'filter.yearLabel': 'Year:',
         'treeTitle.eyebrow': 'Selected tree',
         'loss.title': 'Losses & Gains',
+        'loss.trigger': 'View Losses & Gains',
         'loss.cmp.fcstBdgt': 'Fcst x Bdgt',
         'loss.cmp.fcstLobp': 'Fcst x LOBP',
         'loss.cmp.bdgtLobp': 'Bdgt x LOBP',

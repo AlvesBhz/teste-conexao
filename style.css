@@ -621,31 +621,144 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
   .tree-title-badge { max-width: calc(100% - 32px); }
 }
 
-/* ---- PAINEL "PERDAS & GANHOS" (fixo à esquerda do tree-viewport) ----
-   Irmão de .tree-world dentro de .tree-viewport (position:relative):
-   fica em absolute e por isso NÃO recebe o transform de pan/zoom da
-   árvore — permanece sempre visível, no mesmo lugar, enquanto o
-   usuário navega. Cartão sólido (não pill translúcida) porque carrega
-   conteúdo denso (select + lista rolável), não só um rótulo curto. */
-.loss-panel {
+/* ---- CARD DE ACESSO A "PERDAS & GANHOS" ----
+   O painel deixou de ocupar a lateral esquerda do viewport: a árvore
+   nasce com a largura inteira e o painel entra sob demanda, como
+   gaveta. Este card é a única presença permanente do recurso na tela. */
+.loss-trigger {
   position: absolute;
   top: 16px;
-  left: 16px;
-  bottom: 16px;
+  right: 16px;
+  /* Acima do .tree-title-badge (15): em telas estreitas o título
+     centralizado alcança a faixa do card e passaria por cima dele. */
+  z-index: 16;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px 10px 13px;
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: 100px;
+  box-shadow: var(--card-shadow);
+  cursor: pointer;
+  font-family: var(--font-poppins);
+  font-weight: 600;
+  font-size: .78rem;
+  color: var(--vbm-blue-deep);
+  white-space: nowrap;
+  transition: transform .25s var(--ease-spring), box-shadow .25s var(--ease-out),
+              border-color .25s var(--ease-out), background .25s var(--ease-out);
+}
+.loss-trigger:hover {
+  transform: translateY(-2px);
+  border-color: var(--vbm-blue-light);
+  box-shadow: var(--card-shadow-hover);
+}
+.loss-trigger:active { transform: translateY(0); }
+.loss-trigger:focus-visible {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(60,181,229,.25);
+}
+.loss-trigger-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--blue-light);
+  color: var(--vbm-blue-dark);
+  transition: background .25s var(--ease-out), color .25s var(--ease-out);
+}
+.loss-trigger:hover .loss-trigger-icon { background: var(--vbm-blue); color: #fff; }
+/* Gaveta aberta: o card sai de cena (senão fica sob o painel). */
+.loss-open .loss-trigger { opacity: 0; pointer-events: none; transform: translateX(12px); }
+
+/* Fundo da gaveta — escurece a árvore de leve e captura o clique-fora. */
+.loss-backdrop {
+  position: absolute;
+  inset: 0;
+  /* Gaveta e fundo ficam acima de TUDO que vive dentro do viewport
+     (título 15, legenda/zoom/dica 10) — senão o título centralizado
+     atravessa o painel em telas estreitas. Seguem abaixo da topbar
+     (100) e do painel de Configurações (199/200). */
+  z-index: 20;
+  background: rgba(9,20,34,.28);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .3s var(--ease-out);
+}
+.loss-open .loss-backdrop { opacity: 1; pointer-events: auto; }
+
+/* ---- PAINEL "PERDAS & GANHOS" (gaveta lateral direita) ----
+   Irmão de .tree-world dentro de .tree-viewport (position:relative):
+   fica em absolute e por isso NÃO recebe o transform de pan/zoom da
+   árvore. Cartão sólido (não pill translúcida) porque carrega conteúdo
+   denso (select + lista rolável), não só um rótulo curto. */
+.loss-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
   width: var(--loss-panel-w);
-  max-width: calc(100% - 32px);
+  max-width: calc(100% - 24px);
   display: flex;
   flex-direction: column;
-  background: rgba(255,255,255,.92);
-  border: 1px solid var(--border-light);
-  border-radius: 14px;
-  box-shadow: var(--card-shadow);
+  background: var(--surface);
+  border-left: 1px solid var(--border-light);
+  box-shadow: -16px 0 48px rgba(9,20,34,.16);
   overflow: hidden;
-  z-index: 12;
+  z-index: 21;
+  transform: translateX(100%);
+  visibility: hidden;
+  transition: transform .34s var(--ease-out), visibility .34s;
 }
-@supports (backdrop-filter: blur(1px)) {
-  .loss-panel { backdrop-filter: blur(10px) saturate(140%); -webkit-backdrop-filter: blur(10px) saturate(140%); }
+.loss-open .loss-panel { transform: none; visibility: visible; }
+
+@media (prefers-reduced-motion: reduce) {
+  .loss-panel, .loss-backdrop, .loss-trigger { transition-duration: .01ms; }
 }
+
+/* Barra de título da gaveta: título + botão de fechar */
+.loss-panel-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.loss-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background .2s, color .2s, border-color .2s;
+}
+.loss-close:hover { background: var(--blue-light); color: var(--vbm-blue-dark); border-color: var(--vbm-blue-light); }
+.loss-close:focus-visible { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(60,181,229,.2); }
+
+/* Skeleton — só enquanto o painel ainda não foi calculado. A árvore tem
+   prioridade de renderização (ver scheduleLossPanelRender em app.js). */
+.loss-skeleton { display: flex; flex-direction: column; gap: 14px; padding: 4px 0; }
+.loss-skel-row { height: 30px; border-radius: 8px; background: var(--surface-alt); position: relative; overflow: hidden; }
+.loss-skel-row::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(60,181,229,.14), transparent);
+  animation: lossSkelSweep 1.25s ease-in-out infinite;
+}
+@keyframes lossSkelSweep { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) { .loss-skel-row::after { animation: none; } }
 
 .loss-panel-head {
   display: flex;
@@ -830,20 +943,18 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
 }
 
 @media (max-width: 880px) {
-  /* Em telas estreitas o título centralizado (.tree-title-badge) fica
-     proporcionalmente mais largo que o viewport — desce o painel pra
-     abaixo dele em vez de tentar dividir a mesma faixa horizontal.
-     Continua ao lado da árvore (não empilhado) pra getReservedLeftPx()
-     em app.js seguir reservando só largura, sem precisar de lógica
-     extra pra reserva vertical. */
-  .tree-viewport { --loss-panel-w: 200px; }
-  .loss-panel { top: 76px; }
+  /* Gaveta sobreposta: não divide espaço com a árvore, então em telas
+     estreitas ela pode ocupar quase toda a largura em vez de encolher.
+     O card de acesso encurta pra só o ícone, evitando colidir com o
+     título centralizado. */
+  .tree-viewport { --loss-panel-w: min(86vw, 320px); }
   .loss-panel-head { padding: 11px 12px 10px; }
   .loss-list { padding: 10px 11px 12px; gap: 9px; }
+  .loss-trigger { padding: 9px; gap: 0; }
+  .loss-trigger-text { display: none; }
 }
 
 @media (max-width: 460px) {
-  .tree-viewport { --loss-panel-w: 160px; }
   .loss-row-name, .loss-row-value { font-size: .66rem; }
 }
 
@@ -959,7 +1070,7 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
      e .viewport-hint (que precisa desviar dele) leem daqui em vez de
      duplicar o valor em dois seletores. Ajustada nos mesmos breakpoints
      do painel logo abaixo. */
-  --loss-panel-w: 300px;
+  --loss-panel-w: 320px;
   position: relative;
   margin: 20px 36px 28px;
   height: calc(100vh - 112px);   /* AJUSTE: era calc(100vh - 178px) — sem a faixa de toolbar, sobra mais altura */
@@ -1054,10 +1165,9 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
 
 .viewport-hint {
   position: absolute;
-  /* Começa logo depois do painel "Perdas & Ganhos" (mesma variável que
-     define a largura dele) — nunca fica atrás/embaixo do painel,
-     independente do breakpoint. */
-  left: calc(16px + var(--loss-panel-w) + 16px);
+  /* O painel "Perdas & Ganhos" virou gaveta lateral direita e não ocupa
+     mais a esquerda do viewport, então a dica volta à margem normal. */
+  left: 16px;
   bottom: 14px;
   font-size: 10.5px;
   font-weight: 500;
@@ -1403,12 +1513,28 @@ body[data-bg="dark"] {
 [data-bg="dark"] .legend-item:hover { border-color: var(--vbm-blue-light); background: rgba(60,181,229,.16); }
 [data-bg="dark"] .zoom-btn:hover { background: var(--vbm-blue); color: #fff; }
 
-/* Painel "Top 15 Perdas" — vidro escuro, mesmo princípio do .card */
+/* Gaveta "Perdas & Ganhos" — fundo sólido escuro, mesmo princípio do .card */
 [data-bg="dark"] .loss-panel {
-  background: rgba(20,32,48,.88);
-  border-color: rgba(255,255,255,.1);
-  box-shadow: 0 8px 28px rgba(0,0,0,.35);
+  background: #16202e;
+  border-left-color: rgba(255,255,255,.1);
+  box-shadow: -16px 0 48px rgba(0,0,0,.45);
 }
+[data-bg="dark"] .loss-trigger {
+  background: rgba(255,255,255,.07);
+  border-color: rgba(255,255,255,.14);
+  color: #fff;
+}
+[data-bg="dark"] .loss-trigger:hover { border-color: var(--vbm-blue-light); background: rgba(255,255,255,.12); }
+[data-bg="dark"] .loss-trigger-icon { background: rgba(60,181,229,.22); color: var(--vbm-blue-light); }
+[data-bg="dark"] .loss-trigger:hover .loss-trigger-icon { background: var(--vbm-blue); color: #fff; }
+[data-bg="dark"] .loss-backdrop { background: rgba(0,0,0,.45); }
+[data-bg="dark"] .loss-close {
+  background: rgba(255,255,255,.06);
+  border-color: rgba(255,255,255,.14);
+  color: rgba(255,255,255,.7);
+}
+[data-bg="dark"] .loss-close:hover { background: rgba(60,181,229,.22); color: #fff; border-color: var(--vbm-blue-light); }
+[data-bg="dark"] .loss-skel-row { background: rgba(255,255,255,.05); }
 /* Scrollbar clara translúcida sobre o vidro escuro — sem isso o
    scrollbar padrão do SO (cinza/branco chapado) destoa muito do painel. */
 [data-bg="dark"] .loss-list { scrollbar-color: rgba(255,255,255,.18) transparent; }
