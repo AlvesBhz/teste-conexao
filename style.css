@@ -622,13 +622,14 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
 }
 
 /* ---- CARD DE ACESSO A "PERDAS & GANHOS" ----
-   O painel deixou de ocupar a lateral esquerda do viewport: a árvore
-   nasce com a largura inteira e o painel entra sob demanda, como
-   gaveta. Este card é a única presença permanente do recurso na tela. */
+   Fica exatamente onde o painel completo ficava (canto superior
+   esquerdo do viewport): o painel não aparece mais por padrão, só este
+   card compacto — e o painel completo abre NO MESMO LUGAR, como gaveta,
+   ao clicar nele. */
 .loss-trigger {
   position: absolute;
   top: 16px;
-  right: 16px;
+  left: 16px;
   /* Acima do .tree-title-badge (15): em telas estreitas o título
      centralizado alcança a faixa do card e passaria por cima dele. */
   z-index: 16;
@@ -673,14 +674,14 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
   transition: background .25s var(--ease-out), color .25s var(--ease-out);
 }
 .loss-trigger:hover .loss-trigger-icon { background: var(--vbm-blue); color: #fff; }
-/* Gaveta aberta: o card sai de cena (senão fica sob o painel). */
-.loss-open .loss-trigger { opacity: 0; pointer-events: none; transform: translateX(12px); }
+/* Painel aberto: o card sai de cena (senão fica sob o painel). */
+.loss-open .loss-trigger { opacity: 0; pointer-events: none; transform: translateX(-12px); }
 
-/* Fundo da gaveta — escurece a árvore de leve e captura o clique-fora. */
+/* Fundo do painel — escurece a árvore de leve e captura o clique-fora. */
 .loss-backdrop {
   position: absolute;
   inset: 0;
-  /* Gaveta e fundo ficam acima de TUDO que vive dentro do viewport
+  /* Painel e fundo ficam acima de TUDO que vive dentro do viewport
      (título 15, legenda/zoom/dica 10) — senão o título centralizado
      atravessa o painel em telas estreitas. Seguem abaixo da topbar
      (100) e do painel de Configurações (199/200). */
@@ -692,7 +693,8 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
 }
 .loss-open .loss-backdrop { opacity: 1; pointer-events: auto; }
 
-/* ---- PAINEL "PERDAS & GANHOS" (gaveta lateral direita) ----
+/* ---- PAINEL "PERDAS & GANHOS" (mesmo local do card: canto superior
+   esquerdo do viewport, expandido) ----
    Irmão de .tree-world dentro de .tree-viewport (position:relative):
    fica em absolute e por isso NÃO recebe o transform de pan/zoom da
    árvore. Cartão sólido (não pill translúcida) porque carrega conteúdo
@@ -700,18 +702,18 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
 .loss-panel {
   position: absolute;
   top: 0;
-  right: 0;
+  left: 0;
   bottom: 0;
   width: var(--loss-panel-w);
   max-width: calc(100% - 24px);
   display: flex;
   flex-direction: column;
   background: var(--surface);
-  border-left: 1px solid var(--border-light);
-  box-shadow: -16px 0 48px rgba(9,20,34,.16);
+  border-right: 1px solid var(--border-light);
+  box-shadow: 16px 0 48px rgba(9,20,34,.16);
   overflow: hidden;
   z-index: 21;
-  transform: translateX(100%);
+  transform: translateX(-100%);
   visibility: hidden;
   transition: transform .34s var(--ease-out), visibility .34s;
 }
