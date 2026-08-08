@@ -259,10 +259,19 @@
       </div>
     </aside>
 
-    <!-- Legenda fixa (positivo/negativo) -->
-    <div class="tree-legend">
-      <span class="legend-item"><span class="dot green"></span> <span data-i18n="legend.favorable">Positivo</span></span>
-      <span class="legend-item"><span class="dot red"></span> <span data-i18n="legend.unfavorable">Negativo</span></span>
+    <!-- Formatação Referência — substitui a legenda fixa Positivo/
+         Negativo. Controla qual referência (LOBP ou Budget) define a
+         cor (verde/vermelho) do dot de status dos cards da árvore;
+         reaproveita o padrão visual do seletor de Tema
+         (.theme-toggle/.theme-toggle-btn) em vez de um componente novo.
+         Os deltas "vs LOBP"/"vs Bdgt" de cada card não mudam — já são
+         autoexplicativos pelo próprio rótulo. -->
+    <div class="status-ref-toggle" id="statusRefGroup">
+      <span class="status-ref-label" data-i18n="statusRef.label">Formatação Referência</span>
+      <div class="theme-toggle" role="radiogroup" aria-label="Formatação Referência">
+        <button type="button" class="theme-toggle-btn status-ref-btn" data-ref="lobp" role="radio" aria-checked="false" data-i18n="statusRef.lobp">LOBP</button>
+        <button type="button" class="theme-toggle-btn status-ref-btn active" data-ref="bdgt" role="radio" aria-checked="true" data-i18n="statusRef.bdgt">Budget</button>
+      </div>
     </div>
 
     <!-- Controles de zoom -->
@@ -364,8 +373,9 @@
         'theme.dark': 'Escuro',
         'settings.language': 'Idioma',
         'settings.languageInfo': 'Idioma da interface',
-        'legend.favorable': 'Positivo',
-        'legend.unfavorable': 'Negativo',
+        'statusRef.label': 'Formatação Referência',
+        'statusRef.lobp': 'LOBP',
+        'statusRef.bdgt': 'Budget',
         'hint.viewport': 'Arraste para mover · Scroll para zoom · Passe o mouse num card para destacar a trajetória · Clique para expandir',
         'zoom.in': 'Aproximar',
         'zoom.out': 'Afastar',
@@ -401,8 +411,9 @@
         'theme.dark': 'Dark',
         'settings.language': 'Language',
         'settings.languageInfo': 'Interface language',
-        'legend.favorable': 'Positive',
-        'legend.unfavorable': 'Negative',
+        'statusRef.label': 'Reference Format',
+        'statusRef.lobp': 'LOBP',
+        'statusRef.bdgt': 'Budget',
         'hint.viewport': 'Drag to pan · Scroll to zoom · Hover a card to highlight its path · Click to expand',
         'zoom.in': 'Zoom in',
         'zoom.out': 'Zoom out',

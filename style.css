@@ -969,60 +969,29 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
   .loss-row-name, .loss-row-value { font-size: .66rem; }
 }
 
-/* ---- LEGEND (fixa dentro do tree-viewport, canto superior esquerdo) ---- */
-.tree-legend {
+/* ---- FORMATAÇÃO REFERÊNCIA (fixa dentro do tree-viewport, canto
+   superior direito) — substitui a antiga legenda Positivo/Negativo.
+   Controla qual referência (LOBP ou Budget) define a cor do dot de
+   status dos cards; reaproveita o padrão visual do seletor de Tema
+   (.theme-toggle/.theme-toggle-btn) em vez de inventar um componente
+   novo. ---- */
+.status-ref-toggle {
   position: absolute;
   top: 14px;
-  right: 14px;   /* AJUSTE: era left: 14px */
+  right: 14px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   z-index: 10;
 }
-
-/* Legenda como pill badges (padrão .badge / .swatch-name do DS: 700, LS levemente aberto) */
-.legend-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 11px;   /* AJUSTE: era 11.5px — igual ao .card-title */
-  font-weight: 400;   /* AJUSTE: era 700 — sem negrito */
+.status-ref-label {
   font-family: var(--font-poppins);
-  color: var(--text-secondary);
-  letter-spacing: .03em;
-  padding: .32rem .85rem;
-  border-radius: 100px;
-  background: rgba(255,255,255,.85);
-  border: 1px solid var(--border-light);
-  box-shadow: var(--card-shadow);
-  transition: border-color .25s, background .25s;
+  font-weight: 600;
+  font-size: .64rem;
+  letter-spacing: .04em;
+  color: var(--text-muted);
+  white-space: nowrap;
 }
-@supports (backdrop-filter: blur(1px)) {
-  .legend-item { backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
-}
-.legend-item:hover { border-color: var(--blue); background: var(--blue-light); }
-
-/* Dot com halo pulsante (status-pulse do DS) */
-.dot {
-  width: 9px; height: 9px;
-  border-radius: 50%;
-  display: inline-block;
-  position: relative;
-  flex-shrink: 0;
-}
-.dot::before,
-.dot::after {
-  content: '';
-  position: absolute; top: 50%; left: 50%;
-  width: 9px; height: 9px; border-radius: 50%;
-  background: inherit;
-  transform: translate(-50%,-50%);
-  animation: statusRingPulse 3.6s ease-out infinite;   /* AJUSTE: era 2.5s — pulso mais lento e discreto */
-  pointer-events: none;
-}
-.dot::after { animation-delay: 1.3s; }   /* AJUSTE: era .9s */
-.dot.green { background: var(--green); }
-.dot.red   { background: var(--red); }
 
 /* AJUSTE: amplitude reduzida (scale 3→1.8, opacity .55→.32) — menos chamativo */
 @keyframes statusRingPulse {
@@ -1465,7 +1434,7 @@ body.theme-ready .loss-panel,
 body.theme-ready .loss-compare-select,
 body.theme-ready .loss-sort-group,
 body.theme-ready .loss-sort-btn,
-body.theme-ready .legend-item,
+body.theme-ready .status-ref-label,
 body.theme-ready .zoom-btn,
 body.theme-ready .viewport-hint,
 body.theme-ready .user-chip,
@@ -1509,8 +1478,7 @@ body[data-bg="dark"] {
 [data-bg="dark"] .connector-line.is-active { stroke: rgba(255,255,255,.72); }
 [data-bg="dark"] .connector-line.is-dimmed { stroke: rgba(255,255,255,.12); opacity: 1; }
 
-/* Legenda, controles de zoom, dica de navegação — vidro claro sobre o fundo escuro */
-[data-bg="dark"] .legend-item,
+/* Controles de zoom, dica de navegação — vidro claro sobre o fundo escuro */
 [data-bg="dark"] .zoom-btn,
 [data-bg="dark"] .viewport-hint {
   background: rgba(255,255,255,.07);
@@ -1521,7 +1489,7 @@ body[data-bg="dark"] {
 [data-bg="dark"] #treeTitleText,
 [data-bg="dark"] #treeTitleYear { color: #fff; }
 [data-bg="dark"] .tree-title-eyebrow { color: rgba(255,255,255,.5); }
-[data-bg="dark"] .legend-item:hover { border-color: var(--vbm-blue-light); background: rgba(60,181,229,.16); }
+[data-bg="dark"] .status-ref-label { color: rgba(255,255,255,.5); }
 [data-bg="dark"] .zoom-btn:hover { background: var(--vbm-blue); color: #fff; }
 
 /* Painel "Perdas & Ganhos" — fundo sólido escuro, mesmo princípio do .card */
