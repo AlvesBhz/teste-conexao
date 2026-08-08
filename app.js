@@ -202,11 +202,21 @@
       : `<svg viewBox="0 0 16 16" fill="none" width="10" height="10"><path d="M8 3v10M4 9l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   }
 
+  // Referência que define positivo/negativo (verde/vermelho) no dot de
+  // status do card — antes fixa em Budget, agora escolhível no controle
+  // "Formatação Referência" (substitui a legenda Positivo/Negativo).
+  // Os dois deltas "vs LOBP"/"vs Bdgt" continuam cada um com sua própria
+  // cor real (não dependem desta escolha — já são autoexplicativos pelo
+  // rótulo). 'bdgt' é o default: mantém o comportamento atual intacto
+  // até o usuário trocar.
+  let statusRefKey = 'bdgt';
+
   function createNodeElement(node) {
     const isLeaf = node.children.length === 0;
 
     const vsOrc  = calcVariation(node.VL_PROJ, node.VL_ORC,  node.NodeID);
     const vsLobp = calcVariation(node.VL_PROJ, node.VL_LOBP, node.NodeID);
+    const vsStatus = statusRefKey === 'lobp' ? vsLobp : vsOrc;
 
 
   const fmtReal = formatValuePlain(
@@ -235,6 +245,7 @@ const fmtLobp = formatValuePlain(
     // tem favorável/desfavorável — nem seta, nem %, só "-" em cinza.
     const orcClass  = vsOrc.noData  ? 'nodata' : (vsOrc.favorable  ? 'fav' : 'unfav');
     const lobpClass = vsLobp.noData ? 'nodata' : (vsLobp.favorable ? 'fav' : 'unfav');
+    const statusClass = vsStatus.noData ? 'nodata' : (vsStatus.favorable ? 'fav' : 'unfav');
 
     const orcPct  = vsOrc.noData  ? '-' : (vsOrc.pct  >= 0 ? '+' : '') + vsOrc.pct.toFixed(1)  + '%';
     const lobpPct = vsLobp.noData ? '-' : (vsLobp.pct >= 0 ? '+' : '') + vsLobp.pct.toFixed(1) + '%';
@@ -264,7 +275,7 @@ const fmtLobp = formatValuePlain(
       <div class="${cardClass}">
         <div class="card-header">
           <div class="card-header-left">
-            <span class="card-status-dot ${orcClass}"></span>
+            <span class="card-status-dot ${statusClass}"></span>
             <div class="card-title" title="${node.IndicatorName}">${node.IndicatorName}</div>
           </div>
           
@@ -301,8 +312,25 @@ const fmtLobp = formatValuePlain(
     // mas é apenas um placeholder desabilitado, que nunca recebe estado.
     node.el = el;
     node.toggleBtnEl = isLeaf ? null : el.querySelector('.toggle-btn');
+    node.statusDotEl = el.querySelector('.card-status-dot');
 
     return el;
+  }
+
+  // Troca de referência (LOBP/Budget): recalcula só a classe fav/unfav/
+  // nodata do dot de status em cada card já existente — sem refazer
+  // layout, sem tocar nos deltas "vs LOBP"/"vs Bdgt" (que não dependem
+  // desta escolha) e sem reconstruir a árvore inteira.
+  function updateStatusDots() {
+    Object.values(TREE_MAP).forEach((node) => {
+      if (!node.statusDotEl) return;
+      const vsOrc  = calcVariation(node.VL_PROJ, node.VL_ORC,  node.NodeID);
+      const vsLobp = calcVariation(node.VL_PROJ, node.VL_LOBP, node.NodeID);
+      const vsStatus = statusRefKey === 'lobp' ? vsLobp : vsOrc;
+      const statusClass = vsStatus.noData ? 'nodata' : (vsStatus.favorable ? 'fav' : 'unfav');
+      node.statusDotEl.classList.remove('fav', 'unfav', 'nodata');
+      node.statusDotEl.classList.add(statusClass);
+    });
   }
 
   // ── 5. LAYOUT COM d3.tree() ─────────────────────────────────
@@ -742,6 +770,28 @@ const fmtLobp = formatValuePlain(
     if (zo) zo.addEventListener('click', () =>
       viewportSel.transition().duration(200).call(zoomBehavior.scaleBy, 0.8));
     if (zf) zf.addEventListener('click', () => fitAll());
+  }
+
+  // ── 11.1 FORMATAÇÃO REFERÊNCIA (LOBP / Budget) ───────────────
+  // Substitui a antiga legenda fixa "Positivo/Negativo": agora o
+  // usuário escolhe qual referência define a cor (verde/vermelho) do
+  // dot de status dos cards. Mesmo padrão de toggle segmentado já usado
+  // em Tema e "Indicadores de tempo" — delegação de clique nos 2
+  // botões, sem listener por botão.
+  function attachStatusRefEvents() {
+    const group = document.getElementById('statusRefGroup');
+    if (!group) return;
+    group.addEventListener('click', (e) => {
+      const btn = e.target.closest('.status-ref-btn');
+      if (!btn || btn.dataset.ref === statusRefKey) return;
+      statusRefKey = btn.dataset.ref;
+      group.querySelectorAll('.status-ref-btn').forEach((b) => {
+        const active = b === btn;
+        b.classList.toggle('active', active);
+        b.setAttribute('aria-checked', String(active));
+      });
+      updateStatusDots(); // reage na hora, sem reload — só recolore os dots já existentes
+    });
   }
 
   // ── 12. RESIZE ──────────────────────────────────────────────
@@ -1438,6 +1488,7 @@ const fmtLobp = formatValuePlain(
     // do zoomBehavior existir).
     setupZoom();
     attachEvents();
+    attachStatusRefEvents();
     setupConnectorHighlight();
 
     // Carga inicial numa ÚNICA ida e volta: /api/bootstrap já devolve a
