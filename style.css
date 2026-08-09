@@ -58,12 +58,10 @@
 
   /* Semânticos de status — padrão de cores de feedback:
      Verde/Positivo, Laranja/Alerta, Vermelho/Perda. */
-  --red:         #dc2626;   /* AJUSTE: era #ef4444 — Vermelho/Perda */
+  --red:         #dc2626;   /* Vermelho/Perda */
   --red-light:   #fef2f2;
-  --red-dark:    #991b1b;
-  --green:       #16a34a;   /* AJUSTE: era #22c55e — Verde/Positivo */
+  --green:       #16a34a;   /* Verde/Positivo */
   --green-light: #f0fdf4;
-  --green-dark:  #15803d;
   --orange:      #c2770e;   /* Laranja/Alerta — ainda sem consumidor na UI atual */
 
   --card-shadow: 0 1px 3px rgba(13,38,64,.03), 0 8px 24px rgba(13,38,64,.06);
@@ -1434,8 +1432,12 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
   height: 10px;
   flex-shrink: 0;
 }
-.drow .delta.fav   { color: var(--green-dark); }
-.drow .delta.unfav { color: var(--red-dark); }
+/* AJUSTE: eram --green-dark/--red-dark (tons mais escuros só pra esse
+   texto pequeno) — trocados por var(--green)/var(--red) pra usar
+   exatamente a paleta de feedback pedida em toda formatação
+   condicional, sem variante própria pra este componente. */
+.drow .delta.fav   { color: var(--green); }
+.drow .delta.unfav { color: var(--red); }
 .drow .delta.nodata { color: var(--text-muted); font-weight: 600; }
 
 /* ---- HIDDEN / COLLAPSED ---- */
@@ -1585,12 +1587,16 @@ body[data-bg="dark"] {
 [data-bg="dark"] .loss-sort-btn.active { background: var(--vbm-blue); color: #fff; }
 [data-bg="dark"] .loss-row:hover { background: rgba(60,181,229,.22); }
 [data-bg="dark"] .loss-row-name { color: rgba(255,255,255,.85); }
-[data-bg="dark"] .loss-row.is-loss .loss-row-value     { color: #f87171; }
+/* AJUSTE: eram #f87171/#4ade80 (tons claros escolhidos só pra
+   legibilidade em fundo escuro) — trocados por var(--red)/var(--green)
+   pra usar exatamente a paleta de feedback pedida (mesma cor nos dois
+   temas), igual ao que o tema claro já fazia. */
+[data-bg="dark"] .loss-row.is-loss .loss-row-value     { color: var(--red); }
 [data-bg="dark"] .loss-row.is-loss .loss-row-bar-track { background: rgba(255,255,255,.08); }
-[data-bg="dark"] .loss-row.is-loss .loss-row-bar       { background: #f87171; }
-[data-bg="dark"] .loss-row.is-gain .loss-row-value     { color: #4ade80; }
+[data-bg="dark"] .loss-row.is-loss .loss-row-bar       { background: var(--red); }
+[data-bg="dark"] .loss-row.is-gain .loss-row-value     { color: var(--green); }
 [data-bg="dark"] .loss-row.is-gain .loss-row-bar-track { background: rgba(255,255,255,.08); }
-[data-bg="dark"] .loss-row.is-gain .loss-row-bar       { background: #4ade80; }
+[data-bg="dark"] .loss-row.is-gain .loss-row-bar       { background: var(--green); }
 [data-bg="dark"] .loss-empty { color: rgba(255,255,255,.4); }
 
 /* Cards da árvore — vidro escuro (kpi-card do DS em modo Business).
@@ -1633,8 +1639,8 @@ body[data-bg="dark"] {
 /* Linha de deltas (vs BUD / vs LOBP) */
 [data-bg="dark"] .drow { color: rgba(255,255,255,.4); }
 [data-bg="dark"] .drow-item + .drow-item { border-color: rgba(255,255,255,.1); }
-[data-bg="dark"] .drow .delta.fav   { color: #4ade80; }
-[data-bg="dark"] .drow .delta.unfav { color: #f87171; }
+[data-bg="dark"] .drow .delta.fav   { color: var(--green); }
+[data-bg="dark"] .drow .delta.unfav { color: var(--red); }
 [data-bg="dark"] .drow .delta.nodata { color: rgba(255,255,255,.4); }
 [data-bg="dark"] .card-status-dot.nodata { background: rgba(255,255,255,.35); }
 
