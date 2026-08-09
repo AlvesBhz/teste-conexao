@@ -129,12 +129,16 @@
       </div>
     </div>
 
-    <!-- Separa os filtros do bloco de conta (engrenagem + usuário) —
-         cor de destaque (laranja) só pra marcar visualmente essa
-         fronteira, sem significado funcional. -->
-    <span class="filter-divider" aria-hidden="true"></span>
-
     <div class="topbar-right">
+      <!-- AJUSTE: os dois .filter-divider agora vivem os DOIS dentro de
+           topbar-right, flanqueando a engrenagem — antes o da esquerda
+           era filho direto de .topbar (gap de 24px) e o da direita
+           ficava dentro daqui (gap de 10px), então a engrenagem nunca
+           ficava centralizada entre os dois. Com ambos no mesmo
+           container e no mesmo `gap`, a distância dos dois lados da
+           engrenagem é sempre idêntica. -->
+      <span class="filter-divider" aria-hidden="true"></span>
+
       <button class="settings-btn" id="settingsBtn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="settingsPanel" title="Configurações" data-i18n-title="settings.btnTitle">
         <svg width="17" height="17" viewBox="0 0 20 20" fill="none">
           <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" stroke="currentColor" stroke-width="1.5" />
@@ -142,9 +146,6 @@
         </svg>
       </button>
 
-      <!-- Mesmo separador do .filter-divider acima — reaproveitado (não
-           duplicado) pra garantir que os dois fiquem visualmente
-           idênticos, no lugar da borda sutil que existia antes aqui. -->
       <span class="filter-divider" aria-hidden="true"></span>
 
       <div class="user-chip">

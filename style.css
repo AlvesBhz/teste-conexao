@@ -31,7 +31,6 @@
   --vbm-text:       #333333;
   --vbm-mid:        #888888;
   --vbm-border:     rgba(60,181,229,0.25);
-  --accent-orange:  #ff9f43;
   --ease-out:       cubic-bezier(0.2,1,0.2,1);
   --ease-spring:    cubic-bezier(0.34,1.56,0.64,1);
   --ease-smooth:    cubic-bezier(0.4,0,0.2,1);
@@ -134,11 +133,11 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
   display: flex;
   align-items: center;
   justify-content: space-between;
-  /* AJUSTE: gap fixo entre topbar-left/filter-container/filter-divider/
-     topbar-right — necessário porque filter-container agora empurra os
-     3 combos pra junto de topbar-right via margin-left:auto (ver
-     .filter-container), o que zera o espaço que justify-content teria
-     pra distribuir entre eles. */
+  /* AJUSTE: gap fixo entre topbar-left/filter-container/topbar-right —
+     necessário porque filter-container agora empurra os 3 combos pra
+     junto de topbar-right via margin-left:auto (ver .filter-container),
+     o que zera o espaço que justify-content teria pra distribuir entre
+     eles. */
   gap: 24px;
   padding: 0 32px;
   height: 64px;   /* AJUSTE: era 52px — alinhado à altura do ds-nav-inner */
@@ -263,13 +262,13 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
    AJUSTE: era position:absolute centralizado no meio da .topbar
    inteira. Virou um item de flex normal com margin-left:auto, que
    absorve todo o espaço livre à esquerda e empurra os 3 combos pra
-   junto de topbar-right (separados pelo .filter-divider) — mesmo
-   padrão de nav-com-ações-à-direita do Design System. Sem fundo/borda/
-   vidro próprios: o container é só um agrupador invisível — cada filtro
-   (.vdt-trigger) é que carrega seu próprio visual, replicado pixel a
-   pixel do combo "Fcst x Bdgt" do painel de Perdas & Ganhos
-   (.loss-compare-select). Sem botão de aplicar: a troca do <select> já
-   reaplica o filtro sozinha (ver app.js). */
+   junto de topbar-right — mesmo padrão de nav-com-ações-à-direita do
+   Design System. Sem fundo/borda/vidro próprios: o container é só um
+   agrupador invisível — cada filtro (.vdt-trigger) é que carrega seu
+   próprio visual, replicado pixel a pixel do combo "Fcst x Bdgt" do
+   painel de Perdas & Ganhos (.loss-compare-select). Sem botão de
+   aplicar: a troca do <select> já reaplica o filtro sozinha (ver
+   app.js). */
 .filter-container {
   display: flex;
   align-items: center;
@@ -277,17 +276,15 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
   margin-left: auto;
 }
 
-/* Separador visual entre os filtros e o bloco de conta (engrenagem +
-   usuário) — mesma geometria do .header-divider (logo ↔ título), só com
-   a cor de destaque pra marcar essa fronteira específica. */
+/* Separador sutil usado nos dois lados da engrenagem, dentro de
+   .topbar-right — MESMA cor/espessura do .header-divider (logo ↔
+   título): branco a baixa opacidade, sem tingimento de cor. Os dois
+   vivem no mesmo container/gap de propósito: garante que a engrenagem
+   fique sempre centralizada entre eles (ver comentário em index.html). */
 .filter-divider {
-  width: 2px;   /* AJUSTE: 1px (igual ao .header-divider) ficava quase
-                   invisível na cor laranja contra o azul da topbar —
-                   2px é o mínimo que mantém a cor legível sem virar uma
-                   barra grossa. */
-  height: 24px;
-  border-radius: 1px;
-  background: var(--accent-orange);
+  width: 1px;
+  height: 20px;
+  background: rgba(255,255,255,.18);
   flex-shrink: 0;
 }
 
@@ -451,13 +448,6 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
     flex-wrap: wrap;
     row-gap: 10px;
   }
-  /* Empilhado numa linha própria abaixo da topbar — o separador entre
-     filtros e bloco de conta não faz sentido nesse layout (não há mais
-     nada "à direita" dele na mesma linha). Seletor de filho direto:
-     NÃO afeta o outro .filter-divider (dentro de .topbar-right, entre
-     engrenagem e chip do usuário), que continua fazendo sentido em
-     qualquer largura. */
-  .topbar > .filter-divider { display: none; }
   .topbar { flex-wrap: wrap; height: auto; padding: 12px 20px; row-gap: 10px; }
 }
 
