@@ -722,25 +722,25 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
 /* Painel aberto: o card sai de cena (senão fica sob o painel). */
 .loss-open .loss-trigger { opacity: 0; pointer-events: none; transform: translateX(-12px); }
 
-/* Fundo do painel — só escurece a árvore de leve, sem capturar clique.
-   AJUSTE: pointer-events:auto no estado aberto foi removido — o
-   fechamento agora é só pelo "X" (ver attachLossDrawerEvents em
-   app.js), e mantendo o backdrop clicável ele bloquearia a árvore
-   inteira (clique/pan/zoom) enquanto o painel estivesse aberto. */
+/* Elemento mantido na marcação (estrutura preservada) mas sem efeito
+   visual: painel não-modal, árvore deve permanecer com aparência
+   normal — sem escurecer — enquanto ele está aberto. AJUSTE: fica
+   sempre em opacity:0, inclusive com .loss-open (antes só a
+   interatividade tinha sido removida; o escurecimento sobre a árvore
+   ainda dava a impressão de bloqueio). pointer-events:none já
+   garantia que não capturasse clique. */
 .loss-backdrop {
   position: absolute;
   inset: 0;
-  /* Painel e fundo ficam acima de TUDO que vive dentro do viewport
-     (título 15, legenda/zoom/dica 10) — senão o título centralizado
-     atravessa o painel em telas estreitas. Seguem abaixo da topbar
-     (100) e do painel de Configurações (199/200). */
+  /* Painel fica acima de TUDO que vive dentro do viewport (título 15,
+     legenda/zoom/dica 10) — senão o título centralizado atravessa o
+     painel em telas estreitas. Segue abaixo da topbar (100) e do
+     painel de Configurações (199/200). */
   z-index: 20;
   background: rgba(9,20,34,.28);
   opacity: 0;
   pointer-events: none;
-  transition: opacity .3s var(--ease-out);
 }
-.loss-open .loss-backdrop { opacity: 1; }
 
 /* ---- PAINEL "PERDAS & GANHOS" (mesmo formato/lugar do card original)
    Irmão de .tree-world dentro de .tree-viewport (position:relative):
@@ -771,7 +771,7 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
 .loss-open .loss-panel { transform: none; visibility: visible; }
 
 @media (prefers-reduced-motion: reduce) {
-  .loss-panel, .loss-backdrop, .loss-trigger { transition-duration: .01ms; }
+  .loss-panel, .loss-trigger { transition-duration: .01ms; }
 }
 
 /* Barra de título da gaveta: título + botão de fechar */
@@ -1557,7 +1557,6 @@ body[data-bg="dark"] {
 [data-bg="dark"] .loss-trigger:hover { border-color: var(--vbm-blue-light); background: #1c2b3d; }
 [data-bg="dark"] .loss-trigger-icon { background: rgba(60,181,229,.22); color: var(--vbm-blue-light); }
 [data-bg="dark"] .loss-trigger:hover .loss-trigger-icon { background: var(--vbm-blue); color: #fff; }
-[data-bg="dark"] .loss-backdrop { background: rgba(0,0,0,.45); }
 [data-bg="dark"] .loss-close {
   background: rgba(255,255,255,.06);
   border-color: rgba(255,255,255,.14);
