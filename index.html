@@ -45,11 +45,12 @@
   <header class="topbar">
     <div class="topbar-left">
       <a href="#" class="logo">
-        <!-- O arquivo assets/vale-logo.svg não existe no repositório e
-             retorna 404 em todo carregamento. Enquanto ele não for
-             adicionado, o onerror esconde o ícone de imagem quebrada em
-             vez de exibi-lo ao usuário. -->
-        <img src="assets/vale-logo.svg" alt="Vale" class="logo-img" onerror="this.style.display='none'" />
+        <!-- AJUSTE: era "assets/vale-logo.svg" — pasta assets/ nunca
+             existiu no repositório; o arquivo real está na raiz
+             (vale-logo.svg, ao lado de index.html). O onerror continua
+             como rede de segurança (esconde ícone quebrado em vez de
+             exibi-lo) caso o arquivo suma de novo no futuro. -->
+        <img src="vale-logo.svg" alt="Vale" class="logo-img" onerror="this.style.display='none'" />
       </a>
       <span class="header-divider"></span>
       <h1 class="header-title">Value Driver Tree</h1>
