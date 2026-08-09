@@ -867,29 +867,44 @@ const fmtLobp = formatValuePlain(
   // próprio elemento. Aqui só populamos as opções com dados reais
   // (vindos de /api/filtros-vdt e /api/filtros-ano) e garantimos que
   // eles SEMPRE nascem com um valor selecionado.
+  // Único critério do que é uma opção de combobox válida — usado tanto
+  // ao ler a resposta da API (extractValues) quanto no passo final de
+  // renderização (fillSelect), pra nenhum dos dois caminhos deixar
+  // passar null/undefined/'' (ou só espaços) como opção.
+  function isValidOptionValue(v) {
+    return v != null && String(v).trim() !== '';
+  }
+
   // Preenche um <select> com a lista de valores e deixa um deles
   // selecionado. A preferência (ex.: DEFAULT_VDT) só é aplicada se
   // existir de fato na lista; senão cai no 1º valor (no filtro de Ano a
   // lista já vem ordenada decrescente — logo o 1º é o mais recente).
   // Usada tanto pelo bootstrap quanto pelas recargas de filtro.
+  //
+  // AJUSTE: filtra `valores` por isValidOptionValue antes de renderizar
+  // — o caminho de bootstrap (fillSelect('cmbAno', boot.anos, ...) etc.)
+  // chama esta função direto com o array já vindo da API, sem passar
+  // por extractValues(). Sem este filtro aqui, um valor em branco vindo
+  // do servidor viraria uma <option> vazia no combo.
   function fillSelect(selectId, valores, preferredValue) {
     const select = document.getElementById(selectId);
-    if (!select || !valores.length) return false;
+    const validos = (valores || []).filter(isValidOptionValue);
+    if (!select || !validos.length) return false;
 
-    select.innerHTML = valores
+    select.innerHTML = validos
       .map((v) => `<option value="${v}">${v}</option>`)
       .join('');
 
-    select.value = (preferredValue != null && valores.some((v) => String(v) === String(preferredValue)))
+    select.value = (preferredValue != null && validos.some((v) => String(v) === String(preferredValue)))
       ? preferredValue
-      : valores[0];
+      : validos[0];
     return true;
   }
 
   function extractValues(rows, rowKey) {
     return (Array.isArray(rows) ? rows : [])
       .map((r) => r && r[rowKey])
-      .filter((v) => v != null && String(v).trim() !== '');
+      .filter(isValidOptionValue);
   }
 
   async function loadOptionsFiltro(selectId, url, rowKey, logTag, preferredValue) {

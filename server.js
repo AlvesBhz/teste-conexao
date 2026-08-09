@@ -285,7 +285,10 @@ async function getFilterMatrix() {
 
     const anosPorVdt = {};
     rows.forEach((r) => {
-      if (r.NM_VDT == null || r.ANO == null) return;
+      // == null só pega NULL/undefined — uma NM_VDT em branco ('', só
+      // espaços) passa pelo WHERE IS NOT NULL do SQL e cairia aqui como
+      // opção vazia no combo. trim() fecha essa brecha.
+      if (r.NM_VDT == null || String(r.NM_VDT).trim() === "" || r.ANO == null) return;
       (anosPorVdt[r.NM_VDT] = anosPorVdt[r.NM_VDT] || []).push(Number(r.ANO));
     });
     // Mais recente primeiro (não confia só no ORDER BY do motor).
@@ -353,7 +356,12 @@ async function getVisoesMatrix() {
       `);
       const matrix = {};
       rows.forEach((r) => {
-        if (r.NM_VDT == null || r.ANO == null || r.VISAO == null) return;
+        // == null só pega NULL/undefined — NM_VDT/VISAO em branco ('', só
+        // espaços) passam pelo WHERE IS NOT NULL do SQL e virariam opção
+        // vazia no combo de Visão. trim() fecha essa brecha.
+        if (r.NM_VDT == null || String(r.NM_VDT).trim() === "") return;
+        if (r.ANO == null) return;
+        if (r.VISAO == null || String(r.VISAO).trim() === "") return;
         const porAno = (matrix[r.NM_VDT] = matrix[r.NM_VDT] || {});
         (porAno[Number(r.ANO)] = porAno[Number(r.ANO)] || new Set()).add(String(r.VISAO));
       });
