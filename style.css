@@ -998,6 +998,70 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
   color: var(--text-muted);
 }
 
+/* ---- TOOLTIP CUSTOMIZADO das linhas de Perdas & Ganhos ----
+   AJUSTE: era o title nativo do navegador (sem estilo, sem controle de
+   quebra de linha, aparência inconsistente entre navegadores/SOs) —
+   substituído por um cartão flutuante no mesmo padrão visual do resto
+   do app (.vdt-dropdown-list/.loss-panel: fundo sólido, borda, sombra,
+   cantos arredondados). position:fixed calculado em JS
+   (showLossTooltip, app.js), fora do overflow do painel/lista.
+   pointer-events:none: o próprio tooltip nunca deve capturar o mouse —
+   ele precisa sumir assim que o cursor sai da linha, não da área dele. */
+.loss-tooltip {
+  position: fixed;
+  z-index: 250;
+  max-width: 280px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  box-shadow: var(--card-shadow-hover);
+  font-family: var(--font-poppins);
+  pointer-events: none;
+}
+.loss-tooltip-name {
+  font-weight: 700;
+  font-size: .74rem;
+  line-height: 1.35;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+/* Caminho até a raiz — um nó por linha, terminando em "»" (pedido
+   explícito: quebra de linha após cada nó do caminho). */
+.loss-tooltip-breadcrumb {
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-light);
+}
+.loss-tooltip-crumb {
+  font-size: .66rem;
+  font-weight: 600;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+.loss-tooltip-compare {
+  font-size: .68rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+.loss-tooltip-delta {
+  font-size: .68rem;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--text-primary);
+}
+
+[data-bg="dark"] .loss-tooltip {
+  background: var(--vbm-blue-deep);
+  border-color: rgba(255,255,255,.14);
+}
+[data-bg="dark"] .loss-tooltip-name { color: #fff; }
+[data-bg="dark"] .loss-tooltip-breadcrumb { border-bottom-color: rgba(255,255,255,.1); }
+[data-bg="dark"] .loss-tooltip-crumb { color: rgba(255,255,255,.5); }
+[data-bg="dark"] .loss-tooltip-compare { color: rgba(255,255,255,.75); }
+[data-bg="dark"] .loss-tooltip-delta { color: #fff; }
+
 @media (max-width: 880px) {
   /* Painel sobreposto: não divide espaço com a árvore, então em telas
      estreitas ele pode ocupar quase toda a largura em vez de encolher.

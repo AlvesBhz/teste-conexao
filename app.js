@@ -1200,6 +1200,58 @@ const fmtLobp = formatValuePlain(
   // dele existir).
   let lossShowTimeIndicators = true;
 
+  // ── Tooltip customizado do painel "Perdas & Ganhos" ─────────────
+  // Substitui o "title" nativo do navegador (sem estilo, sem controle
+  // de quebra de linha, cortado/inconsistente entre navegadores) por um
+  // popup próprio no padrão visual do app. Conteúdo por NodeID
+  // (populado em renderLossPanel); um único elemento reaproveitado
+  // entre hovers, criado sob demanda e anexado fora do painel (evita
+  // ser cortado pelo overflow:hidden/auto do painel e da lista).
+  const lossTooltipContent = new Map();
+  let lossTooltipEl = null;
+
+  function getLossTooltipEl() {
+    if (!lossTooltipEl) {
+      lossTooltipEl = document.createElement('div');
+      lossTooltipEl.className = 'loss-tooltip';
+      lossTooltipEl.setAttribute('role', 'tooltip');
+      lossTooltipEl.hidden = true;
+      document.body.appendChild(lossTooltipEl);
+    }
+    return lossTooltipEl;
+  }
+
+  function showLossTooltip(row) {
+    const nodeId = Number(row.dataset.node);
+    const html = lossTooltipContent.get(nodeId);
+    if (html == null) return;
+
+    const tip = getLossTooltipEl();
+    tip.innerHTML = html;
+    tip.hidden = false;
+
+    // Preferência: encostado à direita da linha (o painel fica na borda
+    // esquerda da tela, então normalmente sobra espaço). Sem espaço
+    // suficiente, cai pra esquerda em vez de vazar da viewport.
+    const margin = 10;
+    const rowBox = row.getBoundingClientRect();
+    const tipBox = tip.getBoundingClientRect();
+    let left = rowBox.right + margin;
+    if (left + tipBox.width > window.innerWidth - margin) {
+      left = rowBox.left - tipBox.width - margin;
+    }
+    let top = rowBox.top;
+    if (top + tipBox.height > window.innerHeight - margin) {
+      top = window.innerHeight - tipBox.height - margin;
+    }
+    tip.style.left = Math.max(margin, left) + 'px';
+    tip.style.top  = Math.max(margin, top) + 'px';
+  }
+
+  function hideLossTooltip() {
+    if (lossTooltipEl) lossTooltipEl.hidden = true;
+  }
+
   // Nomes dos até `maxLevels` ancestrais de `node` na árvore, do pai
   // mais próximo pro mais distante (ex.: ["Copper Concentrate",
   // "Copper Concentrate (Dry)", "Copper Contained", "Run of Plant"]) —
@@ -1400,6 +1452,11 @@ const fmtLobp = formatValuePlain(
       return lossSortDir === 'asc' ? signedA - signedB : signedB - signedA;
     });
 
+    // Conteúdo do tooltip customizado (ver showLossTooltip), indexado
+    // por NodeID — reconstruído a cada render, nunca acumula entradas
+    // de VDTs/renders anteriores.
+    lossTooltipContent.clear();
+
     list.innerHTML = sorted.map(({ node, actual, reference, variation, rawDelta }) => {
       const fmtDelta     = formatValuePlain(rawDelta,   node.NodeType, node.VL_FATOR, node.SG_DECIMAL);
       const fmtActual    = formatValuePlain(actual,     node.NodeType, node.VL_FATOR, node.SG_DECIMAL);
@@ -1419,15 +1476,24 @@ const fmtLobp = formatValuePlain(
 
       // Caminho até 5 níveis acima na árvore (pai mais próximo primeiro),
       // dá contexto de ONDE esse indicador-folha está — só nomes, sem
-      // unidade/ID, pra não poluir o tooltip.
+      // unidade/ID, pra não poluir o tooltip. AJUSTE: era um "title"
+      // nativo do navegador (sem estilo, breadcrumb inteiro numa linha
+      // só) — agora um popup próprio (showLossTooltip), com cada nó do
+      // caminho em sua própria linha terminando em "»".
       const ancestors = getAncestorPath(node, 5);
-      const breadcrumb = ancestors.length ? `\n${ancestors.join(' >> ')}` : '';
+      const breadcrumbHtml = ancestors.length
+        ? `<div class="loss-tooltip-breadcrumb">${ancestors.map((a) => `<div class="loss-tooltip-crumb">${a} »</div>`).join('')}</div>`
+        : '';
 
-      const tooltip = `${displayName}${breadcrumb}\n${fmtActual} vs ${fmtReference} (${pctText})\nDiferença: ${fmtDelta}`
-        .replace(/"/g, '&quot;');
+      lossTooltipContent.set(node.NodeID, `
+        <div class="loss-tooltip-name">${displayName}</div>
+        ${breadcrumbHtml}
+        <div class="loss-tooltip-compare">${fmtActual} vs ${fmtReference} (${pctText})</div>
+        <div class="loss-tooltip-delta">Diferença: ${fmtDelta}</div>
+      `);
 
       return `
-        <div class="loss-row ${kindClass}" title="${tooltip}" data-node="${node.NodeID}">
+        <div class="loss-row ${kindClass}" data-node="${node.NodeID}">
           <div class="loss-row-top">
             <span class="loss-row-name">${displayName}</span>
             <span class="loss-row-value">${sign}${fmtDelta} <span class="loss-row-pct">(${pctText})</span></span>
@@ -1483,7 +1549,26 @@ const fmtLobp = formatValuePlain(
         if (Number.isFinite(nodeId)) openTreeToNode(nodeId);
         // AJUSTE: fechava a gaveta ao navegar — painel agora só fecha
         // pelo botão "X" (ver attachLossDrawerEvents).
+        hideLossTooltip(); // a linha embaixo do cursor muda de posição/some ao navegar
       });
+
+      // Tooltip customizado (ver showLossTooltip/hideLossTooltip) — mesma
+      // delegação de mouseover/mouseout já usada pro destaque de hover
+      // dos cards da árvore (setupConnectorHighlight), aqui pro popup.
+      list.addEventListener('mouseover', (e) => {
+        const row = e.target.closest('.loss-row');
+        if (!row || row.contains(e.relatedTarget)) return;
+        showLossTooltip(row);
+      });
+      list.addEventListener('mouseout', (e) => {
+        const row = e.target.closest('.loss-row');
+        if (!row || row.contains(e.relatedTarget)) return;
+        hideLossTooltip();
+      });
+      // A lista rola (overflow-y:auto) mas o tooltip é position:fixed,
+      // calculado a partir da posição da linha no momento do hover —
+      // sem isso, ele ficaria "grudado" no lugar errado ao rolar.
+      list.addEventListener('scroll', hideLossTooltip);
     }
 
     attachLossDrawerEvents();
@@ -1515,6 +1600,7 @@ const fmtLobp = formatValuePlain(
     const trigger = document.getElementById('lossTrigger');
     if (panel) panel.setAttribute('aria-hidden', 'true');
     if (trigger) { trigger.setAttribute('aria-expanded', 'false'); trigger.focus(); }
+    hideLossTooltip(); // não deixa o popup do tooltip flutuando com o painel fechado
   }
 
   // AJUSTE: fechamento restrito ao botão "X" — backdrop e Escape não
