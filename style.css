@@ -972,14 +972,19 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
 }
 
 /* Perda (desfavorável) = vermelho · Ganho (favorável) = verde — mesma
-   paleta semântica da legenda Positivo/Negativo do viewport. */
-.loss-row.is-loss .loss-row-value    { color: var(--red-dark); }
+   paleta semântica da legenda Positivo/Negativo do viewport.
+   AJUSTE: era gradiente (--red → --red-dark / --green → --green-dark)
+   nas barras e o tom mais escuro (--red-dark/--green-dark) só nos
+   números — dois tons diferentes por cor, um deles só na barra.
+   Unificado num tom único (o mais claro dos dois, --red/--green),
+   aplicado igual em número e barra. */
+.loss-row.is-loss .loss-row-value    { color: var(--red); }
 .loss-row.is-loss .loss-row-bar-track { background: var(--red-light); }
-.loss-row.is-loss .loss-row-bar      { background: linear-gradient(90deg, var(--red), var(--red-dark)); }
+.loss-row.is-loss .loss-row-bar      { background: var(--red); }
 
-.loss-row.is-gain .loss-row-value    { color: var(--green-dark); }
+.loss-row.is-gain .loss-row-value    { color: var(--green); }
 .loss-row.is-gain .loss-row-bar-track { background: var(--green-light); }
-.loss-row.is-gain .loss-row-bar      { background: linear-gradient(90deg, var(--green), var(--green-dark)); }
+.loss-row.is-gain .loss-row-bar      { background: var(--green); }
 
 .loss-empty {
   padding: 20px 4px;
@@ -1577,8 +1582,10 @@ body[data-bg="dark"] {
 [data-bg="dark"] .loss-row-name { color: rgba(255,255,255,.85); }
 [data-bg="dark"] .loss-row.is-loss .loss-row-value     { color: #f87171; }
 [data-bg="dark"] .loss-row.is-loss .loss-row-bar-track { background: rgba(255,255,255,.08); }
+[data-bg="dark"] .loss-row.is-loss .loss-row-bar       { background: #f87171; }
 [data-bg="dark"] .loss-row.is-gain .loss-row-value     { color: #4ade80; }
 [data-bg="dark"] .loss-row.is-gain .loss-row-bar-track { background: rgba(255,255,255,.08); }
+[data-bg="dark"] .loss-row.is-gain .loss-row-bar       { background: #4ade80; }
 [data-bg="dark"] .loss-empty { color: rgba(255,255,255,.4); }
 
 /* Cards da árvore — vidro escuro (kpi-card do DS em modo Business).

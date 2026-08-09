@@ -580,6 +580,17 @@ const fmtLobp = formatValuePlain(
     zoomBehavior = d3.zoom()
       .scaleExtent([CFG.ZOOM_MIN, CFG.ZOOM_MAX]) // ← limites de zoom
       .clickDistance(6) // evita toggle acidental ao terminar um arrasto sobre um card
+      // .loss-panel é irmão de #treeWorld dentro de #treeViewport (não
+      // filho) — sem este filtro, o scroll do mouse sobre a lista de
+      // Perdas & Ganhos era capturado pelo zoom da árvore por trás em
+      // vez de rolar a lista (.loss-list tem overflow-y:auto, mas o
+      // listener de wheel do d3.zoom no viewport intercepta o evento
+      // antes). Fora do painel, mantém exatamente o filtro padrão do
+      // d3.zoom (botão esquerdo apenas / wheel sempre liberado).
+      .filter((event) => {
+        if (event.target.closest && event.target.closest('.loss-panel')) return false;
+        return (!event.ctrlKey || event.type === 'wheel') && !event.button;
+      })
       .on('zoom', (event) => {
         const t = event.transform;
         // O transform do d3.zoom é aplicado ao contêiner "mundo"
