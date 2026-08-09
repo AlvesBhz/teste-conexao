@@ -1381,9 +1381,8 @@ const fmtLobp = formatValuePlain(
         if (!row) return;
         const nodeId = Number(row.dataset.node);
         if (Number.isFinite(nodeId)) openTreeToNode(nodeId);
-        // Navegar até o nó é o objetivo do clique: fecha a gaveta pra
-        // liberar a visão da árvore, que é o que o usuário quer ver.
-        closeLossPanel();
+        // AJUSTE: fechava a gaveta ao navegar — painel agora só fecha
+        // pelo botão "X" (ver attachLossDrawerEvents).
       });
     }
 
@@ -1418,18 +1417,17 @@ const fmtLobp = formatValuePlain(
     if (trigger) { trigger.setAttribute('aria-expanded', 'false'); trigger.focus(); }
   }
 
+  // AJUSTE: fechamento restrito ao botão "X" — backdrop e Escape não
+  // fecham mais o painel (antes fechavam). O backdrop continua existindo
+  // só como camada visual de escurecimento (ver .loss-backdrop em
+  // style.css, sem pointer-events); a árvore atrás dele segue clicável/
+  // navegável normalmente com o painel aberto.
   function attachLossDrawerEvents() {
     const trigger  = document.getElementById('lossTrigger');
     const close    = document.getElementById('lossClose');
-    const backdrop = document.getElementById('lossBackdrop');
 
     if (trigger)  trigger.addEventListener('click', openLossPanel);
     if (close)    close.addEventListener('click', closeLossPanel);
-    if (backdrop) backdrop.addEventListener('click', closeLossPanel);
-
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') closeLossPanel();
-    });
   }
 
   // ── 14. INIT ────────────────────────────────────────────────
