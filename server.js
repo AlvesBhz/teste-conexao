@@ -259,12 +259,17 @@ async function getTreeData(nmVDT = null, ano = null, visao = null) {
 }
 
 async function getListaVDT() {
-  return withCache("vdt-list", () => runQuery(`
-    SELECT DISTINCT NM_VDT
-    FROM ${tableRef()}
-    WHERE NM_VDT IS NOT NULL
-    ORDER BY NM_VDT
-  `));
+  return withCache("vdt-list", async () => {
+    const rows = await runQuery(`
+      SELECT DISTINCT NM_VDT
+      FROM ${tableRef()}
+      WHERE NM_VDT IS NOT NULL
+      ORDER BY NM_VDT
+    `);
+    // IS NOT NULL não barra NM_VDT em branco ('', só espaços) — mesma
+    // brecha já fechada em getFilterMatrix()/getVisoesMatrix().
+    return rows.filter((r) => r.NM_VDT != null && String(r.NM_VDT).trim() !== "");
+  });
 }
 
 // Matriz de filtros: TODOS os pares (VDT, ano) existentes numa consulta
