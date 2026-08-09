@@ -285,7 +285,15 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
   font-size: .68rem;
   letter-spacing: .09em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  /* AJUSTE (contraste): era var(--text-muted) (#888) — cinza médio
+     pensado pra rótulo sobre fundo claro, mas aqui o rótulo fica direto
+     sobre o azul saturado da topbar (--vbm-blue #3cb5e5), onde o
+     contraste ficava muito baixo (~1.7:1). Branco sólido é o mesmo tom
+     já usado por .header-title/.user-email/.settings-btn nesse mesmo
+     fundo — reaproveita a identidade visual existente em vez de
+     introduzir uma cor nova, e é o contraste máximo alcançável sem
+     mudar o azul da marca. */
+  color: #fff;
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -400,9 +408,14 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
 [data-bg="dark"] .vdt-option:focus-visible { background: rgba(60,181,229,.22); }
 [data-bg="dark"] .vdt-dropdown-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,.18); }
 
-/* Telas estreitas: o filtro sai do centro absoluto (evita colidir com
-   logo/user-chip) e volta ao fluxo normal, empilhado abaixo da topbar. */
-@media (max-width: 880px) {
+/* Telas estreitas/médias: o filtro sai do centro absoluto (evita
+   colidir com logo/user-chip) e volta ao fluxo normal, empilhado
+   abaixo da topbar. AJUSTE: breakpoint subiu de 880px para 1240px —
+   com 3 combos (VDT/Ano/Visão) o filtro centralizado ficou largo o
+   suficiente pra colidir com o título e o user-chip já a partir de
+   ~990px, faixa que com só 2 combos (VDT/Ano) ainda cabia sem tocar
+   em nada. */
+@media (max-width: 1240px) {
   .filter-container {
     position: static;
     transform: none;

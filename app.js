@@ -112,8 +112,10 @@
   async function fetchTreeData() {
     const nmVDT = document.getElementById("cmbVDT").value;
     const anoSelect = document.getElementById("cmbAno");
+    const visaoSelect = document.getElementById("cmbVisao");
     const params = new URLSearchParams({ nm_vdt: nmVDT });
     if (anoSelect && anoSelect.value) params.set('ano', anoSelect.value);
+    if (visaoSelect && visaoSelect.value) params.set('visao', visaoSelect.value);
     const res = await fetch(`/api/tree?${params.toString()}`);
     if (!res.ok) {
       let detail = '';
@@ -906,6 +908,14 @@ const fmtLobp = formatValuePlain(
   const loadAnoFiltros = (nmVDT) =>
     loadOptionsFiltro('cmbAno', `/api/filtros-ano?nm_vdt=${encodeURIComponent(nmVDT || '')}`, 'ANO', 'Ano');
 
+  // Terceiro nível da cascata Árvore → Ano → Visão: a Visão é um
+  // recorte do par (VDT, ano) — troca de VDT OU de ano refaz esta
+  // busca (ver attachFilterEvents/attachAnoFilterEvents). O backend já
+  // aplica a regra de negócio (ano anterior ao corrente => só Actual);
+  // aqui só populamos o combo com o que ele devolveu.
+  const loadVisaoFiltros = (nmVDT, ano) =>
+    loadOptionsFiltro('cmbVisao', `/api/filtros-visao?nm_vdt=${encodeURIComponent(nmVDT || '')}&ano=${encodeURIComponent(ano || '')}`, 'VISAO', 'Visão');
+
   function showViewportError(msg) {
     clearViewportError();
     const vp = document.getElementById('treeViewport');
@@ -953,6 +963,17 @@ const fmtLobp = formatValuePlain(
   // ao servidor (antes cada troca custava uma consulta a /api/filtros-ano).
   let ANOS_POR_VDT = null;
 
+  // Cascata Árvore → Ano → Visão: sempre que VDT ou Ano mudam, a Visão
+  // (que depende dos DOIS) precisa ser re-escopada ANTES de recarregar
+  // a árvore, pelo mesmo motivo do Ano em relação à VDT — fetchTreeData
+  // lê cmbVisao.value pra montar a query.
+  async function refreshVisaoOptions() {
+    const nmVDT = document.getElementById('cmbVDT').value;
+    const ano = document.getElementById('cmbAno').value;
+    await loadVisaoFiltros(nmVDT, ano);
+    syncVisaoTriggerLabel();
+  }
+
   const attachFilterEvents = () => attachSelectReload('cmbVDT', 'vdtTrigger', async () => {
     const nmVDT = document.getElementById('cmbVDT').value;
     const anosLocais = ANOS_POR_VDT && ANOS_POR_VDT[nmVDT];
@@ -962,8 +983,10 @@ const fmtLobp = formatValuePlain(
       await loadAnoFiltros(nmVDT); // fallback: matriz indisponível
     }
     syncAnoTriggerLabel();
+    await refreshVisaoOptions(); // Visão depende do Ano recém-resolvido acima
   });
-  const attachAnoFilterEvents = () => attachSelectReload('cmbAno', 'anoTrigger');
+  const attachAnoFilterEvents = () => attachSelectReload('cmbAno', 'anoTrigger', refreshVisaoOptions);
+  const attachVisaoFilterEvents = () => attachSelectReload('cmbVisao', 'visaoTrigger');
 
   // ── 13.0.5 DROPDOWN CUSTOMIZADO (VDT e Ano) ──────────────────
   // Os <select id="cmbVDT"/"cmbAno"> continuam sendo a fonte de dados/
@@ -1067,6 +1090,15 @@ const fmtLobp = formatValuePlain(
     if (year) year.textContent = text;
   }
 
+  function syncVisaoTriggerLabel() {
+    const select = document.getElementById('cmbVisao');
+    if (!select) return;
+    const opt  = select.options[select.selectedIndex];
+    const text = (opt && opt.text.trim()) || select.value;
+    const label = document.getElementById('visaoTriggerLabel');
+    if (label) label.textContent = text;
+  }
+
   function attachVdtDropdownEvents() {
     setupCustomDropdown('cmbVDT', 'vdtDropdown', 'vdtTrigger', 'vdtDropdownList');
     document.getElementById('cmbVDT').addEventListener('change', syncVdtTriggerLabel);
@@ -1075,6 +1107,11 @@ const fmtLobp = formatValuePlain(
   function attachAnoDropdownEvents() {
     setupCustomDropdown('cmbAno', 'anoDropdown', 'anoTrigger', 'anoDropdownList');
     document.getElementById('cmbAno').addEventListener('change', syncAnoTriggerLabel);
+  }
+
+  function attachVisaoDropdownEvents() {
+    setupCustomDropdown('cmbVisao', 'visaoDropdown', 'visaoTrigger', 'visaoDropdownList');
+    document.getElementById('cmbVisao').addEventListener('change', syncVisaoTriggerLabel);
   }
 
   // ── 13.1 PAINEL "PERDAS & GANHOS" ─────────────────────────────
@@ -1515,19 +1552,25 @@ const fmtLobp = formatValuePlain(
       ANOS_POR_VDT = boot.anosPorVdt || null;
       fillSelect('cmbVDT', boot.vdts, boot.vdtSelecionada);
       fillSelect('cmbAno', boot.anos || [], boot.anoSelecionado);
+      fillSelect('cmbVisao', boot.visoes || [], boot.visaoSelecionada);
     } else {
       // Fallback pro caminho antigo em etapas — a tela continua
       // funcionando mesmo se a rota de bootstrap falhar.
       await loadVDTFiltros();
-      await loadAnoFiltros(document.getElementById('cmbVDT').value);
+      const nmVDT = document.getElementById('cmbVDT').value;
+      await loadAnoFiltros(nmVDT);
+      await loadVisaoFiltros(nmVDT, document.getElementById('cmbAno').value);
     }
 
     attachFilterEvents();
     attachAnoFilterEvents();
+    attachVisaoFilterEvents();
     attachVdtDropdownEvents();
     attachAnoDropdownEvents();
+    attachVisaoDropdownEvents();
     syncVdtTriggerLabel(); // reflete o valor real já definido nos combos
     syncAnoTriggerLabel();
+    syncVisaoTriggerLabel();
     attachLossPanelEvents();
 
     // Com o bootstrap OK a árvore já está em mãos: renderiza direto,
