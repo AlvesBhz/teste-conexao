@@ -215,12 +215,14 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
 }
 
 /* ── Chip do usuário logado (email + empresa + avatar) ── */
+/* AJUSTE: border-left/padding-left removidos — o separador antes do
+   chip agora é o .filter-divider (span dedicado em index.html),
+   reaproveitado do que já separa os filtros do bloco de conta, pra
+   ficarem visualmente idênticos. */
 .user-chip {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding-left: 10px;
-  border-left: 1px solid rgba(255,255,255,.22);
   flex-shrink: 0;
 }
 .user-text {
@@ -449,10 +451,13 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
     flex-wrap: wrap;
     row-gap: 10px;
   }
-  /* Empilhado numa linha própria abaixo da topbar — o separador não faz
-     sentido nesse layout (não há mais nada "à direita" dele na mesma
-     linha). */
-  .filter-divider { display: none; }
+  /* Empilhado numa linha própria abaixo da topbar — o separador entre
+     filtros e bloco de conta não faz sentido nesse layout (não há mais
+     nada "à direita" dele na mesma linha). Seletor de filho direto:
+     NÃO afeta o outro .filter-divider (dentro de .topbar-right, entre
+     engrenagem e chip do usuário), que continua fazendo sentido em
+     qualquer largura. */
+  .topbar > .filter-divider { display: none; }
   .topbar { flex-wrap: wrap; height: auto; padding: 12px 20px; row-gap: 10px; }
 }
 
