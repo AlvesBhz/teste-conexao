@@ -56,13 +56,15 @@
   --text-muted:     var(--vbm-mid);
   --text-label:     #46525d;   /* AJUSTE: era #5b6b7c — mais escuro, contraste suficiente em caixa alta a 8px */
 
-  /* Semânticos de status — mesma paleta do kpi-card/target-card do DS */
-  --red:         #ef4444;
+  /* Semânticos de status — padrão de cores de feedback:
+     Verde/Positivo, Laranja/Alerta, Vermelho/Perda. */
+  --red:         #dc2626;   /* AJUSTE: era #ef4444 — Vermelho/Perda */
   --red-light:   #fef2f2;
   --red-dark:    #991b1b;
-  --green:       #22c55e;
+  --green:       #16a34a;   /* AJUSTE: era #22c55e — Verde/Positivo */
   --green-light: #f0fdf4;
   --green-dark:  #15803d;
+  --orange:      #c2770e;   /* Laranja/Alerta — ainda sem consumidor na UI atual */
 
   --card-shadow: 0 1px 3px rgba(13,38,64,.03), 0 8px 24px rgba(13,38,64,.06);
   --card-shadow-hover:
