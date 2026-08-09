@@ -31,7 +31,20 @@ try {
 // aplicado (confirmado testando: sem index:false, "/" respondia com
 // "public, max-age=0" do middleware, e a rota explícita nunca era
 // alcançada). Com index:false, "/" cai direto na rota explícita.
-app.use(express.static(__dirname, { etag: true, index: false }));
+//
+// setHeaders(no-store) em cima disso: o default do express.static sem
+// maxAge ainda manda "Cache-Control: public, max-age=0" — tecnicamente
+// já força revalidação, mas o "public" deixa margem pra um proxy/CDN
+// corporativo na frente do domínio *.databricksapps.com guardar uma
+// cópia e servir sem revalidar direito. no-store fecha essa brecha por
+// completo pros mesmos arquivos (app.js/style.css) que antes só tinham
+// essa proteção implícita — sessões/abas nunca ficam presas numa versão
+// antiga do bundle depois de um deploy.
+app.use(express.static(__dirname, {
+  etag: true,
+  index: false,
+  setHeaders: (res) => res.set("Cache-Control", "no-store"),
+}));
 
 async function createSession() {
   const client = new DBSQLClient();
@@ -366,6 +379,16 @@ function resolveVisoes(nmVDT, ano, visoesMatrix) {
   if (reais && reais.size) return [...reais].sort();
   return ["Actual", "Forecast"];
 }
+
+// Nenhuma resposta de /api/* pode ser guardada por um proxy/CDN na
+// frente do app (mesmo motivo do no-store nos estáticos, acima): estes
+// endpoints são a fonte dos números da árvore, consultados frescos no
+// Databricks a cada chamada — uma cópia em cache aqui reintroduziria
+// exatamente a desatualização que o no-store nos estáticos elimina.
+app.use("/api", (req, res, next) => {
+  res.set("Cache-Control", "no-store");
+  next();
+});
 
 app.get("/api/tree", async (req, res) => {
   try {
