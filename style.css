@@ -639,7 +639,7 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
   flex-direction: row;
   align-items: center;
   gap: 11px;
-  width: 176px;
+  width: max-content;   /* AJUSTE: era 176px fixo — texto agora numa linha só, largura acompanha o conteúdo */
   padding: 12px 14px;
   background: var(--surface);
   border: 1px solid var(--border-light);
@@ -652,6 +652,7 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
   line-height: 1.25;
   color: var(--vbm-blue-deep);
   text-align: left;
+  white-space: nowrap;
   transition: transform .25s var(--ease-spring), box-shadow .25s var(--ease-out),
               border-color .25s var(--ease-out), background .25s var(--ease-out);
 }
@@ -961,7 +962,7 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
   .tree-viewport { --loss-panel-w: min(86vw, 320px); }
   .loss-panel-head { padding: 11px 12px 10px; }
   .loss-list { padding: 10px 11px 12px; gap: 9px; }
-  .loss-trigger { width: 152px; padding: 10px 12px; gap: 9px; }
+  .loss-trigger { padding: 10px 12px; gap: 9px; }
   .loss-trigger-icon { width: 30px; height: 30px; }
 }
 
