@@ -202,9 +202,9 @@ function buildTreeSql(nmVDT, ano, visao) {
   // acaba lendo a tabela inteira para depois descartar. A comparação
   // por faixa preserva exatamente o mesmo conjunto de linhas.
   if (ano !== null) where.push(`DT_REF >= '${ano}-01-01' AND DT_REF < '${ano + 1}-01-01'`);
-  // TP_VISAO (Actual/Forecast): nome de coluna ASSUMIDO — ver comentário
-  // em getVisoesMatrix(). Só entra no WHERE se `visao` foi passado.
-  if (visao) where.push(`TP_VISAO = '${visao.replace(/'/g, "''")}'`);
+  // VISAO_COLUMN (TP_VISION, Actual/Forecast) — ver comentário na
+  // declaração da constante. Só entra no WHERE se `visao` foi passado.
+  if (visao) where.push(`${VISAO_COLUMN} = '${visao.replace(/'/g, "''")}'`);
   if (where.length) sql += `WHERE ${where.join(" AND ")}\n`;
 
   sql += `
@@ -219,10 +219,10 @@ async function getTreeData(nmVDT = null, ano = null, visao = null) {
     try {
       rows = await runQuery(buildTreeSql(nmVDT, ano, visao));
     } catch (err) {
-      // TP_VISAO é uma suposição não confirmada (ver getVisoesMatrix).
-      // Se a coluna não existir, a ÁRVORE NÃO PODE quebrar por causa
-      // disso — recarrega sem o filtro de Visão e loga o motivo.
-      console.warn(`[visao] Filtro por Visão falhou (coluna TP_VISAO pode não existir); recarregando sem ele: ${err.message}`);
+      // Proteção defensiva (ver comentário na declaração de VISAO_COLUMN):
+      // se a coluna falhar por qualquer motivo, a ÁRVORE NÃO PODE quebrar
+      // por causa disso — recarrega sem o filtro de Visão e loga o motivo.
+      console.warn(`[visao] Filtro por Visão falhou (coluna ${VISAO_COLUMN} pode não existir); recarregando sem ele: ${err.message}`);
       rows = await runQuery(buildTreeSql(nmVDT, ano, null));
     }
   } else {
@@ -308,18 +308,18 @@ async function getListaAnos(nmVDT = null) {
 }
 
 // ── Visão (Actual / Forecast) ───────────────────────────────────
-// ATENÇÃO — suposição não confirmada: não há confirmação do nome exato
-// da coluna que distingue Actual/Forecast nesta tabela. Assumido
-// TP_VISAO, com valores literais 'Actual'/'Forecast' (mesmos rótulos
-// exibidos na UI). Se o nome real for outro, ajustar aqui e em
-// buildTreeSql() — é o único lugar que precisa mudar.
+// Coluna confirmada pelo usuário: TP_VISION, com valores literais
+// 'Actual'/'Forecast' (mesmos rótulos exibidos na UI). Se o nome real
+// mudar no futuro, ajustar apenas esta constante — buildTreeSql() e
+// getVisoesMatrix() a referenciam, nunca hardcodam o nome da coluna.
 //
-// Toda a leitura desta coluna é defensiva: se ela não existir, a
-// consulta falha e getVisoesMatrix() devolve null (em vez de derrubar
-// o processo), e resolveVisoes() cai no fallback permissivo abaixo —
-// o combo de Visão continua funcionando, só sem o refinamento real por
-// dado. O filtro na árvore (getTreeData) tem a mesma proteção.
-const VISAO_COLUMN = "TP_VISAO";
+// Toda a leitura desta coluna segue defensiva (mesmo confirmada): se
+// ela não existir por algum motivo, a consulta falha e
+// getVisoesMatrix() devolve null (em vez de derrubar o processo), e
+// resolveVisoes() cai no fallback permissivo abaixo — o combo de Visão
+// continua funcionando, só sem o refinamento real por dado. O filtro na
+// árvore (getTreeData) tem a mesma proteção.
+const VISAO_COLUMN = "TP_VISION";
 
 // Ano corrente do SERVIDOR (fonte única da verdade pra "ano anterior
 // vs. ano corrente" — evita depender do relógio/fuso do navegador de
