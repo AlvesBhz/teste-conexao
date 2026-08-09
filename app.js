@@ -392,6 +392,23 @@ const fmtLobp = formatValuePlain(
     return p;
   }
 
+  // Cria (se ainda não existir) o elemento DOM de cada nó da lista —
+  // idempotente, nós que já têm .el são ignorados. Necessário porque o
+  // boot inicial só cria os nós VISÍVEIS de cara (ver loadTreeAndRender)
+  // e cria o resto depois, em tempo ocioso (scheduleBackgroundNodes) —
+  // sem isso, expandir um nó cujos filhos o idle ainda não alcançou
+  // simplesmente não mostraria nada (applyPositions já ignora nós sem
+  // .el). Chamado antes de applyPositions em toda rota que pode tornar
+  // um nó novo visível (update/openTreeToNode).
+  function ensureNodeElements(ids) {
+    const canvas = document.getElementById('treeCanvas');
+    if (!canvas) return;
+    ids.forEach((id) => {
+      const node = TREE_MAP[id];
+      if (node && !node.el) canvas.appendChild(createNodeElement(node));
+    });
+  }
+
   // Passada ÚNICA sobre os nós (antes eram duas, cada uma refazendo
   // document.getElementById por nó), usando as referências já guardadas
   // em createNodeElement. Numa árvore de algumas centenas de cards isso
@@ -704,6 +721,7 @@ const fmtLobp = formatValuePlain(
     const pos = computeLayout();
     CURRENT_POS = pos;
 
+    ensureNodeElements(Object.keys(pos));
     applyPositions(pos);
     drawConnectors(pos);
 
@@ -748,6 +766,7 @@ const fmtLobp = formatValuePlain(
 
     const pos = computeLayout();
     CURRENT_POS = pos;
+    ensureNodeElements(Object.keys(pos));
     applyPositions(pos);
     drawConnectors(pos);
     centerNode(id, CFG.FOCUS_SCALE, true);
@@ -1295,6 +1314,52 @@ const fmtLobp = formatValuePlain(
     renderLossPanel();
   }
 
+  // Cria em segundo plano, em lotes, os nós que nascem colapsados (fora
+  // de CFG.INITIAL_DEPTH — ver loadTreeAndRender). Mesmo espírito de
+  // scheduleLossPanelRender (requestIdleCallback, sem competir com o
+  // paint/interação), mas em pedaços: numa árvore de centenas de nós,
+  // criar o resto inteiro dentro de um único callback ocioso ainda
+  // seria um bloco só de trabalho síncrono. Sem requestIdleCallback
+  // (Safari), processa em lotes fixos de 50 a cada 16ms em vez de tudo
+  // de uma vez.
+  let bgNodesHandle = null;
+  function scheduleBackgroundNodes(map, visibleIds) {
+    if (bgNodesHandle != null) {
+      (window.cancelIdleCallback || window.clearTimeout)(bgNodesHandle);
+      bgNodesHandle = null;
+    }
+    const visible = new Set(visibleIds);
+    const pending = Object.keys(map).filter((id) => !visible.has(id));
+    if (!pending.length) return;
+
+    const canvas = document.getElementById('treeCanvas');
+    if (!canvas) return;
+
+    let i = 0;
+    function step(deadline) {
+      let budget = deadline ? Infinity : 50;
+      while (i < pending.length && (deadline ? deadline.timeRemaining() > 0 : budget-- > 0)) {
+        const node = map[pending[i]];
+        // Pode já ter sido criado sob demanda (ensureNodeElements) se o
+        // usuário expandiu até aqui antes do idle chegar — idempotente.
+        if (node && !node.el) {
+          const el = createNodeElement(node);
+          el.classList.add('hidden'); // colapsado: só aparece numa expansão futura
+          canvas.appendChild(el);
+        }
+        i++;
+      }
+      bgNodesHandle = null;
+      if (i < pending.length) scheduleNext();
+    }
+    function scheduleNext() {
+      bgNodesHandle = window.requestIdleCallback
+        ? window.requestIdleCallback(step, { timeout: 1000 })
+        : setTimeout(() => step(null), 16);
+    }
+    scheduleNext();
+  }
+
   function renderLossPanel() {
     const list = document.getElementById('lossList');
     if (!list || !ROOT_ID) return;
@@ -1526,8 +1591,24 @@ const fmtLobp = formatValuePlain(
       map[id].children.forEach((cid) => queue.push({ id: cid, d: d + 1 }));
     }
 
-    // Cria TODOS os elementos uma única vez (visibilidade via classe .hidden)
-    Object.values(map).forEach((node) => canvas.appendChild(node && createNodeElement(node)));
+    // AJUSTE (performance): cria só os nós VISÍVEIS agora — mesmo
+    // critério (n.expanded && n.children.length) que computeLayout()
+    // usa pra decidir até onde descer — em vez de TODOS os nós da
+    // árvore de uma vez. A maioria nasce colapsada (fora de
+    // CFG.INITIAL_DEPTH) e não precisa existir no DOM até o usuário
+    // expandir até lá. O resto é criado depois, aos poucos, em tempo
+    // ocioso (scheduleBackgroundNodes, no fim desta função); se o
+    // usuário expandir mais rápido do que o idle alcança,
+    // ensureNodeElements (chamada por update()/openTreeToNode()) cria
+    // sob demanda o que faltar, na hora — nunca fica em branco.
+    const visibleIds = [];
+    (function collectVisible(id) {
+      const n = map[id];
+      if (!n) return;
+      visibleIds.push(id);
+      if (n.expanded && n.children.length) n.children.forEach(collectVisible);
+    })(rootId);
+    visibleIds.forEach((id) => canvas.appendChild(createNodeElement(map[id])));
 
     // Cards recém-criados nascem com o texto fixo em português (ver
     // createNodeElement) e data-i18n pra tradução — reaplica o idioma
@@ -1563,6 +1644,11 @@ const fmtLobp = formatValuePlain(
     // painel "Perdas & Ganhos" é montado, em tempo ocioso do navegador,
     // sem competir com o primeiro paint nem travar a interação.
     scheduleLossPanelRender();
+
+    // Resto da árvore (nós colapsados, fora da visão inicial) — criado
+    // aos poucos em tempo ocioso, sem competir com o paint/interação da
+    // parte já visível nem com o cálculo do painel de Perdas & Ganhos.
+    scheduleBackgroundNodes(map, visibleIds);
 
     return true;
   }
