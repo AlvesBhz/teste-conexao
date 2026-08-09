@@ -120,7 +120,11 @@
     if (!res.ok) {
       let detail = '';
       try { detail = (await res.json()).error || ''; } catch (e) {}
-      throw new Error(`Falha ao buscar /api/tree (HTTP ${res.status}) ${detail}`);
+      // detail vem direto do backend (server.js: err.message do driver
+      // Databricks/SQL) — texto técnico de terceiros, sem tradução
+      // própria, igual ao err.message nativo do fetch já tratado em
+      // showViewportError. Só o prefixo fixo é traduzido.
+      throw new Error(`${i18nText('error.fetchFailed')} (HTTP ${res.status}) ${detail}`);
     }
     return mapTreeRows(await res.json());
   }
@@ -942,6 +946,14 @@ const fmtLobp = formatValuePlain(
   const loadVisaoFiltros = (nmVDT, ano) =>
     loadOptionsFiltro('cmbVisao', `/api/filtros-visao?nm_vdt=${encodeURIComponent(nmVDT || '')}&ano=${encodeURIComponent(ano || '')}`, 'VISAO', 'Visão');
 
+  // Ponte pro dicionário de tradução (definido em index.html, fora desta
+  // IIFE — ver window.i18nText/window.i18nRefresh). Fallback pra key
+  // literal se a ponte não existir por algum motivo: nunca quebra a
+  // mensagem, só deixa de traduzir.
+  function i18nText(key) {
+    return (typeof window.i18nText === 'function') ? window.i18nText(key) : key;
+  }
+
   function showViewportError(msg) {
     clearViewportError();
     const vp = document.getElementById('treeViewport');
@@ -1291,7 +1303,11 @@ const fmtLobp = formatValuePlain(
     lossPanelDirty = false;
 
     if (entries.length === 0) {
-      list.innerHTML = `<div class="loss-empty" data-i18n="loss.empty">Nenhuma perda ou ganho neste comparativo.</div>`;
+      // data-i18n continua aqui pra uma troca de idioma FUTURA (com este
+      // texto já na tela) recontinuar funcionando via translatePage();
+      // i18nText() cobre o texto JÁ nascer no idioma certo, mesmo que o
+      // idioma ativo não seja mais o pt-BR do texto fixo original.
+      list.innerHTML = `<div class="loss-empty" data-i18n="loss.empty">${i18nText('loss.empty')}</div>`;
       return;
     }
 
@@ -1467,14 +1483,16 @@ const fmtLobp = formatValuePlain(
         rawData = await fetchTreeData();
       } catch (err) {
         console.error('[VDT] Erro ao carregar dados da tabela:', err);
-        showViewportError(`Erro ao carregar dados da tabela: ${err.message}`);
+        // i18nText: mensagem fixa traduzida; err.message continua como o
+        // navegador devolveu (texto técnico, não tem tradução própria).
+        showViewportError(`${i18nText('error.tableLoad')} ${err.message}`);
         return false;
       }
     }
 
     if (!Array.isArray(rawData) || rawData.length === 0) {
       console.error('[VDT] /api/tree não retornou nenhuma linha.');
-      showViewportError('Nenhum dado retornado pela tabela para o filtro selecionado.');
+      showViewportError(i18nText('error.noData'));
       return false;
     }
 
@@ -1510,6 +1528,13 @@ const fmtLobp = formatValuePlain(
 
     // Cria TODOS os elementos uma única vez (visibilidade via classe .hidden)
     Object.values(map).forEach((node) => canvas.appendChild(node && createNodeElement(node)));
+
+    // Cards recém-criados nascem com o texto fixo em português (ver
+    // createNodeElement) e data-i18n pra tradução — reaplica o idioma
+    // ativo aqui (chamada barata: array de nós, não de frames de
+    // animação) pra funcionar mesmo quando o usuário troca de VDT/Ano/
+    // Visão DEPOIS de já ter trocado o idioma da interface.
+    if (typeof window.i18nRefresh === 'function') window.i18nRefresh();
 
     // Mede a altura real do card renderizado e corrige o CFG
     // (layout e âncoras dos conectores ficam exatos)
@@ -1619,7 +1644,7 @@ const fmtLobp = formatValuePlain(
         console.error('[VDT] D3 não carregou. Verifique se o arquivo d3.v7.min.js está na raiz do projeto.');
         const vp = document.getElementById('treeViewport');
         if (vp) vp.insertAdjacentHTML('beforeend',
-          '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#5A6A7E;font-size:13px;">Erro: biblioteca D3 não carregada (d3.v7.min.js ausente).</div>');
+          `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#5A6A7E;font-size:13px;">${i18nText('error.d3Missing')}</div>`);
       };
       document.head.appendChild(s);
       return;

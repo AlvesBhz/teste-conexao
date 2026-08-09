@@ -455,6 +455,10 @@
         'loss.sort.label': 'Ordenar por impacto',
         'loss.sort.ascTitle': 'Maiores perdas primeiro',
         'loss.sort.descTitle': 'Maiores ganhos primeiro',
+        'error.tableLoad': 'Erro ao carregar dados da tabela:',
+        'error.noData': 'Nenhum dado retornado pela tabela para o filtro selecionado.',
+        'error.d3Missing': 'Erro: biblioteca D3 não carregada (d3.v7.min.js ausente).',
+        'error.fetchFailed': 'Falha ao buscar /api/tree',
       },
       'en': {
         'settings.btnTitle': 'Settings',
@@ -494,6 +498,10 @@
         'loss.sort.label': 'Sort by impact',
         'loss.sort.ascTitle': 'Biggest losses first',
         'loss.sort.descTitle': 'Biggest gains first',
+        'error.tableLoad': 'Error loading table data:',
+        'error.noData': 'No data returned from the table for the selected filter.',
+        'error.d3Missing': 'Error: D3 library not loaded (d3.v7.min.js missing).',
+        'error.fetchFailed': 'Failed to fetch /api/tree',
       }
     };
 
@@ -514,6 +522,20 @@
         if (dict[key] != null) el.setAttribute('aria-label', dict[key]);
       });
     }
+
+    // Ponte pro app.js — roda numa IIFE isolada e não enxerga I18N/
+    // translatePage diretamente. Evita duplicar o dicionário em dois
+    // arquivos: window.i18nText busca uma string pontual (mensagens de
+    // erro montadas em JS) e window.i18nRefresh reaplica a tradução em
+    // conteúdo com data-i18n inserido DEPOIS do boot da página (cards
+    // recriados a cada troca de filtro, estado vazio do painel de
+    // Perdas & Ganhos) — sem isso, esse conteúdo nasce sempre no idioma
+    // do boot, mesmo se o usuário já tiver trocado de idioma depois.
+    window.i18nText = function (key) {
+      var dict = I18N[document.documentElement.lang] || I18N['pt-BR'];
+      return dict[key] != null ? dict[key] : key;
+    };
+    window.i18nRefresh = function () { translatePage(document.documentElement.lang); };
 
     function applyLang(lang) {
       if (!I18N[lang]) lang = 'pt-BR';
