@@ -173,8 +173,7 @@ function tableRef() {
   return `${catalog}.${schema}.${table}`;
 }
 
-async function getTreeData(nmVDT = null, ano = null) {
-
+function buildTreeSql(nmVDT, ano, visao) {
   let sql = `
     SELECT
       NO_PAI,
@@ -192,9 +191,9 @@ async function getTreeData(nmVDT = null, ano = null) {
     FROM ${tableRef()}
   `;
 
-  // nmVDT é escapado (é texto livre); ano só chega aqui já validado
-  // como inteiro por app.get("/api/tree") — nunca interpolado como
-  // string, então não precisa (nem faz sentido) de escaping de aspas.
+  // nmVDT/visao são escapados (texto livre); ano só chega aqui já
+  // validado como inteiro por app.get("/api/tree") — nunca interpolado
+  // como string, então não precisa (nem faz sentido) de escaping.
   const where = [];
   if (nmVDT) where.push(`NM_VDT = '${nmVDT.replace(/'/g, "''")}'`);
   // Intervalo em vez de YEAR(DT_REF) = ano: aplicar função na coluna
@@ -203,13 +202,32 @@ async function getTreeData(nmVDT = null, ano = null) {
   // acaba lendo a tabela inteira para depois descartar. A comparação
   // por faixa preserva exatamente o mesmo conjunto de linhas.
   if (ano !== null) where.push(`DT_REF >= '${ano}-01-01' AND DT_REF < '${ano + 1}-01-01'`);
+  // TP_VISAO (Actual/Forecast): nome de coluna ASSUMIDO — ver comentário
+  // em getVisoesMatrix(). Só entra no WHERE se `visao` foi passado.
+  if (visao) where.push(`TP_VISAO = '${visao.replace(/'/g, "''")}'`);
   if (where.length) sql += `WHERE ${where.join(" AND ")}\n`;
 
   sql += `
     ORDER BY ID_ORDEM
   `;
+  return sql;
+}
 
-  const rows = await runQuery(sql);
+async function getTreeData(nmVDT = null, ano = null, visao = null) {
+  let rows;
+  if (visao) {
+    try {
+      rows = await runQuery(buildTreeSql(nmVDT, ano, visao));
+    } catch (err) {
+      // TP_VISAO é uma suposição não confirmada (ver getVisoesMatrix).
+      // Se a coluna não existir, a ÁRVORE NÃO PODE quebrar por causa
+      // disso — recarrega sem o filtro de Visão e loga o motivo.
+      console.warn(`[visao] Filtro por Visão falhou (coluna TP_VISAO pode não existir); recarregando sem ele: ${err.message}`);
+      rows = await runQuery(buildTreeSql(nmVDT, ano, null));
+    }
+  } else {
+    rows = await runQuery(buildTreeSql(nmVDT, ano, null));
+  }
 
   return rows.map((r) => ({
     NodeID: r.NO_PAI,
@@ -289,6 +307,66 @@ async function getListaAnos(nmVDT = null) {
   });
 }
 
+// ── Visão (Actual / Forecast) ───────────────────────────────────
+// ATENÇÃO — suposição não confirmada: não há confirmação do nome exato
+// da coluna que distingue Actual/Forecast nesta tabela. Assumido
+// TP_VISAO, com valores literais 'Actual'/'Forecast' (mesmos rótulos
+// exibidos na UI). Se o nome real for outro, ajustar aqui e em
+// buildTreeSql() — é o único lugar que precisa mudar.
+//
+// Toda a leitura desta coluna é defensiva: se ela não existir, a
+// consulta falha e getVisoesMatrix() devolve null (em vez de derrubar
+// o processo), e resolveVisoes() cai no fallback permissivo abaixo —
+// o combo de Visão continua funcionando, só sem o refinamento real por
+// dado. O filtro na árvore (getTreeData) tem a mesma proteção.
+const VISAO_COLUMN = "TP_VISAO";
+
+// Ano corrente do SERVIDOR (fonte única da verdade pra "ano anterior
+// vs. ano corrente" — evita depender do relógio/fuso do navegador de
+// cada usuário).
+function anoAtual() {
+  return new Date().getFullYear();
+}
+
+// Matriz NM_VDT × ANO × Visões-reais-observadas, numa única consulta
+// (mesmo espírito de getFilterMatrix — resultado minúsculo, cacheado).
+async function getVisoesMatrix() {
+  return withCache("visoes-matrix", async () => {
+    try {
+      const rows = await runQuery(`
+        SELECT DISTINCT NM_VDT, YEAR(DT_REF) AS ANO, ${VISAO_COLUMN} AS VISAO
+        FROM ${tableRef()}
+        WHERE NM_VDT IS NOT NULL AND DT_REF IS NOT NULL AND ${VISAO_COLUMN} IS NOT NULL
+      `);
+      const matrix = {};
+      rows.forEach((r) => {
+        if (r.NM_VDT == null || r.ANO == null || r.VISAO == null) return;
+        const porAno = (matrix[r.NM_VDT] = matrix[r.NM_VDT] || {});
+        (porAno[Number(r.ANO)] = porAno[Number(r.ANO)] || new Set()).add(String(r.VISAO));
+      });
+      return matrix;
+    } catch (err) {
+      console.warn(`[visao] Consulta de Visão indisponível (coluna ${VISAO_COLUMN} pode não existir); combo de Visão usará fallback permissivo: ${err.message}`);
+      return null;
+    }
+  });
+}
+
+// Regra de negócio (única fonte da verdade, usada por /api/bootstrap E
+// /api/filtros-visao — nunca duplicada):
+//   - Ano ANTERIOR ao corrente: só "Actual", incondicionalmente (mesmo
+//     que existam linhas de Forecast remanescentes pra um ano fechado,
+//     elas não fazem sentido de negócio e não são oferecidas).
+//   - Ano corrente (ou futuro): as visões que realmente existem nos
+//     dados; sem dado real (matrix ausente ou vazia p/ este VDT+ano),
+//     oferece as duas como fallback permissivo em vez de travar o combo.
+function resolveVisoes(nmVDT, ano, visoesMatrix) {
+  if (ano < anoAtual()) return ["Actual"];
+  const reais = visoesMatrix && visoesMatrix[nmVDT] && visoesMatrix[nmVDT][ano];
+  if (reais && reais.size) return [...reais].sort();
+  return ["Actual", "Forecast"];
+}
+
 app.get("/api/tree", async (req, res) => {
   try {
 
@@ -303,7 +381,9 @@ app.get("/api/tree", async (req, res) => {
       if (!Number.isNaN(parsed)) ano = parsed;
     }
 
-    const data = await getTreeData(nmVDT, ano);
+    const visao = req.query.visao || null;
+
+    const data = await getTreeData(nmVDT, ano, visao);
 
     res.json(data);
 
@@ -362,6 +442,39 @@ app.get("/api/filtros-ano", async (req, res) => {
   }
 });
 
+// Terceiro nível da cascata Árvore → Ano → Visão: exige nm_vdt E ano
+// (a Visão é um recorte do par VDT+Ano, nunca isolada). Usa a mesma
+// matriz/regra de negócio do /api/bootstrap (resolveVisoes) — evita
+// qualquer duplicação de lógica entre a carga inicial e as trocas de
+// filtro subsequentes.
+app.get("/api/filtros-visao", async (req, res) => {
+  try {
+
+    const nmVDT = req.query.nm_vdt || null;
+    const ano = parseInt(req.query.ano, 10);
+
+    if (!nmVDT || Number.isNaN(ano)) {
+      return res.status(400).json({ error: "nm_vdt e ano são obrigatórios" });
+    }
+
+    // Ano anterior ao corrente não precisa nem consultar a matriz —
+    // resolveVisoes já resolve pra ["Actual"] só com a data.
+    const visoesMatrix = ano < anoAtual() ? null : await getVisoesMatrix();
+    const visoes = resolveVisoes(nmVDT, ano, visoesMatrix);
+
+    res.json(visoes.map((v) => ({ VISAO: v })));
+
+  } catch (err) {
+
+    console.error(err);
+
+    res.status(500).json({
+      error: err.message
+    });
+
+  }
+});
+
 // Carga inicial numa única ida e volta. ANTES o boot da página fazia 3
 // chamadas ENCADEADAS (lista de VDTs → anos daquela VDT → árvore),
 // somando 3 latências de rede antes do 1º card aparecer. Como as duas
@@ -385,21 +498,37 @@ app.get("/api/bootstrap", async (req, res) => {
     // Sem nenhuma VDT na tabela não há o que carregar — devolve a
     // estrutura vazia e deixa o front exibir a mensagem de "sem dados".
     if (!vdtSelecionada) {
-      return res.json({ vdts: [], anosPorVdt: {}, vdtSelecionada: null, anos: [], anoSelecionado: null, arvore: [] });
+      return res.json({
+        vdts: [], anosPorVdt: {}, vdtSelecionada: null, anos: [], anoSelecionado: null,
+        visoes: [], visaoSelecionada: null, arvore: [],
+      });
     }
 
     // Lista já vem ordenada decrescente: o 1º é o ano mais recente.
     const anos = anosPorVdt[vdtSelecionada] || [];
     const anoSelecionado = anos.length ? anos[0] : null;
 
-    const arvore = await getTreeData(vdtSelecionada, anoSelecionado);
+    // Terceiro nível da cascata, resolvido junto — sem isso, o 1º
+    // carregamento da página precisaria de uma requisição A MAIS só
+    // pra saber quais Visões oferecer pro VDT+ano já escolhidos.
+    let visoes = ["Actual"];
+    if (anoSelecionado !== null) {
+      const visoesMatrix = anoSelecionado < anoAtual() ? null : await getVisoesMatrix();
+      visoes = resolveVisoes(vdtSelecionada, anoSelecionado, visoesMatrix);
+    }
+    const visaoSelecionada = visoes[0] || null;
+
+    const arvore = await getTreeData(vdtSelecionada, anoSelecionado, visaoSelecionada);
 
     console.log(`[api] /api/bootstrap total=${Date.now() - tTotal}ms nos=${arvore.length}`);
 
     // anosPorVdt vai junto de propósito: com a matriz inteira em mãos,
     // trocar de VDT no front não precisa de requisição nenhuma para
-    // remontar o combo de Ano.
-    res.json({ vdts, anosPorVdt, vdtSelecionada, anos, anoSelecionado, arvore });
+    // remontar o combo de Ano. Visão já vem escopada pro VDT+ano
+    // resolvidos aqui; trocar VDT ou Ano no front busca a Visão de novo
+    // via /api/filtros-visao (ela depende dos DOIS, não dá pra
+    // pré-computar tudo numa matriz sem explodir o tamanho da resposta).
+    res.json({ vdts, anosPorVdt, vdtSelecionada, anos, anoSelecionado, visoes, visaoSelecionada, arvore });
 
   } catch (err) {
 

@@ -122,6 +122,26 @@
           <option value="2026">2026</option>
         </select>
       </div>
+
+      <div class="filter-group">
+        <label for="visaoTrigger" data-i18n="filter.viewLabel">Visão:</label>
+
+        <!-- Mesmo componente/comportamento dos dropdowns de VDT/Ano
+             (ver comentários acima) — terceiro nível da cascata
+             Árvore → Ano → Visão (loadVisaoFiltros em app.js). Opções
+             (Actual/Forecast) dependem da VDT E do ano selecionados. -->
+        <div class="vdt-dropdown" id="visaoDropdown">
+          <button type="button" id="visaoTrigger" class="vdt-trigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="visaoDropdownList">
+            <span id="visaoTriggerLabel">Actual</span>
+            <svg width="10" height="10" viewBox="0 0 16 16" fill="none" class="vdt-trigger-caret"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
+          </button>
+          <ul id="visaoDropdownList" class="vdt-dropdown-list" role="listbox" aria-label="Selecionar Visão" hidden></ul>
+        </div>
+
+        <select id="cmbVisao" class="vdt-native-select" tabindex="-1" aria-hidden="true">
+          <option value="Actual">Actual</option>
+        </select>
+      </div>
     </div>
   </header>
 
@@ -387,6 +407,7 @@
         'lbl.bud': 'Bdgt',
         'filter.label': 'VDT:',
         'filter.yearLabel': 'Ano:',
+        'filter.viewLabel': 'Visão:',
         'treeTitle.eyebrow': 'Árvore selecionada',
         'loss.title': 'Perdas & Ganhos',
         'loss.trigger': 'Visualizar Perdas & Ganhos',
@@ -425,6 +446,7 @@
         'lbl.bud': 'Bdgt',
         'filter.label': 'VDT:',
         'filter.yearLabel': 'Year:',
+        'filter.viewLabel': 'View:',
         'treeTitle.eyebrow': 'Selected tree',
         'loss.title': 'Losses & Gains',
         'loss.trigger': 'View Losses & Gains',
