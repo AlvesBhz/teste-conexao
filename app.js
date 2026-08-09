@@ -1073,6 +1073,10 @@ const fmtLobp = formatValuePlain(
     function openList() {
       if (trigger.disabled) return;
       renderList();
+      // Sem opções pra mostrar (ex.: só existe o valor já selecionado,
+      // renderList() filtra ele fora) — abrir só pra exibir uma caixa
+      // vazia é pior que não abrir; nada acontece nesse clique.
+      if (!list.children.length) return;
       list.hidden = false;
       trigger.setAttribute('aria-expanded', 'true');
       dropdown.classList.add('open');
