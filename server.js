@@ -614,33 +614,50 @@ function deriveNameFromEmail(email) {
 }
 
 let graphTokenPromise = null;
+let graphTokenExpiresAt = 0;
 async function getGraphAppToken() {
   const tenantId = process.env.MS_GRAPH_TENANT_ID;
   const clientId = process.env.MS_GRAPH_CLIENT_ID;
   const clientSecret = process.env.MS_GRAPH_CLIENT_SECRET;
   if (!tenantId || !clientId || !clientSecret) return null;
 
-  if (!graphTokenPromise) {
-    graphTokenPromise = (async () => {
-      const body = new URLSearchParams({
-        client_id: clientId,
-        client_secret: clientSecret,
-        scope: "https://graph.microsoft.com/.default",
-        grant_type: "client_credentials",
-      });
-      const resp = await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body,
-      });
-      if (!resp.ok) throw new Error(`token Microsoft Graph: HTTP ${resp.status}`);
-      const json = await resp.json();
-      return json.access_token;
-    })().catch((err) => {
-      graphTokenPromise = null; // falhou: próxima chamada pede um token novo
-      throw err;
-    });
+  // AJUSTE: a promise resolvida era reaproveitada PRA SEMPRE, sem
+  // checar validade — um token client-credentials expira em ~1h
+  // (expires_in), então depois desse prazo toda chamada ao Graph
+  // (empresa E foto, as duas só vêm daqui) passava a usar um token
+  // vencido e falhar, silenciosamente, mesmo com nome ainda aparecendo
+  // via header. Agora o token só é reaproveitado enquanto ainda tiver
+  // validade real (com 60s de folga); vencido, busca um novo.
+  if (graphTokenPromise && graphTokenExpiresAt > Date.now() + 60000) {
+    return graphTokenPromise;
   }
+
+  graphTokenExpiresAt = Date.now() + 3600 * 1000; // otimista; corrigido abaixo com o expires_in real da resposta
+  graphTokenPromise = (async () => {
+    const body = new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      scope: "https://graph.microsoft.com/.default",
+      grant_type: "client_credentials",
+    });
+    const resp = await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body,
+    });
+    if (!resp.ok) {
+      const detail = await resp.text().catch(() => "");
+      throw new Error(`token Microsoft Graph: HTTP ${resp.status} ${detail.slice(0, 300)}`);
+    }
+    const json = await resp.json();
+    graphTokenExpiresAt = Date.now() + (Number(json.expires_in) || 3600) * 1000;
+    return json.access_token;
+  })().catch((err) => {
+    graphTokenPromise = null; // falhou: próxima chamada pede um token novo
+    graphTokenExpiresAt = 0;
+    throw err;
+  });
+
   return graphTokenPromise;
 }
 
@@ -653,7 +670,10 @@ async function fetchGraphProfile(email) {
     `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(email)}?$select=displayName,companyName`,
     { headers }
   );
-  if (!userResp.ok) throw new Error(`Graph /users: HTTP ${userResp.status}`);
+  if (!userResp.ok) {
+    const detail = await userResp.text().catch(() => "");
+    throw new Error(`Graph /users: HTTP ${userResp.status} ${detail.slice(0, 300)}`);
+  }
   const user = await userResp.json();
 
   // Foto é opcional (nem todo usuário tem uma cadastrada no Microsoft
