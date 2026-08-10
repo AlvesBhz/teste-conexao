@@ -168,12 +168,17 @@
 
       <span class="filter-divider" aria-hidden="true"></span>
 
-      <div class="user-chip">
+      <!-- Preenchido dinamicamente por loadUserProfile() em app.js, a
+           partir de /api/user/profile (identidade Microsoft do usuário
+           autenticado) — nasce vazio de propósito, sem nenhum valor
+           fixo/placeholder. -->
+      <div class="user-chip" id="userChip">
         <div class="user-text">
-          <span class="user-email">cristian.alves@vale.com</span>
-          <span class="user-company">VALE S.A.</span>
+          <span class="user-name" id="userName"></span>
+          <span class="user-email" id="userEmail"></span>
+          <span class="user-company" id="userCompany"></span>
         </div>
-        <span class="user-avatar">CA</span>
+        <span class="user-avatar" id="userAvatar" aria-hidden="true"></span>
       </div>
     </div>
   </header>
