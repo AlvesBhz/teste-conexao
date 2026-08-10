@@ -683,6 +683,24 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
   .tree-title-badge { max-width: calc(100% - 32px); }
 }
 
+/* Agrupa o card "Perdas & Ganhos" e a dica de navegação (.viewport-hint,
+   ver abaixo) num único bloco fixo no canto superior esquerdo do
+   viewport — a dica vivia solta no canto inferior esquerdo; agora fica
+   ao lado direito do card. Só este wrapper é posicionado; os dois
+   filhos entram no fluxo normal (flex) dele. */
+.viewport-top-left {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  /* Acima do .tree-title-badge (15): em telas estreitas o título
+     centralizado alcança a faixa do card e passaria por cima dele. */
+  z-index: 16;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;   /* telas estreitas: a dica quebra pra uma 2ª linha em vez de estourar a largura */
+}
+
 /* ---- CARD DE ACESSO A "PERDAS & GANHOS" ----
    Fica exatamente onde o painel completo ficava (canto superior
    esquerdo do viewport): o painel não aparece mais por padrão, só este
@@ -691,12 +709,6 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
    ver .loss-panel); ícone e texto lado a lado, mesma linguagem visual
    do card que ele substitui, só recolhido. */
 .loss-trigger {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  /* Acima do .tree-title-badge (15): em telas estreitas o título
-     centralizado alcança a faixa do card e passaria por cima dele. */
-  z-index: 16;
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -1183,9 +1195,8 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
 
 .tree-viewport {
   /* Largura do painel "Perdas & Ganhos", num único lugar — .loss-panel
-     e .viewport-hint (que precisa desviar dele) leem daqui em vez de
-     duplicar o valor em dois seletores. Ajustada nos mesmos breakpoints
-     do painel logo abaixo. */
+     lê daqui em vez de duplicar o valor. Ajustada nos mesmos
+     breakpoints do painel logo abaixo. */
   --loss-panel-w: 320px;
   position: relative;
   margin: 20px 36px 28px;
@@ -1279,12 +1290,11 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
   box-shadow: 0 6px 18px rgba(60,181,229,.4);
 }
 
+/* AJUSTE: era position:absolute (canto inferior esquerdo do viewport),
+   isolada do card "Perdas & Ganhos". Agora é filha em fluxo normal de
+   .viewport-top-left (acima), que já cuida do posicionamento — a dica
+   fica ao lado direito do card, sem precisar de left/bottom próprios. */
 .viewport-hint {
-  position: absolute;
-  /* O painel "Perdas & Ganhos" virou gaveta lateral direita e não ocupa
-     mais a esquerda do viewport, então a dica volta à margem normal. */
-  left: 16px;
-  bottom: 14px;
   font-size: 10.5px;
   font-weight: 500;
   letter-spacing: .02em;
@@ -1293,10 +1303,31 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
   border: 1px solid var(--border-light);
   border-radius: 100px;   /* AJUSTE: era 6px — pill, como ds-nav-badge */
   padding: 5px 12px;
-  pointer-events: none;
-  z-index: 10;
+  /* AJUSTE: truncado com reticências a partir de max-width — ao lado do
+     card "Perdas & Ganhos", o texto (mais longo em pt-BR) sobrepunha o
+     título centralizado da árvore em telas de até ~1440px (medido:
+     "Clique para expandir" ficava atrás do badge). max-width some por
+     completo abaixo de 1300px, faixa em que não sobra espaço nenhum
+     entre o card e o título pra mostrar qualquer trecho com segurança.
+     O texto completo continua acessível via title (tooltip nativo, ver
+     data-i18n-title no index.html) — nada é perdido, só condensado. */
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  /* AJUSTE: era pointer-events:none (decorativo, nunca atrapalhava o
+     pan da árvore). Precisa aceitar hover agora pra exibir o tooltip
+     nativo (title) com o texto completo quando truncado. */
+  pointer-events: auto;
+  cursor: default;
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
+}
+@media (max-width: 1500px) {
+  .viewport-hint { max-width: 220px; }
+}
+@media (max-width: 1300px) {
+  .viewport-hint { display: none; }
 }
 
 /* ============================================================

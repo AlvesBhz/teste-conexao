@@ -244,20 +244,32 @@
       <span id="treeTitleYear"></span>
     </div>
 
-    <!-- Card de acesso ao painel "Perdas & Ganhos". O painel deixou de
-         ocupar a lateral esquerda do viewport: agora a árvore nasce com
-         a tela inteira e o painel só entra sob demanda, como gaveta. -->
-    <button type="button" class="loss-trigger" id="lossTrigger" aria-haspopup="dialog" aria-expanded="false" aria-controls="lossPanel">
-      <span class="loss-trigger-icon" aria-hidden="true">
-        <svg width="19" height="19" viewBox="0 0 20 20" fill="none">
-          <path d="M7 5h9M7 10h9M7 15h9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-          <circle cx="3.4" cy="5" r="1.3" fill="currentColor"/>
-          <circle cx="3.4" cy="10" r="1.3" fill="currentColor"/>
-          <circle cx="3.4" cy="15" r="1.3" fill="currentColor"/>
-        </svg>
-      </span>
-      <span class="loss-trigger-text" data-i18n="loss.trigger">Visualizar Perdas &amp; Ganhos</span>
-    </button>
+    <!-- Card de acesso ao painel "Perdas & Ganhos" + dica de navegação,
+         agrupados num bloco só no canto superior esquerdo do viewport
+         — a dica vivia solta no canto inferior esquerdo (ver AJUSTE em
+         .viewport-hint); agora acompanha o card, à direita dele. O
+         painel deixou de ocupar a lateral esquerda do viewport: agora a
+         árvore nasce com a tela inteira e o painel só entra sob
+         demanda, como gaveta. -->
+    <div class="viewport-top-left">
+      <button type="button" class="loss-trigger" id="lossTrigger" aria-haspopup="dialog" aria-expanded="false" aria-controls="lossPanel">
+        <span class="loss-trigger-icon" aria-hidden="true">
+          <svg width="19" height="19" viewBox="0 0 20 20" fill="none">
+            <path d="M7 5h9M7 10h9M7 15h9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <circle cx="3.4" cy="5" r="1.3" fill="currentColor"/>
+            <circle cx="3.4" cy="10" r="1.3" fill="currentColor"/>
+            <circle cx="3.4" cy="15" r="1.3" fill="currentColor"/>
+          </svg>
+        </span>
+        <span class="loss-trigger-text" data-i18n="loss.trigger">Visualizar Perdas &amp; Ganhos</span>
+      </button>
+
+      <!-- data-i18n-title (mesma chave) mantém o texto completo como
+           tooltip nativo — necessário porque o texto visível agora é
+           truncado em telas mais estreitas (ver .viewport-hint em
+           style.css), pra nunca sobrepor o título centralizado da árvore. -->
+      <div class="viewport-hint" data-i18n="hint.viewport" data-i18n-title="hint.viewport" title="Arraste para mover · Scroll para zoom · Passe o mouse num card para destacar a trajetória · Clique para expandir">Arraste para mover · Scroll para zoom · Passe o mouse num card para destacar a trajetória · Clique para expandir</div>
+    </div>
 
     <!-- Fundo escurecido da gaveta — fecha ao clicar fora. -->
     <div class="loss-backdrop" id="lossBackdrop"></div>
@@ -343,8 +355,6 @@
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 6V3a1 1 0 0 1 1-1h3M10 2h3a1 1 0 0 1 1 1v3M14 10v3a1 1 0 0 1-1 1h-3M6 14H3a1 1 0 0 1-1-1v-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
     </div>
-
-    <div class="viewport-hint" data-i18n="hint.viewport">Arraste para mover · Scroll para zoom · Passe o mouse num card para destacar a trajetória · Clique para expandir</div>
   </section>
 
   <!--
