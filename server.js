@@ -658,6 +658,10 @@ async function fetchGraphProfile(email) {
 
   // Foto é opcional (nem todo usuário tem uma cadastrada no Microsoft
   // 365) — falha aqui não pode derrubar nome/empresa, que já vieram OK.
+  // AJUSTE: um !photoResp.ok (403 de permissão, 404 sem foto, etc.) era
+  // ignorado em silêncio — impossível diagnosticar em produção por que
+  // a foto não aparecia mesmo com nome/empresa carregando OK. Agora
+  // qualquer caminho sem foto sai logado com o motivo real.
   let photoUrl = "";
   try {
     const photoResp = await fetch(
@@ -668,9 +672,12 @@ async function fetchGraphProfile(email) {
       const buf = Buffer.from(await photoResp.arrayBuffer());
       const contentType = photoResp.headers.get("content-type") || "image/jpeg";
       photoUrl = `data:${contentType};base64,${buf.toString("base64")}`;
+    } else {
+      const detail = await photoResp.text().catch(() => "");
+      console.warn(`[user] Graph /photo para ${email}: HTTP ${photoResp.status} ${detail.slice(0, 300)}`);
     }
   } catch (err) {
-    /* sem foto — front usa o avatar de iniciais */
+    console.warn(`[user] Graph /photo para ${email} falhou: ${err.message}`);
   }
 
   return { name: user.displayName || "", company: user.companyName || "", photoUrl };
