@@ -1908,15 +1908,11 @@ const fmtLobp = formatValuePlain(
       var data = res.ok ? await res.json() : null;
       if (!data) return;
 
+      var nameEl = document.getElementById('userName');
+      if (nameEl) nameEl.textContent = data.name || '';
+
       var avatar = document.getElementById('userAvatar');
       if (!avatar) return;
-
-      // Só a foto é exibida no menu — nome/e-mail viram o nome acessível
-      // (aria-label) e o tooltip nativo (title) do avatar, sem ocupar
-      // espaço visual no topbar.
-      var identidade = data.name || data.email || '';
-      avatar.setAttribute('aria-label', identidade);
-      avatar.title = identidade;
 
       if (data.photoUrl) {
         var img = document.createElement('img');
