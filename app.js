@@ -1911,6 +1911,12 @@ const fmtLobp = formatValuePlain(
       var nameEl = document.getElementById('userName');
       if (nameEl) nameEl.textContent = data.name || '';
 
+      var companyEl = document.getElementById('userCompany');
+      if (companyEl) {
+        companyEl.textContent = data.company || '';
+        companyEl.style.display = data.company ? '' : 'none';
+      }
+
       var avatar = document.getElementById('userAvatar');
       if (!avatar) return;
 
