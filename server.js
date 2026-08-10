@@ -536,7 +536,7 @@ app.get("/api/bootstrap", async (req, res) => {
     if (!vdtSelecionada) {
       return res.json({
         vdts: [], anosPorVdt: {}, vdtSelecionada: null, anos: [], anoSelecionado: null,
-        visoes: [], visaoSelecionada: null, arvore: [],
+        visoes: [], visaoSelecionada: null, arvore: [], anoAtual: anoAtual(),
       });
     }
 
@@ -564,7 +564,11 @@ app.get("/api/bootstrap", async (req, res) => {
     // resolvidos aqui; trocar VDT ou Ano no front busca a Visão de novo
     // via /api/filtros-visao (ela depende dos DOIS, não dá pra
     // pré-computar tudo numa matriz sem explodir o tamanho da resposta).
-    res.json({ vdts, anosPorVdt, vdtSelecionada, anos, anoSelecionado, visoes, visaoSelecionada, arvore });
+    // anoAtual vai junto pro front decidir as opções de comparação do
+    // painel de Perdas & Ganhos (Ano anterior/corrente+Actual/corrente+
+    // Forecast) sem depender do relógio do navegador — mesma fonte
+    // única de verdade já usada por resolveVisoes().
+    res.json({ vdts, anosPorVdt, vdtSelecionada, anos, anoSelecionado, visoes, visaoSelecionada, arvore, anoAtual: anoAtual() });
 
   } catch (err) {
 

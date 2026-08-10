@@ -1020,6 +1020,14 @@ const fmtLobp = formatValuePlain(
   // ao servidor (antes cada troca custava uma consulta a /api/filtros-ano).
   let ANOS_POR_VDT = null;
 
+  // Ano corrente do SERVIDOR (mesma fonte usada por resolveVisoes() em
+  // server.js, devolvida em boot.anoAtual) — usado pelas regras de
+  // disponibilidade do combo de comparação de Perdas & Ganhos (ver
+  // resolveLossCompareOptions). Não depende do relógio do navegador do
+  // usuário. Só existe fallback pro relógio local no caminho antigo em
+  // etapas (bootstrap indisponível), que não tem esse dado pronto.
+  let ANO_ATUAL_SERVIDOR = null;
+
   // Cascata Árvore → Ano → Visão: sempre que VDT ou Ano mudam, a Visão
   // (que depende dos DOIS) precisa ser re-escopada ANTES de recarregar
   // a árvore, pelo mesmo motivo do Ano em relação à VDT — fetchTreeData
@@ -1029,6 +1037,9 @@ const fmtLobp = formatValuePlain(
     const ano = document.getElementById('cmbAno').value;
     await loadVisaoFiltros(nmVDT, ano);
     syncVisaoTriggerLabel();
+    // Comparação de Perdas & Ganhos é um recorte de (Ano, Visão) — os
+    // dois acabaram de ser resolvidos acima.
+    refreshLossCompareOptions();
   }
 
   const attachFilterEvents = () => attachSelectReload('cmbVDT', 'vdtTrigger', async () => {
@@ -1043,7 +1054,10 @@ const fmtLobp = formatValuePlain(
     await refreshVisaoOptions(); // Visão depende do Ano recém-resolvido acima
   });
   const attachAnoFilterEvents = () => attachSelectReload('cmbAno', 'anoTrigger', refreshVisaoOptions);
-  const attachVisaoFilterEvents = () => attachSelectReload('cmbVisao', 'visaoTrigger');
+  // Troca direta de Visão (sem mexer em VDT/Ano) também precisa
+  // re-escopar o combo de comparação — refreshVisaoOptions() não roda
+  // aqui (a Visão em si não muda), então é o único gatilho que falta.
+  const attachVisaoFilterEvents = () => attachSelectReload('cmbVisao', 'visaoTrigger', refreshLossCompareOptions);
 
   // ── 13.0.5 DROPDOWN CUSTOMIZADO (VDT e Ano) ──────────────────
   // Os <select id="cmbVDT"/"cmbAno"> continuam sendo a fonte de dados/
@@ -1190,6 +1204,68 @@ const fmtLobp = formatValuePlain(
     bdgt_lobp: { actualKey: 'VL_ORC', referenceKey: 'VL_LOBP' },
   };
   let lossCompareKey = 'fcst_bdgt';
+
+  // Disponibilidade do combo de comparação, mesma cascata Árvore→Ano→
+  // Visão do topo: as CHAVES (fcst_bdgt/fcst_lobp/bdgt_lobp, acima)
+  // nunca mudam — são só o par de colunas comparado, e VL_PROJ já vem
+  // filtrado por Actual/Forecast desde a consulta (/api/tree). Só o
+  // RÓTULO ("Act" ou "Fcst") e QUAIS pares aparecem mudam com o
+  // contexto:
+  //   - Ano anterior ao corrente: os 3 pares, rotulados "Act" (só
+  //     existe dado realizado num ano fechado).
+  //   - Ano corrente + Actual: só "Act x Bdgt".
+  //   - Ano corrente + Forecast: os 3 pares, rotulados "Fcst" (padrão
+  //     original, inalterado).
+  function resolveLossCompareOptions(ano, visao) {
+    const anoNum = ano === '' || ano == null ? null : Number(ano);
+    const isPast = anoNum != null && ANO_ATUAL_SERVIDOR != null && anoNum < ANO_ATUAL_SERVIDOR;
+
+    if (!isPast && visao === 'Actual') {
+      return [{ value: 'fcst_bdgt', labelKey: 'loss.cmp.actBdgt' }];
+    }
+    if (!isPast && visao === 'Forecast') {
+      return [
+        { value: 'fcst_bdgt', labelKey: 'loss.cmp.fcstBdgt' },
+        { value: 'fcst_lobp', labelKey: 'loss.cmp.fcstLobp' },
+        { value: 'bdgt_lobp', labelKey: 'loss.cmp.bdgtLobp' },
+      ];
+    }
+    // Ano anterior (ou contexto ainda não resolvido, ex.: 1ª chamada
+    // antes do bootstrap responder) — fallback permissivo com os 3
+    // pares rotulados "Act", igual à regra de ano anterior de verdade.
+    return [
+      { value: 'fcst_bdgt', labelKey: 'loss.cmp.actBdgt' },
+      { value: 'fcst_lobp', labelKey: 'loss.cmp.actLobp' },
+      { value: 'bdgt_lobp', labelKey: 'loss.cmp.bdgtLobp' },
+    ];
+  }
+
+  // Reconstrói as opções do combo sempre que Ano ou Visão mudam —
+  // chamada por refreshVisaoOptions() (cobre troca de VDT e de Ano,
+  // que recascateiam pra Visão) e pela troca direta de Visão (ver
+  // attachVisaoFilterEvents). Preserva a seleção atual se ela continuar
+  // válida no novo conjunto; senão cai na 1ª opção disponível — mesmo
+  // padrão já usado pelos outros combos (fillSelect). A árvore é
+  // recarregada logo em seguida por quem chamou (mesmo fluxo de
+  // sempre), e isso já invalida/recalcula o painel — não precisa
+  // duplicar essa invalidação aqui.
+  function refreshLossCompareOptions() {
+    const select = document.getElementById('lossCompareSelect');
+    if (!select) return;
+
+    const ano   = document.getElementById('cmbAno').value;
+    const visao = document.getElementById('cmbVisao').value;
+    const options = resolveLossCompareOptions(ano, visao);
+
+    const previous = select.value;
+    select.innerHTML = options
+      .map((opt) => `<option value="${opt.value}" data-i18n="${opt.labelKey}">${i18nText(opt.labelKey)}</option>`)
+      .join('');
+
+    select.value = options.some((opt) => opt.value === previous) ? previous : options[0].value;
+    lossCompareKey = select.value; // <select> real é a fonte única de verdade pro cálculo (renderLossPanel)
+  }
+
   // 'asc' (padrão) = maiores perdas → menores perdas → menores ganhos →
   // maiores ganhos (transição contínua cruzando o zero — é a leitura
   // "natural" do painel: começa no problema mais grave, termina no
@@ -1787,6 +1863,13 @@ const fmtLobp = formatValuePlain(
       await loadVisaoFiltros(nmVDT, document.getElementById('cmbAno').value);
     }
 
+    // boot.anoAtual só existe no caminho rápido — o caminho em etapas
+    // (bootstrap indisponível) não tem esse dado pronto de nenhuma
+    // rota já chamada, então cai no relógio do navegador como último
+    // recurso (só afeta a disponibilidade do combo de comparação de
+    // Perdas & Ganhos, não nenhuma regra de dado real).
+    ANO_ATUAL_SERVIDOR = bootOk ? boot.anoAtual : new Date().getFullYear();
+
     attachFilterEvents();
     attachAnoFilterEvents();
     attachVisaoFilterEvents();
@@ -1796,6 +1879,7 @@ const fmtLobp = formatValuePlain(
     syncVdtTriggerLabel(); // reflete o valor real já definido nos combos
     syncAnoTriggerLabel();
     syncVisaoTriggerLabel();
+    refreshLossCompareOptions(); // 1ª resolução, com Ano/Visão já definidos acima
     attachLossPanelEvents();
 
     // Com o bootstrap OK a árvore já está em mãos: renderiza direto,
