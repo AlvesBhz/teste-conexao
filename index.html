@@ -171,14 +171,11 @@
       <!-- Preenchido dinamicamente por loadUserProfile() em app.js, a
            partir de /api/user/profile (identidade Microsoft do usuário
            autenticado) — nasce vazio de propósito, sem nenhum valor
-           fixo/placeholder. -->
+           fixo/placeholder. Só a foto/avatar é exibida; o title carrega
+           nome/e-mail como tooltip nativo, pra não perder a identificação
+           por hover mesmo sem texto visível no menu. -->
       <div class="user-chip" id="userChip">
-        <div class="user-text">
-          <span class="user-name" id="userName"></span>
-          <span class="user-email" id="userEmail"></span>
-          <span class="user-company" id="userCompany"></span>
-        </div>
-        <span class="user-avatar" id="userAvatar" aria-hidden="true"></span>
+        <span class="user-avatar" id="userAvatar" title=""></span>
       </div>
     </div>
   </header>

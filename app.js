@@ -1902,25 +1902,21 @@ const fmtLobp = formatValuePlain(
     return local ? local.slice(0, 2).toUpperCase() : '';
   }
 
-  function setChipLine(id, value) {
-    var el = document.getElementById(id);
-    if (!el) return;
-    el.textContent = value || '';
-    el.style.display = value ? '' : 'none';
-  }
-
   async function loadUserProfile() {
     try {
       var res = await fetch('/api/user/profile');
       var data = res.ok ? await res.json() : null;
       if (!data) return;
 
-      setChipLine('userName', data.name);
-      setChipLine('userEmail', data.email);
-      setChipLine('userCompany', data.company);
-
       var avatar = document.getElementById('userAvatar');
       if (!avatar) return;
+
+      // Só a foto é exibida no menu — nome/e-mail viram o nome acessível
+      // (aria-label) e o tooltip nativo (title) do avatar, sem ocupar
+      // espaço visual no topbar.
+      var identidade = data.name || data.email || '';
+      avatar.setAttribute('aria-label', identidade);
+      avatar.title = identidade;
 
       if (data.photoUrl) {
         var img = document.createElement('img');
