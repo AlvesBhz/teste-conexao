@@ -133,11 +133,10 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
   display: flex;
   align-items: center;
   justify-content: space-between;
-  /* AJUSTE: gap fixo entre topbar-left/filter-container/topbar-right —
-     necessário porque filter-container agora empurra os 3 combos pra
-     junto de topbar-right via margin-left:auto (ver .filter-container),
-     o que zera o espaço que justify-content teria pra distribuir entre
-     eles. */
+  /* gap entre topbar-left e topbar-right — os 3 combos (.filter-container)
+     saíram do fluxo (position:absolute, centralizado na topbar inteira;
+     ver .filter-container), então space-between distribui só esses dois
+     agora, um em cada ponta. */
   gap: 24px;
   padding: 0 32px;
   height: 64px;   /* AJUSTE: era 52px — alinhado à altura do ds-nav-inner */
@@ -282,11 +281,22 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
    painel de Perdas & Ganhos (.loss-compare-select). Sem botão de
    aplicar: a troca do <select> já reaplica o filtro sozinha (ver
    app.js). */
+/* AJUSTE: era margin-left:auto (empurrava os 3 combos pra junto de
+   topbar-right, "colado" no bloco de conta). Agora fica centralizado
+   de verdade na largura total da topbar, com position:absolute +
+   left/top:50% — .topbar (position:sticky) já serve de containing
+   block, então os combos ficam sempre no centro do header, independente
+   da largura de topbar-left/topbar-right, sem tocar em mais nada da
+   estrutura. Revertido pra fluxo normal (empilhado abaixo) na faixa
+   estreita — ver @media(max-width:1240px), abaixo. */
 .filter-container {
   display: flex;
   align-items: center;
   gap: 20px;
-  margin-left: auto;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
 }
 
 /* Separador sutil usado nos dois lados da engrenagem, dentro de
@@ -454,6 +464,10 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
    em nada. */
 @media (max-width: 1240px) {
   .filter-container {
+    position: static;
+    left: auto;
+    top: auto;
+    transform: none;
     order: 3;
     width: 100%;
     margin: 10px 0 0;
