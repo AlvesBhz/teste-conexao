@@ -581,6 +581,162 @@ app.get("/api/bootstrap", async (req, res) => {
   }
 });
 
+// ── Perfil do usuário autenticado (menu superior direito) ──────
+// Fonte primária: headers de identidade encaminhados pelo proxy do
+// Databricks Apps (X-Forwarded-Email / X-Forwarded-Preferred-Username /
+// X-Forwarded-User) quando "user authorization" está habilitado no
+// workspace — em Azure Databricks essa identidade já vem da própria
+// conta Microsoft/Entra ID usada pra logar, então nome/e-mail saem daí
+// sem precisar de nenhuma credencial extra. ATENÇÃO: nomes de header
+// não confirmados contra este workspace específico (mesmo princípio
+// defensivo já usado em VISAO_COLUMN acima) — se o proxy usar nomes
+// diferentes, os headers simplesmente não chegam e o front cai no
+// fallback de iniciais, sem quebrar nada.
+//
+// Foto e empresa não vêm nesses headers — só o Microsoft Graph
+// (`/me`, `/me/photo`) tem esses campos. Como este app não tem um login
+// interativo próprio (só o OAuth de serviço pro SQL Warehouse, acima),
+// a consulta ao Graph usa client-credentials (app-only, escopo
+// `https://graph.microsoft.com/.default`) — só é acionada se
+// MS_GRAPH_TENANT_ID/MS_GRAPH_CLIENT_ID/MS_GRAPH_CLIENT_SECRET
+// estiverem configurados em app.yaml; sem eles, o endpoint segue
+// funcionando normalmente só com nome/e-mail dos headers.
+function deriveNameFromEmail(email) {
+  if (!email) return "";
+  const local = email.split("@")[0];
+  return local
+    .replace(/[._-]+/g, " ")
+    .trim()
+    .split(" ")
+    .filter(Boolean)
+    .map((w) => w[0].toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+let graphTokenPromise = null;
+let graphTokenExpiresAt = 0;
+async function getGraphAppToken() {
+  const tenantId = process.env.MS_GRAPH_TENANT_ID;
+  const clientId = process.env.MS_GRAPH_CLIENT_ID;
+  const clientSecret = process.env.MS_GRAPH_CLIENT_SECRET;
+  if (!tenantId || !clientId || !clientSecret) return null;
+
+  // AJUSTE: a promise resolvida era reaproveitada PRA SEMPRE, sem
+  // checar validade — um token client-credentials expira em ~1h
+  // (expires_in), então depois desse prazo toda chamada ao Graph
+  // (empresa E foto, as duas só vêm daqui) passava a usar um token
+  // vencido e falhar, silenciosamente, mesmo com nome ainda aparecendo
+  // via header. Agora o token só é reaproveitado enquanto ainda tiver
+  // validade real (com 60s de folga); vencido, busca um novo.
+  if (graphTokenPromise && graphTokenExpiresAt > Date.now() + 60000) {
+    return graphTokenPromise;
+  }
+
+  graphTokenExpiresAt = Date.now() + 3600 * 1000; // otimista; corrigido abaixo com o expires_in real da resposta
+  graphTokenPromise = (async () => {
+    const body = new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      scope: "https://graph.microsoft.com/.default",
+      grant_type: "client_credentials",
+    });
+    const resp = await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body,
+    });
+    if (!resp.ok) {
+      const detail = await resp.text().catch(() => "");
+      throw new Error(`token Microsoft Graph: HTTP ${resp.status} ${detail.slice(0, 300)}`);
+    }
+    const json = await resp.json();
+    graphTokenExpiresAt = Date.now() + (Number(json.expires_in) || 3600) * 1000;
+    return json.access_token;
+  })().catch((err) => {
+    graphTokenPromise = null; // falhou: próxima chamada pede um token novo
+    graphTokenExpiresAt = 0;
+    throw err;
+  });
+
+  return graphTokenPromise;
+}
+
+async function fetchGraphProfile(email) {
+  const token = await getGraphAppToken();
+  if (!token) return null;
+
+  const headers = { Authorization: `Bearer ${token}` };
+  const userResp = await fetch(
+    `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(email)}?$select=displayName,companyName`,
+    { headers }
+  );
+  if (!userResp.ok) {
+    const detail = await userResp.text().catch(() => "");
+    throw new Error(`Graph /users: HTTP ${userResp.status} ${detail.slice(0, 300)}`);
+  }
+  const user = await userResp.json();
+
+  // Foto é opcional (nem todo usuário tem uma cadastrada no Microsoft
+  // 365) — falha aqui não pode derrubar nome/empresa, que já vieram OK.
+  // AJUSTE: um !photoResp.ok (403 de permissão, 404 sem foto, etc.) era
+  // ignorado em silêncio — impossível diagnosticar em produção por que
+  // a foto não aparecia mesmo com nome/empresa carregando OK. Agora
+  // qualquer caminho sem foto sai logado com o motivo real.
+  let photoUrl = "";
+  try {
+    const photoResp = await fetch(
+      `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(email)}/photo/$value`,
+      { headers }
+    );
+    if (photoResp.ok) {
+      const buf = Buffer.from(await photoResp.arrayBuffer());
+      const contentType = photoResp.headers.get("content-type") || "image/jpeg";
+      photoUrl = `data:${contentType};base64,${buf.toString("base64")}`;
+    } else {
+      const detail = await photoResp.text().catch(() => "");
+      console.warn(`[user] Graph /photo para ${email}: HTTP ${photoResp.status} ${detail.slice(0, 300)}`);
+    }
+  } catch (err) {
+    console.warn(`[user] Graph /photo para ${email} falhou: ${err.message}`);
+  }
+
+  return { name: user.displayName || "", company: user.companyName || "", photoUrl };
+}
+
+app.get("/api/user/profile", async (req, res) => {
+  try {
+    const email = req.headers["x-forwarded-email"] || "";
+    const preferredUsername = req.headers["x-forwarded-preferred-username"] || "";
+    const forwardedUser = req.headers["x-forwarded-user"] || "";
+
+    const nameFromHeader =
+      preferredUsername && !preferredUsername.includes("@") ? preferredUsername
+      : (forwardedUser && !forwardedUser.includes("@") ? forwardedUser : "");
+
+    let name = nameFromHeader || deriveNameFromEmail(email);
+    let company = "";
+    let photoUrl = "";
+
+    if (email) {
+      try {
+        const graphProfile = await withCache(`user-profile:${email}`, () => fetchGraphProfile(email));
+        if (graphProfile) {
+          name = graphProfile.name || name;
+          company = graphProfile.company || company;
+          photoUrl = graphProfile.photoUrl || "";
+        }
+      } catch (err) {
+        console.warn(`[user] Microsoft Graph indisponível para ${email}; seguindo só com dados do header: ${err.message}`);
+      }
+    }
+
+    res.json({ name, email, company, photoUrl });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get("/api/test-auth", async (req, res) => {
   try {
     let WorkspaceClient;

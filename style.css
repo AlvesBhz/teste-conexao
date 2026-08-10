@@ -133,11 +133,10 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
   display: flex;
   align-items: center;
   justify-content: space-between;
-  /* AJUSTE: gap fixo entre topbar-left/filter-container/topbar-right —
-     necessário porque filter-container agora empurra os 3 combos pra
-     junto de topbar-right via margin-left:auto (ver .filter-container),
-     o que zera o espaço que justify-content teria pra distribuir entre
-     eles. */
+  /* gap entre topbar-left e topbar-right — os 3 combos (.filter-container)
+     saíram do fluxo (position:absolute, centralizado na topbar inteira;
+     ver .filter-container), então space-between distribui só esses dois
+     agora, um em cada ponta. */
   gap: 24px;
   padding: 0 32px;
   height: 64px;   /* AJUSTE: era 52px — alinhado à altura do ds-nav-inner */
@@ -213,7 +212,7 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
   transform: rotate(50deg);
 }
 
-/* ── Chip do usuário logado (email + empresa + avatar) ── */
+/* ── Chip do usuário logado (nome + empresa + avatar/foto) ── */
 /* AJUSTE: border-left/padding-left removidos — o separador antes do
    chip agora é o .filter-divider (span dedicado em index.html),
    reaproveitado do que já separa os filtros do bloco de conta, pra
@@ -230,7 +229,7 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
   align-items: flex-end;
   line-height: 1.3;
 }
-.user-email {
+.user-name {
   font-family: var(--font-poppins);
   font-size: 11.5px;
   font-weight: 600;
@@ -245,17 +244,30 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
   color: rgba(255,255,255,.6);
   white-space: nowrap;
 }
+/* Linha vazia (empresa indisponível pro usuário atual) é escondida via
+   JS (display:none) — loadUserProfile() nunca escreve valor fixo num
+   campo sem dado real. */
 .user-avatar {
   display: flex; align-items: center; justify-content: center;
   width: 32px; height: 32px;
   border-radius: 50%;
   flex-shrink: 0;
+  overflow: hidden;
   background: linear-gradient(145deg, var(--vbm-blue-light), var(--vbm-blue-dark));
   border: 1.5px solid rgba(255,255,255,.5);
   color: #fff;
   font-family: var(--font-poppins);
   font-size: 11px;
   font-weight: 700;
+}
+/* Foto do perfil Microsoft, quando disponível — mesma moldura circular
+   do avatar de iniciais; se a imagem falhar ao carregar, app.js troca
+   de volta pras iniciais (ver onerror em loadUserProfile). */
+.user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 /* ── Filtros de VDT, Período e Visão — encostados no bloco de conta ──
@@ -269,11 +281,22 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
    painel de Perdas & Ganhos (.loss-compare-select). Sem botão de
    aplicar: a troca do <select> já reaplica o filtro sozinha (ver
    app.js). */
+/* AJUSTE: era margin-left:auto (empurrava os 3 combos pra junto de
+   topbar-right, "colado" no bloco de conta). Agora fica centralizado
+   de verdade na largura total da topbar, com position:absolute +
+   left/top:50% — .topbar (position:sticky) já serve de containing
+   block, então os combos ficam sempre no centro do header, independente
+   da largura de topbar-left/topbar-right, sem tocar em mais nada da
+   estrutura. Revertido pra fluxo normal (empilhado abaixo) na faixa
+   estreita — ver @media(max-width:1240px), abaixo. */
 .filter-container {
   display: flex;
   align-items: center;
   gap: 20px;
-  margin-left: auto;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
 }
 
 /* Separador sutil usado nos dois lados da engrenagem, dentro de
@@ -441,6 +464,10 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
    em nada. */
 @media (max-width: 1240px) {
   .filter-container {
+    position: static;
+    left: auto;
+    top: auto;
+    transform: none;
     order: 3;
     width: 100%;
     margin: 10px 0 0;
@@ -656,6 +683,24 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
   .tree-title-badge { max-width: calc(100% - 32px); }
 }
 
+/* Agrupa o card "Perdas & Ganhos" e a dica de navegação (.viewport-hint,
+   ver abaixo) num único bloco fixo no canto superior esquerdo do
+   viewport — a dica vivia solta no canto inferior esquerdo; agora fica
+   ao lado direito do card. Só este wrapper é posicionado; os dois
+   filhos entram no fluxo normal (flex) dele. */
+.viewport-top-left {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  /* Acima do .tree-title-badge (15): em telas estreitas o título
+     centralizado alcança a faixa do card e passaria por cima dele. */
+  z-index: 16;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;   /* telas estreitas: a dica quebra pra uma 2ª linha em vez de estourar a largura */
+}
+
 /* ---- CARD DE ACESSO A "PERDAS & GANHOS" ----
    Fica exatamente onde o painel completo ficava (canto superior
    esquerdo do viewport): o painel não aparece mais por padrão, só este
@@ -664,12 +709,6 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
    ver .loss-panel); ícone e texto lado a lado, mesma linguagem visual
    do card que ele substitui, só recolhido. */
 .loss-trigger {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  /* Acima do .tree-title-badge (15): em telas estreitas o título
-     centralizado alcança a faixa do card e passaria por cima dele. */
-  z-index: 16;
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -1156,9 +1195,8 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
 
 .tree-viewport {
   /* Largura do painel "Perdas & Ganhos", num único lugar — .loss-panel
-     e .viewport-hint (que precisa desviar dele) leem daqui em vez de
-     duplicar o valor em dois seletores. Ajustada nos mesmos breakpoints
-     do painel logo abaixo. */
+     lê daqui em vez de duplicar o valor. Ajustada nos mesmos
+     breakpoints do painel logo abaixo. */
   --loss-panel-w: 320px;
   position: relative;
   margin: 20px 36px 28px;
@@ -1252,12 +1290,11 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
   box-shadow: 0 6px 18px rgba(60,181,229,.4);
 }
 
+/* AJUSTE: era position:absolute (canto inferior esquerdo do viewport),
+   isolada do card "Perdas & Ganhos". Agora é filha em fluxo normal de
+   .viewport-top-left (acima), que já cuida do posicionamento — a dica
+   fica ao lado direito do card, sem precisar de left/bottom próprios. */
 .viewport-hint {
-  position: absolute;
-  /* O painel "Perdas & Ganhos" virou gaveta lateral direita e não ocupa
-     mais a esquerda do viewport, então a dica volta à margem normal. */
-  left: 16px;
-  bottom: 14px;
   font-size: 10.5px;
   font-weight: 500;
   letter-spacing: .02em;
@@ -1266,10 +1303,31 @@ p { font-family: var(--font-poppins); font-weight: 400; line-height: 1.65; color
   border: 1px solid var(--border-light);
   border-radius: 100px;   /* AJUSTE: era 6px — pill, como ds-nav-badge */
   padding: 5px 12px;
-  pointer-events: none;
-  z-index: 10;
+  /* AJUSTE: truncado com reticências a partir de max-width — ao lado do
+     card "Perdas & Ganhos", o texto (mais longo em pt-BR) sobrepunha o
+     título centralizado da árvore em telas de até ~1440px (medido:
+     "Clique para expandir" ficava atrás do badge). max-width some por
+     completo abaixo de 1300px, faixa em que não sobra espaço nenhum
+     entre o card e o título pra mostrar qualquer trecho com segurança.
+     O texto completo continua acessível via title (tooltip nativo, ver
+     data-i18n-title no index.html) — nada é perdido, só condensado. */
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  /* AJUSTE: era pointer-events:none (decorativo, nunca atrapalhava o
+     pan da árvore). Precisa aceitar hover agora pra exibir o tooltip
+     nativo (title) com o texto completo quando truncado. */
+  pointer-events: auto;
+  cursor: default;
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
+}
+@media (max-width: 1500px) {
+  .viewport-hint { max-width: 220px; }
+}
+@media (max-width: 1300px) {
+  .viewport-hint { display: none; }
 }
 
 /* ============================================================

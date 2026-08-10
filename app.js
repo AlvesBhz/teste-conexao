@@ -1889,11 +1889,62 @@ const fmtLobp = formatValuePlain(
     });
   }
 
+  // ── Perfil do usuário logado (menu superior direito) ───────────
+  // Busca nome/e-mail/empresa/foto do usuário autenticado via
+  // /api/user/profile (identidade Microsoft, ver server.js) e preenche
+  // o chip no topbar. Roda em paralelo com a árvore, sem bloquear nem
+  // depender dela — uma falha aqui nunca pode afetar o resto da tela.
+  function getInitials(name, email) {
+    var parts = (name || '').trim().split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    var local = (email || '').split('@')[0];
+    return local ? local.slice(0, 2).toUpperCase() : '';
+  }
+
+  async function loadUserProfile() {
+    try {
+      var res = await fetch('/api/user/profile');
+      var data = res.ok ? await res.json() : null;
+      if (!data) return;
+
+      var nameEl = document.getElementById('userName');
+      if (nameEl) nameEl.textContent = data.name || '';
+
+      var companyEl = document.getElementById('userCompany');
+      if (companyEl) {
+        companyEl.textContent = data.company || '';
+        companyEl.style.display = data.company ? '' : 'none';
+      }
+
+      var avatar = document.getElementById('userAvatar');
+      if (!avatar) return;
+
+      if (data.photoUrl) {
+        var img = document.createElement('img');
+        img.alt = data.name || data.email || '';
+        img.onerror = function () {
+          // Foto falhou ao carregar (URL expirada, formato inesperado…):
+          // cai no fallback de iniciais em vez de deixar um ícone quebrado.
+          avatar.textContent = getInitials(data.name, data.email);
+        };
+        img.src = data.photoUrl;
+        avatar.innerHTML = '';
+        avatar.appendChild(img);
+      } else {
+        avatar.textContent = getInitials(data.name, data.email);
+      }
+    } catch (err) {
+      console.warn('[user] Não foi possível carregar o perfil do usuário:', err.message);
+    }
+  }
+
   // ── 14. BOOT ────────────────────────────────────────────────
   // Guard: garante que o D3 carregou antes de iniciar. Sem isso,
   // um 404 no script do D3 deixava todos os cards empilhados em
   // (0,0), pois o init() quebrava antes de posicionar os nós.
   function boot() {
+    loadUserProfile(); // independente da árvore/D3 — não bloqueia nem é bloqueado
     setupThemeToggle(); // independente do D3 — funciona mesmo se a árvore falhar
     if (typeof d3 === 'undefined') {
       // Fallback: tenta o CDN caso o arquivo local d3.v7.min.js falte
