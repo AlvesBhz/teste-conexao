@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gráfico de Barras — Turnover</title>
+  <link href="https://fonts.googleapis.com" rel="preconnect"/>
+  <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin/>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* Anti-flash: restaura o tema Business antes do 1º paint */
+    :root {
+      --chart-bg: #ffffff;
+      --chart-grid: #e8e8e8;
+      --delta-up: #16a34a;
+      --delta-down: #dc2626;
+      --delta-flat: #888888;
+      --delta-up-tint: rgba(22, 163, 74, 0.1);
+      --delta-down-tint: rgba(220, 38, 38, 0.1);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --chart-bg: #1a1a1a;
+        --chart-grid: #333333;
+      }
+    }
+    html[data-theme="dark"] {
+      --chart-bg: #1a1a1a;
+      --chart-grid: #333333;
+    }
+  </style>
+  <script>
+    (function(){try{if(localStorage.getItem('vdt-theme')==='dark'){document.documentElement.style.background='linear-gradient(145deg,#1a1a1a 0%,#0d2640 100%)'; document.documentElement.setAttribute('data-theme','dark');}}catch(e){}})();
+  </script>
+</head>
+
+<body>
+
+  <!-- TOPBAR (sem conteúdo centralizado) -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <a href="/" class="logo" aria-label="Voltar à árvore">
+        <svg class="logo-img" viewBox="0 0 71 28" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true">
+          <mask id="valeLogoMask" style="mask-type:luminance" maskUnits="userSpaceOnUse" x="0" y="0" width="71" height="28">
+            <path d="M71 0.15918H0V27.841H71V0.15918Z" fill="white"></path>
+          </mask>
+          <g mask="url(#valeLogoMask)">
+            <path d="M25.3432 10.8778C27.9075 11.2795 29.8701 10.8103 31.6461 9.63759L18.1989 27.841L0 3.04279C0 3.04279 2.97274 0.15918 7.9218 0.15918C15.1858 0.15918 19.6038 9.97757 25.3432 10.8778Z" fill="white"></path>
+            <path d="M32.8187 1.31152C28.6427 1.31152 25.9127 5.23711 20.9658 6.58897C22.7404 8.36452 25.1944 9.78319 27.2939 9.78319C30.2962 9.78319 32.2451 8.82566 33.4454 7.20799L36.7805 2.74782C36.7805 2.74782 35.0825 1.31226 32.8187 1.31226" fill="white"></path>
+            <path d="M45.7822 14.2412H43.9674L41.6055 20.7376C41.4695 21.1136 41.3874 21.3632 41.3874 21.3632H41.36C41.36 21.3632 39.5039 16.6057 38.5487 14.2412H36.6377L39.9946 22.6013C40.1861 23.0881 40.7992 23.8958 42.0012 23.8958L45.7822 14.2419V14.2412Z" fill="white"></path>
+            <path d="M63.1625 23.7556V22.2532H59.006V14.2412H57.2998V23.7556H63.1625Z" fill="white"></path>
+            <path d="M70.7932 23.7556V22.2532H66.8469V19.5275H70.1813V18.0801H66.8469V15.7429H69.1179C70.9021 15.7429 70.9999 14.2412 70.9999 14.2412H65.1416V23.7556H70.7938H70.7932Z" fill="white"></path>
+            <path d="M51.907 19.8337H49.464L50.6785 16.6204L50.6924 16.5646L51.907 19.8337ZM55.3055 23.7563L51.593 14.2412H49.9688L46.1064 23.7563H47.9291L48.8631 21.3361H52.4668L53.3948 23.7563H55.3055Z" fill="white"></path>
+          </g>
+        </svg>
+      </a>
+      <span class="header-divider"></span>
+      <h1 class="header-title" data-i18n="chart.title">Turnover</h1>
+    </div>
+
+    <div class="topbar-right">
+      <span class="filter-divider" aria-hidden="true"></span>
+
+      <button class="settings-btn" id="settingsBtn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="settingsPanel" title="Configurações" data-i18n-title="settings.btnTitle">
+        <svg width="17" height="17" viewBox="0 0 20 20" fill="none">
+          <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" stroke="currentColor" stroke-width="1.5" />
+          <path d="M16.2 12.3a1.4 1.4 0 0 0 .28 1.54l.05.05a1.7 1.7 0 1 1-2.4 2.4l-.05-.05a1.4 1.4 0 0 0-1.54-.28 1.4 1.4 0 0 0-.85 1.28V17.4a1.7 1.7 0 0 1-3.4 0v-.08a1.4 1.4 0 0 0-.91-1.28 1.4 1.4 0 0 0-1.54.28l-.05.05a1.7 1.7 0 1 1-2.4-2.4l.05-.05a1.4 1.4 0 0 0 .28-1.54 1.4 1.4 0 0 0-1.28-.85H2.6a1.7 1.7 0 0 1 0-3.4h.08a1.4 1.4 0 0 0 1.28-.91 1.4 1.4 0 0 0-.28-1.54l-.05-.05a1.7 1.7 0 1 1 2.4-2.4l.05.05a1.4 1.4 0 0 0 1.54.28h.06a1.4 1.4 0 0 0 .85-1.28V2.6a1.7 1.7 0 0 1 3.4 0v.08a1.4 1.4 0 0 0 .85 1.28h.06a1.4 1.4 0 0 0 1.54-.28l.05-.05a1.7 1.7 0 1 1 2.4 2.4l-.05.05a1.4 1.4 0 0 0-.28 1.54v.06a1.4 1.4 0 0 0 1.28.85h.08a1.7 1.7 0 0 1 0 3.4h-.08a1.4 1.4 0 0 0-1.28.85Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+        </svg>
+      </button>
+
+      <span class="filter-divider" aria-hidden="true"></span>
+
+      <div class="user-chip">
+        <div class="user-text">
+          <span class="user-email" id="userEmail">cristian.alves@vale.com</span>
+          <span class="user-company">VALE S.A.</span>
+        </div>
+        <span class="user-avatar">CA</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- PAINEL DE CONFIGURAÇÕES -->
+  <div class="settings-backdrop" id="settingsBackdrop"></div>
+  <aside class="settings-panel" id="settingsPanel" role="dialog" aria-modal="true" aria-label="Configurações" aria-hidden="true">
+    <div class="settings-panel-head">
+      <h2 data-i18n="settings.title">Settings</h2>
+      <button class="settings-close" id="settingsClose" type="button" aria-label="Fechar" data-i18n-aria="settings.close">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg>
+      </button>
+    </div>
+
+    <div class="settings-panel-body">
+      <section class="settings-section">
+        <span class="settings-section-title" data-i18n="settings.theme">Theme</span>
+        <div class="theme-toggle" role="group" aria-label="Alternar tema">
+          <button class="theme-toggle-btn active" id="btnWhite" data-i18n="theme.white">Claro</button>
+          <button class="theme-toggle-btn" id="btnBusiness" data-i18n="theme.dark">Escuro</button>
+        </div>
+      </section>
+
+      <div class="settings-divider"></div>
+
+      <section class="settings-section">
+        <span class="settings-section-title">
+          <span data-i18n="settings.language">Language</span>
+        </span>
+        <div class="settings-select-wrap">
+          <select id="langSelect" class="settings-select">
+            <option value="pt-BR">Português (Brasil)</option>
+            <option value="en">English</option>
+          </select>
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="none" class="settings-select-caret"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
+        </div>
+      </section>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="chart-main">
+    <!-- PAINEL DE FILTROS -->
+    <aside class="chart-filters-panel" id="filtersPanel" role="region" aria-label="Filtros do gráfico">
+      <div class="chart-filters-header">
+        <h2 data-i18n="chart.filters">Filtros</h2>
+        <button class="chart-filters-close" id="filtersClose" type="button" aria-label="Fechar" style="display:none;">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg>
+        </button>
+      </div>
+
+      <div class="chart-filters-body">
+        <!-- Será preenchido por chart.js -->
+      </div>
+
+      <div class="chart-filters-actions">
+        <button class="chart-filters-apply" id="filtersApply" data-i18n="chart.apply">Aplicar</button>
+        <button class="chart-filters-reset" id="filtersReset" data-i18n="chart.reset">Limpar</button>
+      </div>
+    </aside>
+
+    <!-- ÁREA DO GRÁFICO -->
+    <section class="chart-container" aria-label="Gráfico de barras">
+      <div class="chart-state chart-loading" id="chartLoading" role="status" aria-live="polite">
+        <div class="chart-spinner"></div>
+        <p data-i18n="chart.loading">Carregando...</p>
+      </div>
+
+      <div class="chart-state chart-error" id="chartError" role="alert" aria-live="assertive" style="display:none;">
+        <p data-i18n="chart.error">Erro ao carregar dados</p>
+        <small id="chartErrorMsg"></small>
+      </div>
+
+      <div class="chart-state chart-empty" id="chartEmpty" role="status" style="display:none;">
+        <p data-i18n="chart.empty">Nenhum dado disponível</p>
+      </div>
+
+      <div class="chart-wrapper" id="chartWrapper" style="display:none;">
+        <div class="chart-header">
+          <h3 id="chartTitle">Turnover</h3>
+          <p class="chart-subtitle" id="chartSubtitle">Variação (%)</p>
+        </div>
+        <div class="chart-svg-wrapper" id="chartSvgWrapper">
+          <svg id="chartSvg" class="chart-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="d3.v7.min.js"></script>
+  <script src="chart.js"></script>
+
+  <script>
+    /* Painel de configurações — abre/fecha */
+    (function () {
+      var btn = document.getElementById('settingsBtn');
+      var panel = document.getElementById('settingsPanel');
+      var backdrop = document.getElementById('settingsBackdrop');
+      var closeBtn = document.getElementById('settingsClose');
+      if (!btn || !panel || !backdrop) return;
+
+      function openPanel() {
+        panel.classList.add('open');
+        backdrop.classList.add('open');
+        btn.setAttribute('aria-expanded', 'true');
+        panel.setAttribute('aria-hidden', 'false');
+      }
+      function closePanel() {
+        panel.classList.remove('open');
+        backdrop.classList.remove('open');
+        btn.setAttribute('aria-expanded', 'false');
+        panel.setAttribute('aria-hidden', 'true');
+      }
+
+      btn.addEventListener('click', function () {
+        panel.classList.contains('open') ? closePanel() : openPanel();
+      });
+      closeBtn && closeBtn.addEventListener('click', closePanel);
+      backdrop.addEventListener('click', closePanel);
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closePanel();
+      });
+    })();
+
+    /* Tema e idioma */
+    (function () {
+      var I18N = {
+        'pt-BR': {
+          'settings.btnTitle': 'Configurações',
+          'settings.title': 'Configurações',
+          'settings.close': 'Fechar',
+          'settings.theme': 'Tema',
+          'theme.white': 'Claro',
+          'theme.dark': 'Escuro',
+          'settings.language': 'Idioma',
+          'chart.title': 'Turnover',
+          'chart.filters': 'Filtros',
+          'chart.apply': 'Aplicar',
+          'chart.reset': 'Limpar',
+          'chart.loading': 'Carregando...',
+          'chart.error': 'Erro ao carregar dados',
+          'chart.empty': 'Nenhum dado disponível',
+        },
+        'en': {
+          'settings.btnTitle': 'Settings',
+          'settings.title': 'Settings',
+          'settings.close': 'Close',
+          'settings.theme': 'Theme',
+          'theme.white': 'Light',
+          'theme.dark': 'Dark',
+          'settings.language': 'Language',
+          'chart.title': 'Turnover',
+          'chart.filters': 'Filters',
+          'chart.apply': 'Apply',
+          'chart.reset': 'Clear',
+          'chart.loading': 'Loading...',
+          'chart.error': 'Error loading data',
+          'chart.empty': 'No data available',
+        }
+      };
+
+      var btnWhite = document.getElementById('btnWhite');
+      var btnBusiness = document.getElementById('btnBusiness');
+      var langSelect = document.getElementById('langSelect');
+
+      function applyTheme(theme) {
+        if (theme === 'dark') {
+          document.documentElement.setAttribute('data-theme', 'dark');
+          document.documentElement.style.background = 'linear-gradient(145deg,#1a1a1a 0%,#0d2640 100%)';
+          btnBusiness.classList.add('active');
+          btnWhite.classList.remove('active');
+        } else {
+          document.documentElement.removeAttribute('data-theme');
+          document.documentElement.style.background = '';
+          btnWhite.classList.add('active');
+          btnBusiness.classList.remove('active');
+        }
+        try { localStorage.setItem('vdt-theme', theme); } catch (e) {}
+      }
+
+      function translatePage(lang) {
+        var dict = I18N[lang] || I18N['pt-BR'];
+        document.querySelectorAll('[data-i18n]').forEach(function (el) {
+          var key = el.dataset.i18n;
+          if (dict[key] != null) el.textContent = dict[key];
+        });
+        document.querySelectorAll('[data-i18n-title]').forEach(function (el) {
+          var key = el.dataset.i18nTitle;
+          if (dict[key] != null) el.setAttribute('title', dict[key]);
+        });
+      }
+
+      function applyLang(lang) {
+        if (!I18N[lang]) lang = 'pt-BR';
+        if (langSelect) langSelect.value = lang;
+        document.documentElement.lang = lang;
+        translatePage(lang);
+        try { localStorage.setItem('vdt-lang', lang); } catch (e) {}
+      }
+
+      btnWhite && btnWhite.addEventListener('click', function () { applyTheme('light'); });
+      btnBusiness && btnBusiness.addEventListener('click', function () { applyTheme('dark'); });
+      langSelect && langSelect.addEventListener('change', function () { applyLang(langSelect.value); });
+
+      var savedTheme = 'light';
+      var savedLang = 'pt-BR';
+      try { savedTheme = localStorage.getItem('vdt-theme') || 'light'; } catch (e) {}
+      try { savedLang = localStorage.getItem('vdt-lang') || 'pt-BR'; } catch (e) {}
+
+      applyTheme(savedTheme);
+      applyLang(savedLang);
+
+      document.addEventListener('DOMContentLoaded', function () {
+        translatePage(document.documentElement.lang);
+      });
+    })();
+  </script>
+
+</body>
+
+</html>

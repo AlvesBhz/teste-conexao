@@ -478,6 +478,51 @@ app.get("/api/filtros-ano", async (req, res) => {
   }
 });
 
+// ── Endpoint de dados para gráfico de barras ──────────────────────
+// Retorna dados em múltiplas granularidades (mês/trimestre/semestre/ano)
+// da tabela de KPIs, preparados pra renderização em D3.
+async function getChartData() {
+  return withCache("chart-data", async () => {
+    const sql = `
+      -- Query de dados para gráfico de barras (mês, trimestre, semestre, ano)
+      -- Estrutura: múltiplas UNION de queries com granularidades diferentes
+
+      DECLARE @DT_INI AS DATE, @DT_FIM AS DATE, @DT_REF AS DATE
+      SET @DT_INI = '2025-01-01'
+      SET @DT_FIM = CAST(DATEADD(MONTH, 0, CONCAT(YEAR(DATEFROMPARTS(YEAR(DATEADD(MONTH, 0, GETDATE()-1)), MONTH(DATEADD(MONTH, -1, GETDATE()-1)), 1)), '-12-01')) AS DATE)
+      SET @DT_REF = (SELECT DATEADD(MONTH, -1, DT_INI) AS DT_INI_MENOS_1_MES FROM IBP.CONTROLE_PROCESSOS WHERE ID_PROCESSO = 2)
+
+      -- MESES
+      SELECT
+        PVC.DT_REF, PVC.ID_SISTEMA, PVC.ID_SITE, PVC.ID_OPERACAO, PVC.ID_KPI,
+        DASH.NM_KPIS_DASH AS NM_KPI, DASH.ID_ORDEM,
+        CASE WHEN UnpivotedData.Type = 'Budget' THEN 0 WHEN UnpivotedData.Type = 'Supply' THEN 1 ELSE 2 END AS ORDEM_GRAFICO,
+        CASE WHEN UnpivotedData.Type = 'Budget' THEN 0 WHEN UnpivotedData.Type = 'Supply' THEN 2 ELSE 1 END AS ID_TYPE,
+        CASE WHEN UnpivotedData.Type = 'Budget' THEN 'Budget' WHEN UnpivotedData.Type = 'Supply' THEN 'Plan' ELSE 'Act/Fcst' END AS NM_TYPE,
+        CASE WHEN UnpivotedData.Type = 'Budget' THEN CONCAT(FORMAT(DT_REF, 'MMM'),' B')
+          WHEN UnpivotedData.Type = 'Supply' THEN CONCAT(FORMAT(DT_REF, 'MMM'),' P')
+          WHEN UnpivotedData.Type = 'Forecast' AND PVC.DT_REF <= @DT_REF THEN CONCAT(FORMAT(DT_REF, 'MMM'),' A')
+          WHEN UnpivotedData.Type = 'Forecast' THEN CONCAT(FORMAT(DT_REF, 'MMM'),' F') END AS Type,
+        CASE WHEN UnpivotedData.Value IS NULL THEN 0 ELSE UnpivotedData.Value END AS Value
+      FROM IBP.PEDRAVISAOCONSOLIDADA PVC
+      INNER JOIN IBP.DASHBOARD DASH ON PVC.ID_SISTEMA = DASH.ID_SISTEMA AND CONCAT(PVC.ID_SITE, PVC.ID_OPERACAO, PVC.ID_KPI) = CONCAT(DASH.ID_SITE, DASH.ID_OPERACAO, DASH.ID_KPI)
+      CROSS APPLY (
+        SELECT 'Budget' AS Type, PVC.VL_ORC * DASH.VL_FATOR AS Value
+        UNION ALL SELECT 'Supply' AS Type, PVC.VL_SUPPLY * DASH.VL_FATOR AS Value
+        UNION ALL SELECT 'Forecast' AS Type,
+          CASE WHEN PVC.DT_REF <= DATEFROMPARTS(YEAR(DATEADD(MONTH, -1, @DT_REF)), MONTH(DATEADD(MONTH, -1, @DT_REF)), 1) AND PVC.VL_REAL IS NULL THEN 0
+            WHEN PVC.DT_REF <= DATEFROMPARTS(YEAR(DATEADD(MONTH, -1, @DT_REF)), MONTH(DATEADD(MONTH, -1, @DT_REF)), 1) AND PVC.VL_REAL IS NOT NULL THEN PVC.VL_REAL * DASH.VL_FATOR
+            ELSE PVC.VL_PROJ * DASH.VL_FATOR END AS Value
+      ) AS UnpivotedData
+      WHERE PVC.DT_REF BETWEEN @DT_INI AND @DT_FIM AND DASH.ID_DASH = 21
+    `;
+
+    // Retorna os dados brutos do warehouse
+    const rows = await runQuery(sql);
+    return rows;
+  });
+}
+
 // Terceiro nível da cascata Árvore → Ano → Visão: exige nm_vdt E ano
 // (a Visão é um recorte do par VDT+Ano, nunca isolada). Usa a mesma
 // matriz/regra de negócio do /api/bootstrap (resolveVisoes) — evita
@@ -508,6 +553,19 @@ app.get("/api/filtros-visao", async (req, res) => {
       error: err.message
     });
 
+  }
+});
+
+// Endpoint de dados do gráfico de barras — retorna todos os dados em cache
+app.get("/api/chart-data", async (req, res) => {
+  try {
+    const tTotal = Date.now();
+    const data = await getChartData();
+    console.log(`[api] /api/chart-data total=${Date.now() - tTotal}ms rows=${data.length}`);
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -624,6 +682,11 @@ app.get("/api/test-auth", async (req, res) => {
       details: err.message,
     });
   }
+});
+
+app.get("/chart", (req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.sendFile(path.join(__dirname, "chart.html"));
 });
 
 app.get("/", (req, res) => {
