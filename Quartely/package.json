@@ -1,0 +1,19 @@
+{
+  "name": "quarterly-dashboard",
+  "version": "1.0.0",
+  "description": "Dashboard de gráfico de barras com dados trimestrais/mensais/semestrais/anuais",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "@databricks/sql": "^1.17.0",
+    "compression": "^1.8.1",
+    "d3": "^7.9.0",
+    "express": "^5.2.1"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

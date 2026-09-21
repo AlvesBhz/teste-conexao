@@ -1,0 +1,624 @@
+/* ── VBM Design System Tokens ───────────────────────────────────── */
+:root {
+  /* Colors */
+  --color-primary: #D4A547;
+  --color-primary-dark: #B8932B;
+  --color-secondary: #1F3A70;
+  --color-accent: #E74C3C;
+
+  --color-bg: #FFFFFF;
+  --color-bg-alt: #F5F5F5;
+  --color-surface: #FFFFFF;
+  --color-surface-variant: #FAFAFA;
+
+  --color-text: #1A1A1A;
+  --color-text-secondary: #666666;
+  --color-text-tertiary: #999999;
+
+  --color-border: #E0E0E0;
+  --color-border-light: #F0F0F0;
+
+  --color-success: #27AE60;
+  --color-warning: #F39C12;
+  --color-error: #E74C3C;
+  --color-info: #3498DB;
+
+  /* Typography */
+  --font-family-primary: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-family-mono: 'Monaco', 'Courier New', monospace;
+
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: 1.875rem;
+
+  --font-weight-light: 300;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Spacing */
+  --spacing-0: 0;
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+  --spacing-3xl: 4rem;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.15);
+
+  /* Border Radius */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+
+  /* Transitions */
+  --transition-fast: 150ms ease-in-out;
+  --transition-base: 300ms ease-in-out;
+  --transition-slow: 500ms ease-in-out;
+
+  /* Z-index */
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-modal: 300;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg: #1A1A1A;
+    --color-bg-alt: #2A2A2A;
+    --color-surface: #252525;
+    --color-surface-variant: #303030;
+
+    --color-text: #FFFFFF;
+    --color-text-secondary: #AAAAAA;
+    --color-text-tertiary: #777777;
+
+    --color-border: #404040;
+    --color-border-light: #303030;
+  }
+}
+
+:root[data-theme="dark"] {
+  --color-bg: #1A1A1A;
+  --color-bg-alt: #2A2A2A;
+  --color-surface: #252525;
+  --color-surface-variant: #303030;
+
+  --color-text: #FFFFFF;
+  --color-text-secondary: #AAAAAA;
+  --color-text-tertiary: #777777;
+
+  --color-border: #404040;
+  --color-border-light: #303030;
+}
+
+/* ── Global Styles ──────────────────────────────────────────────── */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-family: var(--font-family-primary);
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.5;
+  transition: background-color var(--transition-base), color var(--transition-base);
+}
+
+/* ── Topbar ─────────────────────────────────────────────────────── */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-md) var(--spacing-lg);
+  background-color: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.logo {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+
+.page-title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  margin: 0;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.icon-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: var(--spacing-sm);
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  transition: background-color var(--transition-fast);
+}
+
+.icon-btn:hover {
+  background-color: var(--color-bg-alt);
+}
+
+.language-select {
+  padding: var(--spacing-sm) var(--spacing-md);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  transition: border-color var(--transition-fast);
+}
+
+.language-select:hover {
+  border-color: var(--color-primary);
+}
+
+.language-select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(212, 165, 71, 0.1);
+}
+
+/* ── Chart Main Layout ──────────────────────────────────────────── */
+.chart-main {
+  display: flex;
+  height: calc(100vh - 65px);
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  background-color: var(--color-bg);
+}
+
+/* ── Filters Panel ──────────────────────────────────────────────── */
+.chart-filters-panel {
+  width: 280px;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  overflow-y: auto;
+  transition: transform var(--transition-base);
+}
+
+.filters-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-lg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.filters-title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  margin: 0;
+}
+
+.filters-toggle {
+  display: none;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text);
+  padding: var(--spacing-sm);
+}
+
+.filters-content {
+  padding: var(--spacing-lg);
+}
+
+.filter-group {
+  margin-bottom: var(--spacing-xl);
+}
+
+.filter-group:last-child {
+  margin-bottom: 0;
+}
+
+.filter-label {
+  display: block;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  margin-bottom: var(--spacing-md);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.filter-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.filter-checkbox {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  cursor: pointer;
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-md);
+  transition: background-color var(--transition-fast);
+}
+
+.filter-checkbox:hover {
+  background-color: var(--color-bg-alt);
+}
+
+.filter-checkbox input[type="checkbox"] {
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-primary);
+}
+
+.filter-checkbox span {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.btn-clear-filters {
+  width: 100%;
+  padding: var(--spacing-md);
+  background-color: var(--color-error);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+  margin-top: var(--spacing-md);
+}
+
+.btn-clear-filters:hover {
+  background-color: #C0392B;
+}
+
+/* ── Chart Container ────────────────────────────────────────────── */
+.chart-container {
+  flex: 1;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  min-height: 400px;
+}
+
+#chart-wrapper {
+  flex: 1;
+  overflow: auto;
+  padding: var(--spacing-lg);
+}
+
+#chart {
+  display: block;
+}
+
+#chart text {
+  fill: var(--color-text);
+}
+
+#chart line, #chart path {
+  stroke: var(--color-border);
+  stroke-width: 1;
+}
+
+/* ── Chart State ────────────────────────────────────────────────── */
+.chart-state {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--color-surface);
+  z-index: 10;
+}
+
+.state-loading,
+.state-empty,
+.state-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-md);
+  text-align: center;
+  padding: var(--spacing-2xl);
+}
+
+/* Loading Spinner */
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.state-loading p,
+.state-empty h3,
+.state-empty p,
+.state-error h3,
+.state-error p {
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.state-empty h3,
+.state-error h3 {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.state-error svg {
+  color: var(--color-error);
+  width: 80px;
+  height: 80px;
+}
+
+.state-empty svg {
+  color: var(--color-text-tertiary);
+  width: 80px;
+  height: 80px;
+}
+
+.btn-retry {
+  margin-top: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  background-color: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.btn-retry:hover {
+  background-color: var(--color-primary-dark);
+}
+
+/* ── Responsive Design ──────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .chart-filters-panel {
+    width: 240px;
+  }
+
+  .filters-content {
+    padding: var(--spacing-md);
+  }
+
+  .filter-group {
+    margin-bottom: var(--spacing-lg);
+  }
+}
+
+@media (max-width: 768px) {
+  .chart-main {
+    flex-direction: column;
+    height: auto;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm);
+  }
+
+  .chart-filters-panel {
+    width: 100%;
+    max-height: 300px;
+  }
+
+  .chart-filters-panel.collapsed {
+    display: none;
+  }
+
+  .filters-toggle {
+    display: flex;
+  }
+
+  .chart-container {
+    min-height: 400px;
+    flex: 1;
+  }
+
+  .topbar {
+    padding: var(--spacing-md);
+  }
+
+  .page-title {
+    font-size: var(--font-size-lg);
+  }
+
+  .filter-label {
+    font-size: var(--font-size-xs);
+  }
+
+  .filter-checkbox span {
+    font-size: var(--font-size-xs);
+  }
+}
+
+@media (max-width: 480px) {
+  .chart-main {
+    padding: var(--spacing-sm);
+  }
+
+  .topbar {
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+
+  .topbar-left,
+  .topbar-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .logo {
+    width: 32px;
+    height: 32px;
+  }
+
+  .page-title {
+    font-size: var(--font-size-base);
+  }
+
+  .language-select {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: var(--font-size-xs);
+  }
+
+  .chart-filters-panel {
+    max-height: 250px;
+  }
+
+  .filters-header {
+    padding: var(--spacing-md);
+  }
+
+  .filters-content {
+    padding: var(--spacing-md);
+  }
+
+  .state-loading,
+  .state-empty,
+  .state-error {
+    padding: var(--spacing-lg);
+  }
+
+  #chart-wrapper {
+    padding: var(--spacing-md);
+  }
+}
+
+/* ── Scrollbar Styling ──────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-alt);
+  border-radius: var(--radius-md);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-tertiary);
+}
+
+/* ── Focus Styles ────────────────────────────────────────────────– */
+button:focus,
+input:focus,
+select:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* ── Print Styles ────────────────────────────────────────────────– */
+@media print {
+  .topbar,
+  .chart-filters-panel {
+    display: none;
+  }
+
+  .chart-main {
+    display: block;
+    height: auto;
+  }
+
+  .chart-container {
+    box-shadow: none;
+    border: 1px solid var(--color-border);
+  }
+}
+
+/* ── Animations ─────────────────────────────────────────────────── */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+#chart-wrapper {
+  animation: fadeIn var(--transition-base);
+}
+
+.filter-checkbox {
+  animation: slideIn var(--transition-base);
+}

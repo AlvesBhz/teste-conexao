@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quarterly Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 40'%3E%3Crect width='120' height='40' fill='%23D4A547'/%3E%3Ctext x='60' y='28' font-family='Arial, sans-serif' font-size='20' font-weight='bold' text-anchor='middle' fill='white'%3EVALE%3C/text%3E%3C/svg%3E" alt="Vale Logo" class="logo">
+      <h1 class="page-title">Quarterly Dashboard</h1>
+    </div>
+    <div class="topbar-right">
+      <button class="icon-btn" id="theme-toggle" title="Toggle theme" aria-label="Toggle dark/light theme">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="5"></circle>
+          <line x1="12" y1="1" x2="12" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="23"></line>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+          <line x1="1" y1="12" x2="3" y2="12"></line>
+          <line x1="21" y1="12" x2="23" y2="12"></line>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+      </button>
+      <select class="language-select" id="language-select" aria-label="Select language">
+        <option value="pt-BR">PT-BR</option>
+        <option value="en">EN</option>
+      </select>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <div class="chart-main">
+    <!-- Filters Sidebar -->
+    <aside class="chart-filters-panel" id="filters-panel">
+      <div class="filters-header">
+        <h2 class="filters-title" data-i18n="filters">Filtros</h2>
+        <button class="filters-toggle" id="filters-toggle" aria-label="Toggle filters panel">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 6 13 16"></polyline>
+            <polyline points="13 6 23 16"></polyline>
+          </svg>
+        </button>
+      </div>
+
+      <div class="filters-content">
+        <!-- Years Filter -->
+        <div class="filter-group">
+          <label class="filter-label" data-i18n="years">Anos</label>
+          <div class="filter-options" id="years-filter"></div>
+        </div>
+
+        <!-- Sites Filter -->
+        <div class="filter-group">
+          <label class="filter-label" data-i18n="sites">Sites</label>
+          <div class="filter-options" id="sites-filter"></div>
+        </div>
+
+        <!-- Products Filter -->
+        <div class="filter-group">
+          <label class="filter-label" data-i18n="products">Produtos</label>
+          <div class="filter-options" id="products-filter"></div>
+        </div>
+
+        <!-- Views Filter (NM_TYPE) -->
+        <div class="filter-group">
+          <label class="filter-label" data-i18n="views">Visualizações</label>
+          <div class="filter-options" id="views-filter"></div>
+        </div>
+
+        <!-- Horizons Filter (Type) -->
+        <div class="filter-group">
+          <label class="filter-label" data-i18n="horizons">Horizontes</label>
+          <div class="filter-options" id="horizons-filter"></div>
+        </div>
+
+        <!-- Clear Filters Button -->
+        <button class="btn-clear-filters" id="clear-filters" data-i18n="clearFilters">Limpar Filtros</button>
+      </div>
+    </aside>
+
+    <!-- Chart Container -->
+    <main class="chart-container">
+      <!-- State Indicators -->
+      <div class="chart-state" id="chart-state">
+        <!-- Loading State -->
+        <div class="state-loading" id="state-loading">
+          <div class="spinner"></div>
+          <p data-i18n="loading">Carregando dados...</p>
+        </div>
+
+        <!-- Empty State -->
+        <div class="state-empty" id="state-empty" style="display: none;">
+          <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+            <path d="M3 3h18v18H3z"></path>
+            <path d="M3 12l6-6 6 6 6-6"></path>
+            <path d="M21 15h-2v6h-2v-4h-2v4h-2v-6"></path>
+          </svg>
+          <h3 data-i18n="noData">Nenhum dado disponível</h3>
+          <p data-i18n="noDataMessage">Tente ajustar os filtros</p>
+        </div>
+
+        <!-- Error State -->
+        <div class="state-error" id="state-error" style="display: none;">
+          <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <h3 data-i18n="error">Erro ao carregar dados</h3>
+          <p id="error-message"></p>
+          <button class="btn-retry" id="retry-btn" data-i18n="retry">Tentar Novamente</button>
+        </div>
+      </div>
+
+      <!-- SVG Chart Container (hidden initially, shown when data loads) -->
+      <div id="chart-wrapper" style="display: none; width: 100%; height: 100%;">
+        <svg id="chart" style="width: 100%; height: 100%;"></svg>
+      </div>
+    </main>
+  </div>
+
+  <!-- D3 Library -->
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+
+  <!-- Internationalization -->
+  <script>
+    const i18n = {
+      'pt-BR': {
+        filters: 'Filtros',
+        years: 'Anos',
+        sites: 'Sites',
+        products: 'Produtos',
+        views: 'Visualizações',
+        horizons: 'Horizontes',
+        clearFilters: 'Limpar Filtros',
+        loading: 'Carregando dados...',
+        noData: 'Nenhum dado disponível',
+        noDataMessage: 'Tente ajustar os filtros',
+        error: 'Erro ao carregar dados',
+        retry: 'Tentar Novamente'
+      },
+      'en': {
+        filters: 'Filters',
+        years: 'Years',
+        sites: 'Sites',
+        products: 'Products',
+        views: 'Views',
+        horizons: 'Horizons',
+        clearFilters: 'Clear Filters',
+        loading: 'Loading data...',
+        noData: 'No data available',
+        noDataMessage: 'Try adjusting the filters',
+        error: 'Error loading data',
+        retry: 'Retry'
+      }
+    };
+
+    function setLanguage(lang) {
+      localStorage.setItem('language', lang);
+      document.documentElement.lang = lang;
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        el.textContent = i18n[lang][key];
+      });
+    }
+
+    const savedLang = localStorage.getItem('language') || 'pt-BR';
+    setLanguage(savedLang);
+    document.getElementById('language-select').value = savedLang;
+  </script>
+
+  <!-- Application Script -->
+  <script src="chart.js"></script>
+</body>
+</html>
