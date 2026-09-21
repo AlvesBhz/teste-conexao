@@ -192,6 +192,14 @@ function sortChartData(data) {
   });
 }
 
+// Calcular delta entre pares de barras
+function calcDeltaPair(current, base) {
+  if (!base || base.Value === 0) return null;
+  const delta = current.Value - base.Value;
+  const deltaPct = delta / base.Value;
+  return { delta, deltaPct, deltaClass: deltaPct > 0.001 ? 'up' : deltaPct < -0.001 ? 'down' : 'flat' };
+}
+
 // Renderizar gráfico
 function renderChart() {
   const data = sortChartData(appState.filteredData);
@@ -203,7 +211,7 @@ function renderChart() {
 
   showState('chart');
 
-  const margin = { top: 40, right: 20, bottom: 50, left: 50 };
+  const margin = { top: 60, right: 20, bottom: 50, left: 50 };
   const container = document.getElementById('chartSvgWrapper');
   const width = container.clientWidth - margin.left - margin.right;
   const height = container.clientHeight - margin.top - margin.bottom;
@@ -218,7 +226,7 @@ function renderChart() {
     .padding(0.15);
 
   const yScale = d3.scaleLinear()
-    .domain([0, maxValue * 1.1])
+    .domain([0, maxValue * 1.15])
     .range([margin.top + height, margin.top]);
 
   const g = svg.append('g');
@@ -252,7 +260,7 @@ function renderChart() {
     .attr('fill', 'var(--text-muted)')
     .text(d => formatNumber(d));
 
-  // Barras
+  // Barras com animação
   const bars = g.selectAll('.bar')
     .data(data)
     .enter()
@@ -265,22 +273,22 @@ function renderChart() {
     .attr('fill', d => appState.colors[d.NM_TYPE] || '#888')
     .attr('rx', '4')
     .attr('opacity', '0')
-    .on('mouseenter', function (_, d, i) {
+    .on('mouseenter', function () {
       d3.select(this)
         .transition()
         .duration(200)
-        .attr('opacity', '1')
+        .attr('opacity', '0.9')
         .attr('filter', 'brightness(1.1)');
     })
     .on('mouseleave', function () {
       d3.select(this)
         .transition()
         .duration(200)
-        .attr('opacity', '1')
+        .attr('opacity', '0.8')
         .attr('filter', 'none');
     });
 
-  bars.transition().duration(600).attr('opacity', '1');
+  bars.transition().duration(600).attr('opacity', '0.8');
 
   // Valores acima das barras
   g.selectAll('.bar-value')
@@ -296,6 +304,57 @@ function renderChart() {
     .attr('fill', 'var(--text-primary)')
     .text(d => formatNumber(d.Value));
 
+  // Deltas percentuais (linha de cota simples entre pares)
+  for (let i = 1; i < data.length; i++) {
+    const current = data[i];
+    const prev = data[i - 1];
+
+    // Buscar base (orçamento do mesmo período ou linha anterior)
+    let baseRow = null;
+    if (i > 0) {
+      baseRow = data[i - 1];
+
+      // Se a linha anterior é do mesmo período mas tipo diferente, usa ela como base
+      if (baseRow && baseRow.Type === current.Type) {
+        const deltaInfo = calcDeltaPair(current, baseRow);
+        if (deltaInfo && Math.abs(deltaInfo.deltaPct) > 0.01) {
+          const xCurrent = xScale(i) + xScale.bandwidth() / 2;
+          const xPrev = xScale(i - 1) + xScale.bandwidth() / 2;
+          const yCurrent = yScale(current.Value);
+          const yPrev = yScale(baseRow.Value);
+
+          // Linha conectando os dois níveis
+          g.append('line')
+            .attr('x1', xPrev)
+            .attr('y1', yPrev)
+            .attr('x2', xCurrent)
+            .attr('y2', yCurrent)
+            .attr('stroke', deltaInfo.deltaClass === 'up' ? 'var(--delta-up)' :
+                            deltaInfo.deltaClass === 'down' ? 'var(--delta-down)' : 'var(--delta-flat)')
+            .attr('stroke-width', '2')
+            .attr('stroke-dasharray', '3,3')
+            .attr('opacity', '0.4');
+
+          // Texto de delta
+          const midX = (xPrev + xCurrent) / 2;
+          const midY = (yPrev + yCurrent) / 2;
+          g.append('text')
+            .attr('class', 'delta-label')
+            .attr('x', midX)
+            .attr('y', midY - 8)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11')
+            .attr('font-weight', '600')
+            .attr('fill', deltaInfo.deltaClass === 'up' ? 'var(--delta-up)' :
+                          deltaInfo.deltaClass === 'down' ? 'var(--delta-down)' : 'var(--delta-flat)')
+            .attr('background', 'rgba(255,255,255,0.9)')
+            .attr('padding', '2px 4px')
+            .text(formatPercent(deltaInfo.deltaPct));
+        }
+      }
+    }
+  }
+
   // Rótulos do eixo X
   g.selectAll('.x-label')
     .data(data)
@@ -309,7 +368,7 @@ function renderChart() {
     .attr('fill', 'var(--text-muted)')
     .text(d => d.Type);
 
-  // Tooltips
+  // Tooltips acessíveis
   g.selectAll('.bar')
     .append('title')
     .text(d => `
@@ -317,6 +376,7 @@ ${d.NM_KPI}
 ${d.Type}: ${formatNumber(d.Value)}
 Visão: ${d.NM_TYPE}
 Site: ${d.ID_SITE}
+Data: ${new Date(d.DT_REF).toLocaleDateString('pt-BR')}
 `.trim());
 }
 
