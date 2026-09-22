@@ -844,25 +844,28 @@ const CFG = {
 // Neutrals: #333333 (text), #888888 (mid), #CCCCCC (light), #FFFFFF (white), #F6F6F6 (off-white)
 // Feedback: #1BA13A (success), #CC7700 (warning), #DC2626 (error)
 
-// Paleta limitada de cores VBM para seleção
+// Paleta limitada de cores VBM para seleção (ordenada de clara para escura)
 const PALETTE_COLORS = [
-  '#3CB5E5', // Primary Blue
-  '#7DD3F0', // Light Blue
-  '#1B40BF', // Dark Blue
-  '#3DADD8', // Cyan
-  '#116080', // Dark Cyan
-  '#007E79', // Teal
-  '#DEEFF8', // Pale Blue
-  '#CCCCCC', // Light Gray
+  // Cores Claras
+  '#FFFFFF', // White
+  '#F6F6F6', // Off-white
   '#E7E6E6', // Very Light Gray
+  '#DEEFF8', // Pale Blue
+  '#D8F7FD', // Pale Blue
+  // Cores Médias
+  '#CCCCCC', // Light Gray
+  '#BCBEBF', // Medium Gray
+  '#7DD3F0', // Light Blue
+  '#3DADD8', // Cyan
+  '#3CB5E5', // Primary Blue
+  // Cores Escuras
   '#888888', // Mid Gray
   '#44546A', // Dark Slate
+  '#116080', // Dark Cyan
+  '#1B40BF', // Dark Blue
+  '#007E79', // Teal
   '#1BA13A', // Success Green
   '#DC2626', // Error Red
-  '#CC7700', // Warning Orange
-  '#D8F7FD', // Pale Blue
-  '#F6F6F6', // Off-white
-  '#FFFFFF', // White
 ];
 
 const COLORS = {
@@ -871,11 +874,11 @@ const COLORS = {
 
 // Cores padrão para cada tipo de série (por último caractere)
 const DEFAULT_SERIES_COLORS = {
-  'A': '#3CB5E5', // Actual (Primary Blue)
-  'F': '#3CB5E5', // Forecast (Primary Blue)
-  'P': '#7DD3F0', // Plan (Light Blue)
-  'B': '#CCCCCC', // Budget (Light Gray)
-  'default': '#CCCCCC'
+  'A': '#3CB5E5', // Actual (Primary Blue) — Real
+  'F': '#3CB5E5', // Forecast (Primary Blue) — Forecast
+  'P': '#3CB5E5', // Plan (Primary Blue) — Real/Forecast
+  'B': '#BCBEBF', // Budget (Medium Gray) — Budget
+  'default': '#BCBEBF'
 };
 
 const DEFAULT_COLORS = { ...COLORS, ...DEFAULT_SERIES_COLORS };
