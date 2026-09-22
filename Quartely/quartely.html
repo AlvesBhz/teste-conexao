@@ -1,0 +1,1912 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<!--
+  ═══════════════════════════════════════════════════════════════════
+  QUARTELY · Dashboard — Página de Gráfico
+  ═══════════════════════════════════════════════════════════════════
+  PAPEL DA PÁGINA
+    Tela de dados: mesma topbar do index.html, sem hero de imagem,
+    com o gráfico de Turnover centralizado na página.
+
+  SISTEMA DE DELTA (portado de uma medida DAX/Power BI)
+    O visual "cota de diferença" abaixo é a versão web do componente:
+    mesmas classes CSS, mesma animação e mesma lógica de comparação
+    (Budget do mesmo período, senão a coluna anterior), porém
+    implementado em HTML/CSS/JS puro — sem DAX, sem Power BI, com os
+    dados vindos de um array JS (ver `chartData` no fim do arquivo).
+
+  TEMA CLARO/ESCURO
+    Alternado por body[data-bg="dark"] (persistido em localStorage
+    'vdt-theme').
+  ═══════════════════════════════════════════════════════════════════
+-->
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>Quartely — Dashboard</title>
+<style>
+/* ═══════════════════════════════════════════════════
+   TOPNAV LAYOUT
+═══════════════════════════════════════════════════ */
+
+:root {
+  --vbm-blue: #3cb5e5;
+  --vbm-blue-light: #7dd3f0;
+  --vbm-blue-dark: #0d2640;
+  --vbm-dark: #0a1421;
+  --vbm-mid: #6b7c93;
+  --vbm-white: #f4f7fb;
+  --ease-out: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+[data-bg="dark"] {
+  --vbm-dark: #f4f7fb;
+  --vbm-mid: rgba(244,247,251,.55);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  overflow-x: clip;
+  overflow-y: auto;
+}
+
+body {
+  background: #eef1f6;
+  min-height: 100vh;
+  color: var(--vbm-dark);
+}
+
+[data-bg="dark"] body,
+body[data-bg="dark"] {
+  background: linear-gradient(160deg, #10131a 0%, var(--vbm-blue-dark) 100%);
+}
+
+/* App layout */
+.app-layout { display: block; }
+.app-main { margin-left: 0; min-height: calc(100vh - 64px); }
+.page-content {
+  padding: 1.75rem;
+  min-height: calc(100vh - 64px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Topbar (sempre sólida — não há hero para "revelar" o fundo) */
+.topnav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  height: 64px;
+  background: var(--vbm-blue-dark);
+  display: flex;
+  align-items: center;
+  padding: 0 2rem;
+  gap: 0;
+  border-bottom: 1px solid rgba(255,255,255,.05);
+  box-shadow: 0 2px 20px rgba(13,38,64,.18);
+}
+
+.topnav-logo {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  flex-shrink: 0;
+  margin-right: 1.5rem;
+  position: relative;
+  z-index: 1;
+}
+
+.topnav-logo img { height: 26px; width: auto; filter: brightness(10); }
+
+.topnav-links {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .15rem;
+  flex: 1;
+  position: relative;
+  z-index: 1;
+}
+
+.topnav-link {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .5rem .85rem;
+  border-radius: .45rem;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 400;
+  font-size: .72rem;
+  letter-spacing: .04em;
+  color: rgba(255,255,255,.75);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color .18s;
+  position: relative;
+}
+
+.topnav-link:hover { color: #fff; }
+.topnav-link.active { color: #fff; }
+
+.topnav-link::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 50%;
+  width: 0;
+  height: 1.5px;
+  background: linear-gradient(90deg, transparent, #fff 25%, #fff 75%, transparent);
+  border-radius: 10px;
+  box-shadow: 0 0 8px rgba(255,255,255,.65);
+  opacity: 0;
+  transform: translateX(-50%);
+  transition: width .3s var(--ease-out), opacity .3s var(--ease-out);
+}
+
+.topnav-link.active::after { width: 60%; opacity: 1; }
+
+.topnav-sep {
+  width: 1px;
+  height: 20px;
+  background: rgba(255,255,255,.25);
+  flex-shrink: 0;
+  margin: 0 .1rem;
+}
+
+.topnav-actions {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  flex-shrink: 0;
+  margin-left: auto;
+  position: relative;
+  z-index: 1;
+}
+
+.settings-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 100px;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background .25s;
+}
+
+.settings-btn:hover { background: rgba(255,255,255,.12); }
+
+.topnav-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 10px;
+  border-left: 1px solid rgba(255,255,255,.22);
+  flex-shrink: 0;
+}
+
+.topnav-user-text { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.3; }
+
+.topnav-user-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: linear-gradient(145deg, var(--vbm-blue-light), var(--vbm-blue-dark));
+  border: 1.5px solid rgba(255,255,255,.5);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Poppins', sans-serif; font-weight: 700; font-size: 11px; color: #fff;
+  flex-shrink: 0;
+}
+
+.topnav-user-name { font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 11.5px; color: #fff; white-space: nowrap; }
+.topnav-user-role {
+  font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 9px; letter-spacing: .1em;
+  text-transform: uppercase; color: rgba(255,255,255,.6); white-space: nowrap;
+}
+
+@media (max-width: 960px) {
+  .topnav-links { display: none; }
+  .topnav-user-role { display: none; }
+}
+@media (max-width: 540px) { .topnav-user-name { display: none; } }
+@media (max-width: 768px) { .page-content { padding: 1rem; } }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,.14); border-radius: 100px; }
+[data-bg="dark"] ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.14); }
+
+/* ════════════════════════════════════════════════════════════════════
+   ÁREA DE FILTROS — separa visualmente [MENU] de [GRÁFICOS]
+   Glassmorphism no mesmo padrão já usado em .dash-hero-float-card-inner
+   (css/vbm-app.css): fundo translúcido + blur + borda sutil de 1px. Fica
+   sobre o mesmo fundo do topnav (--vbm-blue-dark), então o "vidro" lê
+   como uma continuação dele, não como um bloco novo.
+   ════════════════════════════════════════════════════════════════════ */
+.filters-bar-wrap { padding: .85rem 1.5rem 0; }
+.data-fallback-banner {
+  display: flex; align-items: center; gap: .6rem;
+  margin: .85rem 1.5rem 0; padding: .65rem 1rem;
+  background: rgba(245, 158, 11, .12); border: 1px solid rgba(245, 158, 11, .45);
+  border-radius: 10px; color: #B45309; font-size: .85rem; font-weight: 600;
+}
+[data-bg="dark"] .data-fallback-banner {
+  background: rgba(245, 158, 11, .16); border-color: rgba(245, 158, 11, .5); color: #FBBF24;
+}
+.data-fallback-banner i { color: #F59E0B; }
+/* Grid de 3 colunas (1fr / auto / 1fr): a coluna central do grupo de
+   filtros fica matematicamente centralizada na barra INDEPENDENTE da
+   largura do botão "Limpar Filtros" à direita — a 1ª coluna (vazia) e a
+   3ª (onde mora o botão) têm sempre a mesma largura (1fr cada), então o
+   conteúdo do meio nunca puxa para um lado. Um flex com margin:auto no
+   grupo central não conseguia essa garantia: o auto-margin reparte o
+   espaço livre, mas a largura do próprio botão continuava a desequilibrar
+   visualmente os dois vãos. */
+.filters-bar {
+  position: relative; z-index: 20;
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: .6rem;
+  padding: .7rem 1.1rem;
+  border-radius: .75rem;
+  /* Base sólida (mesma cor do topnav) + véu translúcido por cima: o vidro
+     precisa de um fundo escuro garantido — esta página não tem hero para
+     "emprestar" o dela, e sem base sólida o texto branco perdia contraste
+     sobre o cinza claro do body no tema claro. */
+  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02)), var(--vbm-blue-dark);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid rgba(255,255,255,.10);
+  box-shadow: 0 8px 24px rgba(10,20,35,.14);
+}
+
+.qf-fields-center { grid-column: 2; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: .6rem; }
+.qf-clear-btn { grid-column: 3; justify-self: end; }
+
+.qf-field { position: relative; flex: 0 0 auto; }
+
+.qf-trigger {
+  display: flex; align-items: center; gap: .5rem;
+  padding: .5rem .8rem;
+  min-width: 150px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: .55rem;
+  color: rgba(255,255,255,.88);
+  font-family: 'Poppins', sans-serif; font-weight: 400; font-size: .72rem;
+  cursor: pointer; text-align: left;
+  transition: background .18s, border-color .18s;
+}
+.qf-trigger i.qf-icon { font-size: .72rem; color: rgba(255,255,255,.55); flex-shrink: 0; }
+.qf-trigger:hover { background: rgba(255,255,255,.10); border-color: rgba(255,255,255,.24); }
+.qf-field.open .qf-trigger { background: rgba(255,255,255,.12); border-color: var(--vbm-blue); }
+.qf-trigger-label {
+  flex: 1; display: flex; align-items: center; gap: .3rem;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.qf-badge {
+  flex-shrink: 0;
+  padding: .1rem .4rem; border-radius: .3rem;
+  background: rgba(60,181,229,.22); border: 1px solid rgba(60,181,229,.4);
+  color: #fff; font-size: .62rem; font-weight: 600; letter-spacing: .02em;
+  text-transform: uppercase;
+}
+.qf-badge-more { background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.22); }
+.qf-chevron { font-size: .6rem; color: rgba(255,255,255,.45); transition: transform .2s; flex-shrink: 0; }
+.qf-field.open .qf-chevron { transform: rotate(180deg); color: var(--vbm-blue-light); }
+
+/* Painel — mesmo vidro do trigger, um tom mais opaco para legibilidade
+   do texto escuro das opções sobre fundos claros/escuros variados */
+.qf-panel {
+  position: absolute; top: calc(100% + 8px); left: 0; z-index: 30;
+  width: max(220px, 100%); max-width: 320px;
+  background: rgba(20,32,48,.92);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: .65rem;
+  box-shadow: 0 16px 40px rgba(5,12,22,.4);
+  padding: .5rem;
+  display: none;
+  animation: qfPanelIn .16s ease both;
+}
+[data-bg="light"] .qf-panel,
+body:not([data-bg]) .qf-panel { background: rgba(20,32,48,.96); }
+.qf-field.open .qf-panel { display: block; }
+@keyframes qfPanelIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
+.qf-search {
+  display: flex; align-items: center; gap: .45rem;
+  padding: .4rem .55rem; margin-bottom: .4rem;
+  background: rgba(255,255,255,.07);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: .4rem;
+}
+.qf-search i { font-size: .68rem; color: rgba(255,255,255,.4); }
+.qf-search input {
+  flex: 1; border: none; background: none; outline: none;
+  font-family: 'Poppins', sans-serif; font-size: .7rem; color: #fff;
+}
+.qf-search input::placeholder { color: rgba(255,255,255,.35); }
+
+/* Toolbar "Selecionar Todos / Limpar Seleção" — apenas nos filtros de
+   multiseleção (Ano, Site, Visão, Horizonte). O Product é seleção única
+   e usa a linha-rádio "Todos os Products" já existente na lista. */
+.qf-panel-actions {
+  display: flex; gap: .9rem; margin-bottom: .4rem; padding: 0 .1rem .4rem;
+  border-bottom: 1px solid rgba(255,255,255,.1);
+}
+.qf-action-link {
+  background: none; border: none; padding: 0; cursor: pointer;
+  font-family: 'Poppins', sans-serif; font-size: .66rem; font-weight: 600;
+  color: var(--vbm-blue-light); letter-spacing: .01em;
+  transition: color .14s;
+}
+.qf-action-link:hover { color: #fff; text-decoration: underline; }
+
+.qf-options { max-height: 220px; overflow-y: auto; }
+.qf-options::-webkit-scrollbar { width: 6px; }
+.qf-options::-webkit-scrollbar-thumb { background: rgba(255,255,255,.18); border-radius: 100px; }
+
+.qf-option {
+  display: flex; align-items: center; gap: .5rem;
+  padding: .42rem .5rem; border-radius: .4rem;
+  font-family: 'Poppins', sans-serif; font-size: .72rem; color: rgba(255,255,255,.82);
+  cursor: pointer; user-select: none;
+  transition: background .14s;
+}
+.qf-option:hover { background: rgba(255,255,255,.08); }
+.qf-option.qf-option-all { border-bottom: 1px solid rgba(255,255,255,.1); margin-bottom: .25rem; padding-bottom: .55rem; }
+.qf-option-empty { padding: .6rem .5rem; font-size: .68rem; color: rgba(255,255,255,.4); font-style: italic; }
+
+.qf-check {
+  width: 15px; height: 15px; flex-shrink: 0; border-radius: .3rem;
+  border: 1.5px solid rgba(255,255,255,.35);
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s, border-color .15s;
+}
+.qf-option.qf-radio .qf-check { border-radius: 50%; }
+.qf-option.is-checked .qf-check { background: var(--vbm-blue); border-color: var(--vbm-blue); }
+.qf-check i { font-size: .55rem; color: #fff; opacity: 0; transform: scale(.6); transition: opacity .12s, transform .12s; }
+.qf-option.is-checked .qf-check i { opacity: 1; transform: scale(1); }
+.qf-option.qf-radio.is-checked .qf-check::after {
+  content: ''; width: 7px; height: 7px; border-radius: 50%; background: #fff;
+}
+
+.qf-clear-btn {
+  display: flex; align-items: center; gap: .4rem;
+  padding: .5rem .85rem;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: .55rem;
+  color: rgba(255,255,255,.82);
+  font-family: 'Poppins', sans-serif; font-weight: 500; font-size: .72rem;
+  cursor: pointer; transition: background .18s, border-color .18s, color .18s;
+  white-space: nowrap;
+}
+.qf-clear-btn:hover { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.26); color: #fff; }
+.qf-clear-btn i { font-size: .68rem; }
+
+/* Foco por teclado — visível em qualquer combobox (trigger, opção, busca,
+   ações), consistente em Dark/Light; :focus-visible ignora o anel em
+   cliques de mouse, só aparece navegando por Tab */
+.qf-trigger:focus-visible,
+.qf-option:focus-visible,
+.qf-action-link:focus-visible,
+.qf-clear-btn:focus-visible,
+.qf-search input:focus-visible {
+  outline: 2px solid var(--vbm-blue-light);
+  outline-offset: 2px;
+}
+
+/* Loader coordenado (atividade 8): recálculo local instantâneo, mas o
+   mesmo controle cobre uma chamada real a /api/chart-data mais lenta */
+.qf-loader {
+  display: none;
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.25); border-top-color: var(--vbm-blue-light);
+  animation: qfSpin .6s linear infinite;
+}
+@keyframes qfSpin { to { transform: rotate(360deg); } }
+.filters-bar.is-busy .qf-loader,
+.filters-bar.is-loading .qf-loader { display: inline-block; }
+.filters-bar.is-busy .qf-trigger,
+.filters-bar.is-loading .qf-fields-center { opacity: .55; pointer-events: none; }
+.qf-trigger:disabled { cursor: not-allowed; }
+
+/* Telas menores: a grade de 3 colunas vira 1, cada item quebra em sua
+   própria linha organizada — grupo de filtros primeiro, botão por último
+   (mesma ordem visual do desktop, só empilhada). */
+@media (max-width: 960px) {
+  .filters-bar { grid-template-columns: 1fr; padding: .75rem 1rem; }
+  .qf-fields-center { grid-column: 1; justify-content: flex-start; }
+  .qf-clear-btn { grid-column: 1; justify-self: stretch; justify-content: center; }
+  .qf-field { flex: 1 1 auto; min-width: 130px; }
+  .qf-trigger { min-width: 0; width: 100%; }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   GRÁFICO DE TURNOVER — sistema de "cota de diferença" (delta)
+   Portado de uma medida DAX/Power BI: mesmas classes, mesma animação,
+   mesma lógica de comparação (Budget do período, senão a coluna
+   anterior). Aqui roda como HTML/CSS/JS estático, sem DAX.
+   ════════════════════════════════════════════════════════════════════ */
+.main-wrapper, .main-wrapper *, .main-wrapper *::before, .main-wrapper *::after { box-sizing: border-box; }
+
+.main-wrapper {
+  --gap: clamp(10px, 3vw, 30px);
+  --folga: clamp(34px, 7.5vh, 48px);
+  --barw: 74%;
+  --ink-strong: #0F172A;
+  --ink-soft: #6B7280;
+  --chart-bg: #FFFFFF;
+  /* Tokens do delta (paleta VBM):
+     --stroke  linhas de nível (Mid Gray com transparência)
+     --hair    ponta fraca do fio guia (Light Gray esmaecido)
+     --glass   preenchimento da pílula (Off-white translúcido) */
+  --stroke: rgba(136,136,136,.38);
+  --hair: rgba(204,204,204,.14);
+  --glass: rgba(246,246,246,.92);
+
+  width: min(92vw, 1200px);
+  min-width: 420px;
+  max-width: 96vw;
+  display: flex; flex-direction: column; gap: 16px;
+  font-family: 'Vale Sans Medium', 'Segoe UI', 'system-ui', sans-serif;
+  background: transparent;
+  transition: background-color .2s ease;
+}
+
+/* Alça de resize — reforça visualmente o canto nativo do navegador */
+.main-wrapper::-webkit-resizer { background: transparent; }
+
+.chart-header { flex-shrink: 0; }
+.chart-title { color: #316866; font-family: 'Vale Sans Medium', 'Segoe UI', sans-serif; font-size: 1.4rem; font-weight: 400; margin: 0; }
+.chart-subtitle { color: #9CA3AF; font-family: 'Vale Sans', 'Segoe UI', sans-serif; font-size: 1.05rem; margin: 0; font-weight: 200; }
+
+/* Container do gráfico com fundo */
+.chart-container {
+  display: flex; flex-direction: column;
+  width: 100%; height: min(76vh, 720px); min-height: 360px;
+  padding: 20px 20px 14px;
+  background: var(--chart-bg); border-radius: 14px; border: 1px solid #E2E8F0;
+  box-shadow: 0 12px 40px rgba(10,20,35,.12), 0 2px 8px rgba(10,20,35,.06);
+  resize: both;
+}
+
+/* área do gráfico — gap em px garante que a distância centro-a-centro
+   entre colunas vizinhas seja (100% + gap), o que permite ancorar a
+   cota no vão sem depender da ordem do eixo */
+.chart-area {
+  position: relative; display: flex; align-items: flex-end; justify-content: center;
+  gap: var(--gap); width: 100%; flex: 1; min-width: 0;
+  margin-top: calc(var(--folga) + 40px);
+  margin-bottom: clamp(22px, 5vh, 28px);
+}
+.chart-area::before {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; z-index: 1;
+  background: linear-gradient(90deg, rgba(203,213,225,0), #CBD5E1 8%, #CBD5E1 92%, rgba(203,213,225,0));
+}
+
+.col-wrapper { position: relative; flex: 1 1 0; max-width: 96px; min-width: 30px; height: 100%; }
+.col-wrapper::after {
+  content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 46%; height: 7px; background: var(--pill-bg); border-radius: 4px; z-index: 2;
+}
+
+/* barra */
+.bar {
+  position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: var(--barw); height: var(--h); border-radius: 4px 4px 2px 2px; z-index: 3;
+  background-color: var(--c);
+  background-image: linear-gradient(180deg, rgba(255,255,255,.18) 0%, rgba(255,255,255,0) 42%, rgba(15,23,42,.06) 100%);
+  box-shadow: 0 1px 2px rgba(15,23,42,.07);
+  animation: growBar .95s cubic-bezier(.16,.84,.28,1) both;
+}
+@keyframes growBar { from { height: 0; } to { height: var(--h); } }
+.col-wrapper:hover .bar { filter: brightness(1.04); }
+
+.value-label {
+  position: absolute; bottom: calc(var(--h) + 7px); left: 50%; transform: translateX(-50%);
+  white-space: nowrap; color: var(--ink-strong); font-family: 'Vale Sans', 'Segoe UI', sans-serif;
+  font-size: .8rem; font-variant-numeric: tabular-nums; z-index: 6;
+}
+.axis-label {
+  position: absolute; bottom: -22px; left: 0; width: 100%; text-align: center;
+  font-size: clamp(.80rem, 2vh, .8rem); color: var(--ink-soft); font-weight: 500;
+}
+.chart-empty-state {
+  margin: auto; color: var(--ink-soft); font-family: 'Vale Sans', 'Segoe UI', sans-serif;
+  font-size: .85rem; text-align: center;
+}
+
+/* ────────────────────────────────────────────────────────────────────
+   COTA DE DIFERENÇA — anatomia (5 peças, ordem de leitura):
+     .dref   linha de nível da coluna-BASE, tracejada (projeção)
+     .dnow   linha de nível da coluna ATUAL, sólida (fato medido)
+     .dspan  haste vertical entre os dois níveis — o comprimento É o delta
+     .dfill  faixa que preenche o intervalo, dando massa à haste
+     .dtrack fio guia do nível mais alto até a pílula
+     .dpill  o número, em vidro fosco, flutuando acima do par
+   Partido de cor: linhas de nível, fio guia e pílula são neutros.
+   Só o número, a haste e a faixa carregam a cor do estado (--tint).
+   ──────────────────────────────────────────────────────────────────── */
+/* Cores de feedback (VBM): Success, Error, Neutral */
+.is-up   { --ink: #1BA13A; --tint: 27,161,58; }   /* Success Green */
+.is-down { --ink: #DC2626; --tint: 220,38,38; }   /* Error Red */
+.is-flat { --ink: #888888; --tint: 136,136,136; } /* Mid Gray */
+.dcnx.no-tint { --tint: 100,116,139; }
+
+.dcnx {
+  position: absolute; top: 0; bottom: 0; z-index: 7; pointer-events: none;
+  width: calc(100% - var(--barw) + var(--gap));
+}
+.a-l { right: calc(50% + var(--barw) / 2); --org: left;  --orgr: right; }
+.a-r { left:  calc(50% + var(--barw) / 2); --org: right; --orgr: left;  }
+
+.dref, .dnow {
+  position: absolute; left: -2px; right: -2px; height: 0;
+  animation: dLine .55s .34s cubic-bezier(.22,.9,.24,1) forwards;
+}
+.dref { bottom: var(--h-base); border-top: 1px dashed var(--stroke); transform: scaleX(0); transform-origin: var(--org) center; }
+.dnow { bottom: var(--h);      border-top: 1px solid  var(--stroke); transform: scaleX(0); transform-origin: var(--orgr) center; }
+@keyframes dLine { to { transform: scaleX(1); } }
+
+/* modo colapsado — delta fisicamente pequeno (ver CFG.limiarCota) */
+.dcnx.tight .dref { display: none; }
+
+.dfill {
+  position: absolute; left: 0; right: 0; bottom: var(--h-min); height: var(--h-dif);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 14%, #000 86%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 14%, #000 86%, transparent 100%);
+  opacity: 0; animation: dFade .6s .62s ease-out forwards;
+}
+.dfill.up { background: linear-gradient(180deg, rgba(var(--tint),.17), rgba(var(--tint),.04)); }
+.dfill.dn { background: repeating-linear-gradient(135deg, rgba(var(--tint),.14) 0 3px, transparent 3px 7px); }
+@keyframes dFade { to { opacity: 1; } }
+
+.dspan {
+  position: absolute; left: 50%; bottom: var(--h-min); height: var(--h-dif); width: 2px;
+  border-radius: 1px; background: rgba(var(--tint),.55);
+  transform: translateX(-50%) scaleY(0); transform-origin: bottom center;
+  animation: dSpan .55s .48s cubic-bezier(.2,.85,.25,1) forwards;
+}
+@keyframes dSpan { to { transform: translateX(-50%) scaleY(1); } }
+
+.dtrack {
+  position: absolute; left: 50%; bottom: var(--h-max); width: 1px;
+  height: calc(var(--folga) + var(--lift, 0px)); transform: translateX(-50%);
+  background: linear-gradient(180deg, var(--hair) 0%, var(--stroke) 100%);
+  opacity: 0; animation: dFade .5s .70s ease-out forwards;
+}
+
+.dpill {
+  position: absolute; left: 50%; bottom: calc(var(--h-max) + var(--folga) + var(--lift, 0px));
+  display: flex; align-items: center; gap: 7px;
+  padding: 5px 11px; border-radius: 999px; border: 0;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(12px) saturate(150%);
+  backdrop-filter: blur(12px) saturate(150%);
+  color: var(--ink);
+  font-family: 'Vale Sans', 'Segoe UI', sans-serif;
+  font-size: clamp(.76rem, 2.2vh, .82rem); font-weight: 400; line-height: 1.15;
+  white-space: nowrap; font-variant-numeric: tabular-nums; letter-spacing: .01em;
+  box-shadow: 0 2px 12px rgba(15,23,42,.05);
+  opacity: 0; transform: translate(-50%, 8px) scale(.96);
+  animation: dPill .5s .78s cubic-bezier(.2,.85,.25,1) forwards;
+}
+@keyframes dPill { to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
+
+.abs { color: #94A3B8; font-weight: 400; font-size: .68rem; padding-left: 7px; border-left: 1px solid rgba(148,163,184,.35); }
+
+@media (prefers-reduced-motion: reduce) {
+  .bar         { animation: none; height: var(--h); }
+  .dref,.dnow  { animation: none; transform: none; }
+  .dspan       { animation: none; transform: translateX(-50%); }
+  .dfill       { animation: none; opacity: 1; }
+  .dtrack      { animation: none; opacity: 1; }
+  .dpill       { animation: none; opacity: 1; transform: translate(-50%, 0) scale(1); }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   CONFIGURADOR DE CORES — barra horizontal estreita inferior
+═════════════════════════════════════════════════════════════════════ */
+.color-config-panel {
+  display: flex; flex-direction: row; align-items: center; gap: 10px;
+  padding: 8px 12px;
+  background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 8px;
+  width: 100%; overflow-x: auto; overflow-y: visible; flex-shrink: 0;
+  position: relative; z-index: 10;
+}
+[data-bg="dark"] .color-config-panel {
+  background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.1);
+}
+
+.color-reset-icon {
+  display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; padding: 0;
+  background: #E5E7EB; border: 1px solid #D1D5DB;
+  border-radius: .4rem; cursor: pointer; color: #374151;
+  transition: background .2s; font-size: 14px;
+  flex-shrink: 0;
+}
+.color-reset-icon:hover { background: #D1D5DB; }
+[data-bg="dark"] .color-reset-icon {
+  background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.18);
+  color: rgba(255,255,255,.8);
+}
+[data-bg="dark"] .color-reset-icon:hover { background: rgba(255,255,255,.15); }
+
+.color-item {
+  display: flex; align-items: center; gap: 6px; padding: 4px 8px;
+  border-radius: 4px; cursor: pointer;
+  transition: background .15s;
+  position: relative;
+  flex-shrink: 0;
+}
+.color-item:hover { background: rgba(0,0,0,.03); }
+[data-bg="dark"] .color-item:hover { background: rgba(255,255,255,.05); }
+
+.color-swatch {
+  flex-shrink: 0; width: 16px; height: 16px;
+  border-radius: 2px; cursor: pointer; transition: transform .2s;
+  border: 1px solid rgba(0,0,0,.12); box-shadow: 0 1px 2px rgba(0,0,0,.06);
+}
+.color-swatch:hover { transform: scale(1.1); }
+.color-swatch.has-palette { cursor: pointer; }
+[data-bg="dark"] .color-swatch { border-color: rgba(255,255,255,.2); }
+
+.color-label {
+  font-size: .62rem; font-weight: 500; color: #4B5563;
+  white-space: nowrap; flex: 0 0 auto; overflow: hidden; text-overflow: ellipsis; max-width: 50px;
+}
+[data-bg="dark"] .color-label { color: rgba(255,255,255,.75); }
+
+/* Paleta de cores flutuante — aparece acima da barra, na frente */
+.color-palette {
+  position: fixed; z-index: 9999;
+  display: none; flex-wrap: wrap; gap: 6px;
+  padding: 10px; background: #fff; border: 1px solid #D1D5DB;
+  border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.20);
+  width: max-content;
+}
+.color-palette.active { display: flex; }
+[data-bg="dark"] .color-palette {
+  background: rgba(20,32,48,.96); border-color: rgba(255,255,255,.14);
+  box-shadow: 0 8px 24px rgba(0,0,0,.40);
+}
+
+.palette-color {
+  width: 24px; height: 24px; border-radius: 50%;
+  border: 2px solid transparent; cursor: pointer;
+  transition: transform .15s, border-color .15s;
+}
+.palette-color:hover { transform: scale(1.1); }
+.palette-color.active { border-color: #333; }
+[data-bg="dark"] .palette-color.active { border-color: #fff; }
+
+.color-input { display: none; }
+
+@media (max-width: 768px) {
+  .color-config-panel { gap: 8px; padding: 10px 12px; }
+  .color-label { font-size: .6rem; max-width: 50px; }
+  .color-swatch { width: 16px; height: 16px; }
+  .color-reset-icon { width: 24px; height: 24px; font-size: 12px; }
+}
+
+@media (max-width: 640px) {
+  .chart-container { padding: 16px 14px 12px; }
+  .chart-title { font-size: 1.15rem; }
+  .chart-subtitle { font-size: .9rem; }
+  .color-config-panel { gap: 6px; padding: 8px 10px; }
+  .color-item { padding: 4px 8px; gap: 6px; }
+  .color-label { font-size: .55rem; max-width: 40px; }
+  .color-swatch { width: 14px; height: 14px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ TOP NAVIGATION ═══ -->
+<nav class="topnav" id="topnav">
+  <a href="index.html" class="topnav-logo">
+    <img src="assets/images/vale-logo.svg" alt="Quartely"/>
+  </a>
+
+  <div class="topnav-links" id="topnavLinks">
+    <a href="quartely.html" class="topnav-link active" data-i18n="nav.quartely">
+      <i class="fa-solid fa-chart-line"></i> <span>Quartely</span>
+    </a>
+    <div class="topnav-sep"></div>
+    <a href="#monthly" class="topnav-link" data-i18n="nav.monthly">
+      <i class="fa-solid fa-calendar"></i> <span>Monthly</span>
+    </a>
+  </div>
+
+  <div class="topnav-actions">
+    <button class="settings-btn" id="settingsBtn" type="button" title="Configurações" aria-label="Configurações">
+      <svg width="17" height="17" viewBox="0 0 20 20" fill="none">
+        <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" stroke="currentColor" stroke-width="1.5" />
+        <path d="M16.2 12.3a1.4 1.4 0 0 0 .28 1.54l.05.05a1.7 1.7 0 1 1-2.4 2.4l-.05-.05a1.4 1.4 0 0 0-1.54-.28 1.4 1.4 0 0 0-.85 1.28V17.4a1.7 1.7 0 0 1-3.4 0v-.08a1.4 1.4 0 0 0-.91-1.28 1.4 1.4 0 0 0-1.54.28l-.05.05a1.7 1.7 0 1 1-2.4-2.4l.05-.05a1.4 1.4 0 0 0 .28-1.54 1.4 1.4 0 0 0-1.28-.85H2.6a1.7 1.7 0 0 1 0-3.4h.08a1.4 1.4 0 0 0 1.28-.91 1.4 1.4 0 0 0-.28-1.54l-.05-.05a1.7 1.7 0 1 1 2.4-2.4l.05.05a1.4 1.4 0 0 0 1.54.28h.06a1.4 1.4 0 0 0 .85-1.28V2.6a1.7 1.7 0 0 1 3.4 0v.08a1.4 1.4 0 0 0 .85 1.28h.06a1.4 1.4 0 0 0 1.54-.28l.05-.05a1.7 1.7 0 1 1 2.4 2.4l-.05.05a1.4 1.4 0 0 0-.28 1.54v.06a1.4 1.4 0 0 0 1.28.85h.08a1.7 1.7 0 0 1 0 3.4h-.08a1.4 1.4 0 0 0-1.28.85Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+      </svg>
+    </button>
+    <div class="topnav-user" id="topnavUser">
+      <div class="topnav-user-text">
+        <span class="topnav-user-name" id="topnavUserName">Usuário</span>
+        <span class="topnav-user-role" id="topnavUserRole">Quartely</span>
+      </div>
+      <div class="topnav-user-avatar" id="topnavUserAvatar">QT</div>
+    </div>
+  </div>
+</nav>
+
+<!-- ═══ FILTROS ═══ -->
+<div class="filters-bar-wrap">
+  <div class="filters-bar" id="filtersBar"></div>
+</div>
+
+<!-- Só aparece quando /api/chart-data ou /api/sites falha e a página cai
+     no fixture local de teste (ver loadQuartelyData) — nunca deveria
+     mostrar dado real, então precisa ficar visível, não só no console. -->
+<div class="data-fallback-banner" id="dataFallbackBanner" role="alert" style="display:none;">
+  <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+  <span id="dataFallbackText"></span>
+</div>
+
+<!-- ═══ MAIN ═══ -->
+<div class="app-layout">
+<main class="app-main">
+<div class="page-content">
+
+  <div class="main-wrapper" id="chartWrapper">
+    <div class="chart-container">
+      <div class="chart-header">
+        <p class="chart-title" id="chartTitle" data-i18n="chart.title">Turnover</p>
+        <p class="chart-subtitle" id="chartSubtitle">(%)</p>
+      </div>
+      <div class="chart-area" id="chartArea"></div>
+    </div>
+    <div class="color-config-panel" id="colorConfigPanel"></div>
+  </div>
+
+</div>
+</main>
+</div>
+
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+
+<script>
+// ─── Tema ───
+document.addEventListener('DOMContentLoaded', () => {
+  const savedTheme = localStorage.getItem('vdt-theme') || 'light';
+  document.body.setAttribute('data-bg', savedTheme === 'dark' ? 'dark' : 'light');
+
+  document.getElementById('settingsBtn').addEventListener('click', () => {
+    const currentBg = document.body.getAttribute('data-bg');
+    const newBg = currentBg === 'dark' ? 'light' : 'dark';
+    document.body.setAttribute('data-bg', newBg);
+    localStorage.setItem('vdt-theme', newBg);
+  });
+});
+
+// ─── Menu links ───
+document.querySelectorAll('.topnav-link').forEach(link => {
+  link.addEventListener('click', (e) => {
+    if (link.getAttribute('href').startsWith('#')) {
+      document.querySelectorAll('.topnav-link').forEach(l => l.classList.remove('active'));
+      e.target.closest('.topnav-link').classList.add('active');
+    }
+  });
+});
+
+// ─── i18n ───
+const i18n = {
+  'pt-BR': { 'nav.quartely': 'Quartely', 'nav.monthly': 'Monthly', 'chart.title': 'Turnover', 'chart.empty': 'Nenhum dado para os filtros selecionados.' },
+  'en':    { 'nav.quartely': 'Quarterly', 'nav.monthly': 'Monthly', 'chart.title': 'Turnover', 'chart.empty': 'No data for the selected filters.' }
+};
+function applyI18n(lang) {
+  document.documentElement.lang = lang;
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (i18n[lang] && i18n[lang][key]) el.textContent = i18n[lang][key];
+  });
+  localStorage.setItem('vdt-lang', lang);
+}
+applyI18n(localStorage.getItem('vdt-lang') || 'pt-BR');
+
+// ════════════════════════════════════════════════════════════════════
+// GRÁFICO DE TURNOVER — motor de renderização (porte do sistema DAX)
+// ------------------------------------------------------------------------
+// Nenhuma linha de DAX/Power BI aqui: os dados vêm de `chartData` (troque
+// por uma chamada a /api/chart-data quando o backend estiver disponível)
+// e toda a lógica de comparação (Budget do período > coluna anterior) e
+// geometria da "cota de diferença" foi reimplementada em JS puro, gerando
+// exatamente as mesmas classes/CSS do componente original.
+// ════════════════════════════════════════════════════════════════════
+
+// Painel de controle (equivalente às VARs de configuração do DAX)
+const CFG = {
+  limiarCota: 1.2,      // pp de altura abaixo do qual a cota colapsa
+  tingirCota: true,     // haste/faixa recebem a cor do estado
+  exibirBanda: true,    // desenha a faixa (.dfill) além da haste
+  exibirDeltaAbs: false,// acrescenta o delta absoluto ao lado do %
+  casasDecimais: 2
+};
+
+// Paleta VBM — alinhada ao design system corporativo
+// Primary: #3CB5E5 (azul claro), #1B40BF (azul escuro)
+// Neutrals: #333333 (text), #888888 (mid), #CCCCCC (light), #FFFFFF (white), #F6F6F6 (off-white)
+// Feedback: #1BA13A (success), #CC7700 (warning), #DC2626 (error)
+
+// Paleta limitada de cores VBM para seleção
+const PALETTE_COLORS = [
+  '#3CB5E5', // Primary Blue
+  '#7DD3F0', // Light Blue
+  '#1B40BF', // Dark Blue
+  '#3DADD8', // Cyan
+  '#116080', // Dark Cyan
+  '#007E79', // Teal
+  '#DEEFF8', // Pale Blue
+  '#CCCCCC', // Light Gray
+  '#E7E6E6', // Very Light Gray
+  '#888888', // Mid Gray
+  '#44546A', // Dark Slate
+  '#1BA13A', // Success Green
+  '#DC2626', // Error Red
+  '#CC7700', // Warning Orange
+  '#D8F7FD', // Pale Blue
+  '#F6F6F6', // Off-white
+  '#FFFFFF', // White
+];
+
+const COLORS = {
+  bgChart: '#F6F6F6',   // Off-white — fundo do gráfico (neutro)
+};
+
+// Cores padrão para cada tipo de série (por último caractere)
+const DEFAULT_SERIES_COLORS = {
+  'A': '#3CB5E5', // Actual (Primary Blue)
+  'F': '#3CB5E5', // Forecast (Primary Blue)
+  'P': '#7DD3F0', // Plan (Light Blue)
+  'B': '#CCCCCC', // Budget (Light Gray)
+  'default': '#CCCCCC'
+};
+
+const DEFAULT_COLORS = { ...COLORS, ...DEFAULT_SERIES_COLORS };
+
+// Carrega cores personalizadas do localStorage ou restaura padrões
+function loadColorPreferences() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('vdt-chart-colors') || 'null');
+    if (saved && typeof saved === 'object') {
+      Object.assign(COLORS, saved);
+    }
+  } catch (e) { /* localStorage indisponível — usa padrão */ }
+}
+
+// Persiste cores no localStorage
+function saveColorPreferences() {
+  try {
+    localStorage.setItem('vdt-chart-colors', JSON.stringify(COLORS));
+  } catch (e) { /* localStorage indisponível — sessão segue sem persistir */ }
+}
+
+// Atualiza variável CSS do fundo do gráfico
+function applyChartBackgroundColor() {
+  const wrapper = document.getElementById('chartWrapper');
+  if (wrapper) {
+    wrapper.style.setProperty('--chart-bg', COLORS.bgChart);
+  }
+}
+
+// Restaura cores padrão
+function resetColorsToDefault() {
+  // Remove todas as cores personalizadas de barras específicas
+  const keysToRemove = Object.keys(COLORS).filter(k => k !== 'bgChart');
+  keysToRemove.forEach(k => delete COLORS[k]);
+
+  // Restaura a cor de fundo padrão
+  COLORS.bgChart = '#F6F6F6';
+
+  saveColorPreferences();
+  applyChartBackgroundColor();
+  renderTurnoverChart(getFilteredChartRows());
+}
+
+function formatNumber(v, decimals) {
+  return v.toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+function formatPct(v) {
+  const s = (v * 100).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  return (v > 0 ? '+' : '') + s + '%';
+}
+
+// Renderiza o painel de configuração de cores com opções dinâmicas para cada barra visível
+function renderColorConfigPanel(visibleBarTypes = []) {
+  const panel = document.getElementById('colorConfigPanel');
+  if (!panel) return;
+
+  let html = `<button type="button" class="color-reset-icon" id="colorResetIcon" title="Restaurar cores padrão">↺</button>`;
+
+  // Gera um item de cor para cada barra visível
+  if (visibleBarTypes.length > 0) {
+    html += visibleBarTypes.map(barType => {
+      const colorKey = barType.trim();
+      const currentColor = COLORS[colorKey] || getDefaultColorForBar(barType);
+      return `
+        <div class="color-item" data-bar-type="${colorKey}">
+          <div class="color-swatch has-palette" data-bar-type="${colorKey}" style="background-color: ${currentColor};" title="Clique para alterar a cor de ${colorKey}"></div>
+          <span class="color-label">${colorKey}</span>
+          <div class="color-palette" data-bar-type="${colorKey}"></div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Adiciona opção de cor de fundo
+  html += `
+    <div class="color-item" data-bar-type="bgChart">
+      <div class="color-swatch has-palette" data-bar-type="bgChart" style="background-color: ${COLORS.bgChart};" title="Clique para alterar a cor do fundo"></div>
+      <span class="color-label">Fundo</span>
+      <div class="color-palette" data-bar-type="bgChart"></div>
+    </div>
+  `;
+
+  panel.innerHTML = html;
+
+  // Popula as paletas de cores
+  panel.querySelectorAll('.color-swatch.has-palette').forEach(swatch => {
+    const barType = swatch.getAttribute('data-bar-type');
+    const palette = panel.querySelector(`.color-palette[data-bar-type="${barType}"]`);
+    if (palette) {
+      palette.innerHTML = PALETTE_COLORS.map(color => `
+        <div class="palette-color" data-color="${color}" style="background-color: ${color};"></div>
+      `).join('');
+    }
+  });
+
+  // Listeners para os swatches — abre/fecha a paleta (posicionada em fixed, na frente)
+  panel.querySelectorAll('.color-swatch.has-palette').forEach(swatch => {
+    swatch.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const barType = swatch.getAttribute('data-bar-type');
+      const palette = panel.querySelector(`.color-palette[data-bar-type="${barType}"]`);
+
+      // Fecha outras paletas abertas
+      panel.querySelectorAll('.color-palette.active').forEach(p => {
+        if (p !== palette) p.classList.remove('active');
+      });
+
+      // Posiciona a paleta (fixed, acima do swatch, na frente do gráfico)
+      if (!palette.classList.contains('active')) {
+        const rect = swatch.getBoundingClientRect();
+        palette.style.left = (rect.left + rect.width / 2) + 'px';
+        palette.style.top = (rect.top - 8) + 'px';
+        palette.style.transform = 'translateX(-50%) translateY(-100%)';
+        palette.classList.add('active');
+      } else {
+        palette.classList.remove('active');
+      }
+    });
+  });
+
+  // Listeners para as cores na paleta
+  panel.querySelectorAll('.palette-color').forEach(colorOption => {
+    colorOption.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const color = colorOption.getAttribute('data-color');
+      const palette = colorOption.closest('.color-palette');
+      const barType = palette.getAttribute('data-bar-type');
+
+      // Atualiza a cor
+      COLORS[barType] = color;
+
+      // Atualiza o swatch
+      const swatch = palette.previousElementSibling;
+      if (swatch) swatch.style.backgroundColor = color;
+
+      // Atualiza fundo do gráfico se necessário
+      if (barType === 'bgChart') applyChartBackgroundColor();
+
+      // Fecha a paleta
+      palette.classList.remove('active');
+
+      // Persiste e re-renderiza
+      saveColorPreferences();
+      renderTurnoverChart(getFilteredChartRows());
+    });
+  });
+
+  // Listener para o botão de restaurar
+  const resetIcon = document.getElementById('colorResetIcon');
+  if (resetIcon) {
+    resetIcon.addEventListener('click', resetColorsToDefault);
+  }
+
+  // Fecha paletas ao clicar fora
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.color-item')) {
+      panel.querySelectorAll('.color-palette.active').forEach(p => p.classList.remove('active'));
+    }
+  });
+}
+
+// Retorna a cor padrão para uma barra baseada no seu tipo
+function getDefaultColorForBar(barType) {
+  if (!barType) return DEFAULT_SERIES_COLORS.default;
+  const lastChar = barType.trim().slice(-1).toUpperCase();
+  return DEFAULT_SERIES_COLORS[lastChar] || DEFAULT_SERIES_COLORS.default;
+}
+
+// Extrai o tipo de horizonte (Trimestre, Semestre, Anual) do core do período
+function getHorizonType(core) {
+  if (/^Q\d/i.test(core)) return 'QUARTER';
+  if (/^H\d/i.test(core)) return 'SEMESTER';
+  if (/^\d{2,4}[A-Z]/i.test(core)) return 'YEAR';
+  return null;
+}
+
+// Valida se dois períodos podem ser comparados (mesmo tipo de horizonte)
+function isValidComparison(core1, core2) {
+  const type1 = getHorizonType(core1);
+  const type2 = getHorizonType(core2);
+  return type1 !== null && type1 === type2;
+}
+
+function renderTurnoverChart(sourceRows) {
+  const chartAreaEl = document.getElementById('chartArea');
+
+  // Combinação de filtros sem nenhuma linha correspondente — estado vazio,
+  // não um gráfico quebrado (pode acontecer com filtros muito restritivos).
+  if (!sourceRows.length) {
+    chartAreaEl.innerHTML = '<p class="chart-empty-state" data-i18n="chart.empty">Nenhum dado para os filtros selecionados.</p>';
+    renderColorConfigPanel([]); // Limpa o painel quando não há dados
+    return;
+  }
+
+  const data = sourceRows.map(d => ({ type: d.type, value: Number(d.value.toFixed(CFG.casasDecimais)) }));
+  const maxValue = Math.max(...data.map(d => d.value), 0);
+
+  // Extrai os tipos de barra visíveis para atualizar o painel de cores
+  const visibleBarTypes = data.map(d => d.type.trim());
+  renderColorConfigPanel(visibleBarTypes);
+
+  const html = data.map((row, i) => {
+    const index1 = i + 1; // índice 1-based, como o VIndex do DAX
+    const type = row.type.trim();
+    const value = row.value;
+    const { core, yearSuffix } = splitTypeLabel(type);
+    const lastChar = core.slice(-1).toUpperCase();
+    const isActualOrFcst = lastChar === 'A' || lastChar === 'F';
+
+    const barHeightPct = maxValue === 0 ? 0 : (value / maxValue) * 100;
+    const formattedValue = formatNumber(value, CFG.casasDecimais);
+
+    // Cor da barra: usa a cor personalizada ou a cor padrão do tipo
+    const barColor = COLORS[type] || getDefaultColorForBar(type);
+
+    // Cor da pílula: versão pálida da cor da barra (ou padrão)
+    const pillColor = isActualOrFcst ? '#D8F7FD' : lastChar === 'P' ? '#E8F4FF' : '#E8E8E8';
+
+    // Anual não tem prefixo de letra (core começa direto pelo ano: "25B"),
+    // Trimestral começa com "Q", o restante (Semestral, "H1B") cai no piso.
+    const isYear = /^\d/.test(core);
+    const isQuarter = core.toUpperCase().startsWith('Q');
+    const barOpacity = isYear ? 1 : isQuarter ? 0.8 : 0.6;
+
+    // ── Base de comparação: Budget do mesmo período > coluna anterior ──
+    // O Budget correspondente precisa ser do MESMO ano (mesmo yearSuffix),
+    // senão um Act/Fcst de 2026 poderia parear com o Budget de 2025.
+    // NOVO: também valida que ambos os períodos são do mesmo tipo (Trimestre,
+    // Semestre ou Anual) — Q4 nunca compara com H1, H2 nunca com Ano.
+    const baseName = core.length > 1 ? core.slice(0, -1) : '';
+    const budgetIndex = data.findIndex(d => {
+      const dSplit = splitTypeLabel(d.type.trim());
+      const budgetCore = (baseName + 'B').toUpperCase();
+      return dSplit.core.toUpperCase() === budgetCore
+        && dSplit.yearSuffix === yearSuffix
+        && isValidComparison(core, dSplit.core);
+    });
+    const budgetVal = budgetIndex >= 0 ? data[budgetIndex].value : undefined;
+
+    const prevRow = i > 0 ? data[i - 1] : undefined;
+    const prevLastChar = prevRow ? splitTypeLabel(prevRow.type.trim()).core.slice(-1).toUpperCase() : undefined;
+    const isPrevActualOrFcst = prevLastChar === 'A' || prevLastChar === 'F';
+    const isRealSequence = isActualOrFcst && isPrevActualOrFcst;
+
+    // NOVO: valida que a coluna anterior também é do mesmo tipo de horizonte
+    const prevIsValidType = prevRow ? isValidComparison(core, splitTypeLabel(prevRow.type.trim()).core) : false;
+    const isValidPrevSequence = isRealSequence && prevIsValidType;
+
+    const usaBudget = !isRealSequence && budgetVal !== undefined && budgetVal !== 0;
+    const usaPrev = !usaBudget && (isValidPrevSequence || index1 % 2 === 0);
+
+    let baseValue, baseIndex;
+    if (usaBudget) { baseValue = budgetVal; baseIndex = budgetIndex; }
+    else if (usaPrev && prevRow) { baseValue = prevRow.value; baseIndex = i - 1; }
+
+    const deltaAbs = baseValue !== undefined ? value - baseValue : undefined;
+    const deltaPct = (isActualOrFcst && baseValue !== undefined && baseValue !== 0) ? deltaAbs / baseValue : undefined;
+    const hasDelta = deltaPct !== undefined;
+
+    const deltaClass = !hasDelta ? '' : deltaPct > 0.001 ? 'is-up' : deltaPct < -0.001 ? 'is-down' : 'is-flat';
+    const deltaText = hasDelta ? formatPct(deltaPct) : '';
+    const deltaAbsText = deltaAbs !== undefined ? (deltaAbs > 0 ? '+' : '') + formatNumber(deltaAbs, CFG.casasDecimais) : '';
+
+    const side = (baseIndex !== undefined && baseIndex > i) ? 'R' : 'L';
+    const anchorClass = side === 'R' ? 'a-r' : 'a-l';
+    const tintClass = CFG.tingirCota ? '' : ' no-tint';
+
+    // ── Geometria da cota ──
+    const baseHeightPct = baseValue !== undefined && maxValue !== 0 ? (baseValue / maxValue) * 100 : 0;
+    const hMax = Math.max(barHeightPct, baseHeightPct);
+    const hMin = Math.min(barHeightPct, baseHeightPct);
+    const hDif = hMax - hMin;
+    const cotaVisivel = hDif >= CFG.limiarCota;
+    const tightClass = cotaVisivel ? '' : ' tight';
+
+    const cH = barHeightPct.toFixed(1) + '%';
+    const cHBase = baseHeightPct.toFixed(1) + '%';
+    const cHMax = hMax.toFixed(1) + '%';
+    const cHMin = hMin.toFixed(1) + '%';
+    const cHDif = hDif.toFixed(1) + '%';
+
+    let htmlFaixa = '';
+    if (hasDelta && cotaVisivel && CFG.exibirBanda) {
+      htmlFaixa = `<div class="dfill ${deltaAbs >= 0 ? 'up' : 'dn'}"></div>`;
+    }
+    const htmlHaste = (hasDelta && cotaVisivel) ? '<span class="dspan"></span>' : '';
+    const htmlAbs = CFG.exibirDeltaAbs ? `<span class="abs">${deltaAbsText}</span>` : '';
+
+    let htmlCota = '';
+    if (hasDelta) {
+      htmlCota = `<div class="dcnx ${anchorClass} ${deltaClass}${tintClass}${tightClass}" style="--h-base:${cHBase}; --h-min:${cHMin}; --h-dif:${cHDif}; --h-max:${cHMax};">
+        ${htmlFaixa}
+        <span class="dref"></span><span class="dnow"></span>
+        ${htmlHaste}
+        <span class="dtrack"></span>
+        <div class="dpill"><span>${deltaText}</span>${htmlAbs}</div>
+      </div>`;
+    }
+
+    return `<div class="col-wrapper" style="--h:${cH}; --pill-bg:${pillColor};">
+      ${htmlCota}
+      <span class="value-label">${formattedValue}</span>
+      <div class="bar" style="--c:${barColor}; opacity:${barOpacity};"></div>
+      <span class="axis-label">${type}</span>
+    </div>`;
+  }).join('');
+
+  document.getElementById('chartArea').innerHTML = html;
+}
+
+// ════════════════════════════════════════════════════════════════════
+// ÁREA DE FILTROS — Ano / Site / Visão (Série) / Horizonte / Product
+// ------------------------------------------------------------------------
+// Fonte: QUARTELY.sql — DT_REF, ID_SITE, NM_KPI, NM_TYPE, Type e as chaves
+// técnicas de ordenação ORDEM_VISAO/ORDEM_ANO/ORDEM_PERIODO/ORDEM_SERIE
+// (uma por bloco MONTH/QUARTER/SEMESTER/YEAR da UNION ALL), mais a junção
+// com IBP.SITES só para resolver NM_SITE:
+//   SELECT DISTINCT Q.ID_SITE, S.NM_SITE FROM QUARTELY_RESULT Q
+//   LEFT JOIN IBP.SITES S ON S.ID_SITE = Q.ID_SITE
+// Nenhuma lista de opções é escrita à mão: todo combobox é preenchido
+// extraindo valores distintos das linhas de /api/chart-data e /api/sites.
+// Sem essas rotas (ambiente sem Azure SQL), cai num fixture local do
+// mesmo formato — o motor de filtros e de ordenação não muda uma linha
+// entre os dois casos.
+//
+// ORDENAÇÃO — nunca por texto de rótulo, sempre pelas chaves técnicas,
+// na mesma ordem usada no back-end e no front-end (Ano → Visão → Período
+// → Série, conforme padrão adotado para todo o sistema):
+//   ORDEM_ANO, ORDEM_VISAO, ORDEM_PERIODO, ORDEM_SERIE
+// ════════════════════════════════════════════════════════════════════
+
+const SERIE_ORDER = { 'Budget': 1, 'Plan': 2, 'Act/Fcst': 3 }; // negócio, não alfabético
+function serieOrder(nmType) { return SERIE_ORDER[nmType] ?? 99; }
+
+// Ordem pedida explicitamente: Trimestre → Semestre → Ano SEMPRE primeiro
+// (ORDEM_VISAO), independente do ano — com múltiplos anos selecionados,
+// os grupos Trimestral/Semestral/Anual não se misturam entre si; dentro de
+// cada grupo, mantém a ordem temporal já existente (Ano → Período → Série).
+function compareByTechnicalKeys(a, b) {
+  return (a.ORDEM_VISAO - b.ORDEM_VISAO)
+      || (a.ORDEM_ANO - b.ORDEM_ANO)
+      || (a.ORDEM_PERIODO - b.ORDEM_PERIODO)
+      || (a.ORDEM_SERIE - b.ORDEM_SERIE);
+}
+
+// A QUARTELY.sql sufixa Trimestral/Semestral com o ano (" YY", ex.:
+// "Q3F 25") para diferenciar o mesmo período entre anos — Anual já era
+// assim ("25B"). Isola esse sufixo opcional antes de ler o "core" do
+// rótulo (letra de série, prefixo Q/H) — usado tanto na leitura do
+// gráfico quanto na detecção do período "atual" para o filtro default.
+function splitTypeLabel(t) {
+  const m = t.match(/^(.*?)(\s\d{2})$/);
+  return m ? { core: m[1], yearSuffix: m[2] } : { core: t, yearSuffix: '' };
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+const FILTER_DEFS = [
+  { key: 'ano',        label: 'Ano',        icon: 'fa-calendar-days', multiple: true,  allLabel: 'Todos os anos',       searchable: false },
+  { key: 'sites',      label: 'Site',       icon: 'fa-location-dot',  multiple: true,  allLabel: 'Todos os sites',      searchable: true  },
+  { key: 'visoes',     label: 'Visão',      icon: 'fa-eye',           multiple: true,  allLabel: 'Todas as visões',     searchable: false },
+  { key: 'horizontes', label: 'Horizonte',  icon: 'fa-timeline',      multiple: true,  allLabel: 'Todos os horizontes', searchable: true  },
+  { key: 'product',    label: 'Product',    icon: 'fa-tags',          multiple: false, allLabel: 'Todos os Products',   searchable: true  }
+];
+
+// filterState: Set vazio (multi) ou null (single) == "Todos" (sem restrição)
+const filterState = {
+  ano: new Set(),
+  sites: new Set(),
+  visoes: new Set(),
+  horizontes: new Set(),
+  product: null
+};
+
+let allRows = [];          // linhas cruas de QUARTELY.sql (+ NM_SITE já resolvido)
+let filterOptions = {};    // opções de cada combobox, derivadas de allRows
+
+// ── Fixture local (mesmo formato de QUARTELY.sql, chaves técnicas incluídas) ──
+// Usado apenas quando /api/chart-data e /api/sites não respondem (ex.:
+// ambiente de desenvolvimento sem conexão com o Azure SQL). Gerado, não
+// hardcoded como lista de opções — os combobox extraem os valores destas
+// linhas exatamente como extrairiam de linhas vindas do banco.
+//
+// Sites: os 10 nomes reais confirmados para ID_DASH = 21 (IBP.SITES RIGHT
+// JOIN IBP.DASHBOARD), para que o fixture de teste não esconda o mesmo bug
+// que a query original tinha (lista incompleta).
+//
+// SEM granularidade Mensal: a QUARTELY.sql de origem tem o bloco MONTH
+// inteiro comentado — a Quarterly nunca recebe linhas 'MONTH' dela. Este
+// fixture não gera nenhuma; ver também o filtro de defesa em loadQuartelyData.
+//
+// [CORREÇÃO — causa-raiz do bug "faltam horizontes em 2025/2026"]
+// A janela real da QUARTELY.sql é @DT_INI = '2025-01-01' até
+// @DT_FIM ≈ dezembro do ano corrente (calculado a partir de GETDATE()) —
+// ou seja, DOIS anos inteiros, não um. Uma versão anterior deste fixture
+// só gerava Trimestral/Semestral para um único "ano corrente", então
+// filtrar por Ano=2025 esvaziava esses dois horizontes (só sobrava Anual,
+// que já era multi-ano) — o filtro em si nunca teve bug; era o fixture que
+// não representava a janela completa da query real. Corrigido abaixo:
+// Trimestral e Semestral agora cobrem os DOIS anos, com todos os 4
+// trimestres e os 2 semestres em cada um — igual ao que UNION ALL +
+// CROSS APPLY (Budget/Supply/Forecast) produzem para cada período dentro
+// de @DT_INI..@DT_FIM na query real.
+function buildFallbackRows() {
+  const sites = [
+    { ID_SITE: 1,  NM_SITE: 'Clydach | CNR' },
+    { ID_SITE: 2,  NM_SITE: 'Copper Business | Global' },
+    { ID_SITE: 3,  NM_SITE: 'Manitoba' },
+    { ID_SITE: 4,  NM_SITE: 'Matsusaka | Tonimet' },
+    { ID_SITE: 5,  NM_SITE: 'Nickel Business | Global' },
+    { ID_SITE: 6,  NM_SITE: 'Onça Puma' },
+    { ID_SITE: 7,  NM_SITE: 'Ontario Operations' },
+    { ID_SITE: 8,  NM_SITE: 'Salobo' },
+    { ID_SITE: 9,  NM_SITE: 'Sossego' },
+    { ID_SITE: 10, NM_SITE: 'VNL Operations' }
+  ];
+  const products = [
+    { NM_KPI: 'Turnover',   SG_UNID: '%' },
+    { NM_KPI: 'Production', SG_UNID: 'kt' },
+    { NM_KPI: 'Recovery',   SG_UNID: '%' }
+  ];
+  const WINDOW_YEARS = [2025, 2026]; // @DT_INI..@DT_FIM reais cobrem os dois
+  const CURRENT_YEAR = 2026;         // ano em curso — decide Act ('A') vs Fcst ('F')
+  const CURRENT_QUARTER = 3;         // "hoje" ~ set/2026 -> Q1-Q3 fechados, Q4 em aberto
+  const rows = [];
+
+  const mk = (dtRef, site, product, nmType, type, ordemSerie, ordemVisao, nmVisao, ordemPeriodo, value) => rows.push({
+    DT_REF: dtRef, ID_SITE: site.ID_SITE, NM_SITE: site.NM_SITE,
+    NM_KPI: product.NM_KPI, SG_UNID: product.SG_UNID,
+    NM_TYPE: nmType, Type: type,
+    CD_VISAO: nmVisao === 'Trimestral' ? 'QUARTER' : nmVisao === 'Semestral' ? 'SEMESTER' : 'YEAR',
+    NM_VISAO: nmVisao, ORDEM_VISAO: ordemVisao,
+    ORDEM_ANO: new Date(dtRef).getUTCFullYear(), ORDEM_PERIODO: ordemPeriodo, ORDEM_SERIE: ordemSerie,
+    Value: Number(value.toFixed(2))
+  });
+
+  // Nem todo site tem dados de todo Product — reproduz uma base real, onde a
+  // disponibilidade varia por site/KPI (útil para exercitar os filtros
+  // dependentes: escolher um Product deve mudar as opções de Site e vice-versa).
+  sites.forEach((site, siteIdx) => {
+    const productsForSite = products.filter((_, i) => (siteIdx + i) % 3 !== 2); // ~2 de 3 products por site
+    productsForSite.forEach(product => {
+      const seed = (site.ID_SITE + product.NM_KPI.length) % 7;
+      const base = 0.5 + seed * 0.3;
+
+      WINDOW_YEARS.forEach(year => {
+        const yy = String(year).slice(-2);
+        const yearFactor = year === CURRENT_YEAR ? 1 : 0.92;
+
+        // TRIMESTRAL — Q1..Q4, Budget/Plan/Act-Fcst em cada um. Rótulo com
+        // sufixo de ano (' YY') igual ao CONCAT(..., ' ', RIGHT(YEAR,2)) da
+        // QUARTELY.sql real — sem isso, "Q3B" de 2025 e 2026 colidiriam no
+        // mesmo rótulo e a soma por Type os misturaria num só valor.
+        for (let q = 1; q <= 4; q++) {
+          const isClosed = year < CURRENT_YEAR || (year === CURRENT_YEAR && q <= CURRENT_QUARTER);
+          const fcstSuffix = isClosed ? 'A' : 'F';
+          const qFactor = 1 + (q - 1) * 0.18;
+          const dtRef = `${year}-${String((q - 1) * 3 + 1).padStart(2, '0')}-01`;
+          mk(dtRef, site, product, 'Budget',   `Q${q}B ${yy}`, 1, 2, 'Trimestral', q, base * 2.6 * qFactor * yearFactor);
+          mk(dtRef, site, product, 'Plan',     `Q${q}P ${yy}`, 2, 2, 'Trimestral', q, base * 2.4 * qFactor * yearFactor);
+          mk(dtRef, site, product, 'Act/Fcst', `Q${q}${fcstSuffix} ${yy}`, 3, 2, 'Trimestral', q, base * 2.2 * qFactor * yearFactor);
+        }
+
+        // SEMESTRAL — H1/H2 em cada ano, com sufixo B/P/A/F + ano (mesmo
+        // padrão de rótulo que Trimestral, corrigido junto com o server.js)
+        [{ h: 1, month: '01', closed: year < CURRENT_YEAR || (year === CURRENT_YEAR && CURRENT_QUARTER >= 2) },
+         { h: 2, month: '07', closed: year < CURRENT_YEAR || (year === CURRENT_YEAR && CURRENT_QUARTER >= 4) }]
+          .forEach(({ h, month, closed }) => {
+            const fcstSuffix = closed ? 'A' : 'F';
+            const hFactor = h === 1 ? 5 : 4.6;
+            const dtRef = `${year}-${month}-01`;
+            mk(dtRef, site, product, 'Budget',   `H${h}B ${yy}`, 1, 3, 'Semestral', h, base * hFactor * yearFactor);
+            mk(dtRef, site, product, 'Plan',     `H${h}P ${yy}`, 2, 3, 'Semestral', h, base * (hFactor - 0.3) * yearFactor);
+            mk(dtRef, site, product, 'Act/Fcst', `H${h}${fcstSuffix} ${yy}`, 3, 3, 'Semestral', h, base * (hFactor - 0.5) * yearFactor);
+          });
+
+        // ANUAL — Budget/Plan/Act-Fcst, ano corrente em aberto ('F')
+        const yearClosed = year < CURRENT_YEAR;
+        mk(`${year}-01-01`, site, product, 'Budget',   `${yy}B`, 1, 4, 'Anual', year, base * 12.3 * yearFactor);
+        mk(`${year}-01-01`, site, product, 'Plan',     `${yy}P`, 2, 4, 'Anual', year, base * 11.6 * yearFactor);
+        mk(`${year}-01-01`, site, product, 'Act/Fcst', `${yy}${yearClosed ? 'A' : 'F'}`, 3, 4, 'Anual', year, base * 10.4 * yearFactor);
+      });
+    });
+  });
+  return rows;
+}
+
+// A página Quarterly nunca exibe granularidade Mensal (CD_VISAO = 'MONTH').
+// A QUARTELY.sql de origem já não produz essas linhas (bloco comentado),
+// mas o filtro fica aqui como segunda camada de defesa — se um dia o
+// bloco MONTH voltar à query (p.ex. para alimentar uma futura página
+// Monthly), a Quarterly continua correta sem precisar de nenhum ajuste.
+const QUARTERLY_VISOES = ['QUARTER', 'SEMESTER', 'YEAR'];
+function isQuarterlyVisao(row) { return QUARTERLY_VISOES.includes(row.CD_VISAO); }
+
+// ── Carga de dados: API real, com fallback local ────────────────────────
+// Mostra/esconde o aviso de "dado de exemplo" — precisa ser visível na
+// própria página, não só um console.warn, senão o fixture local passa
+// por dado real (foi exatamente essa confusão que motivou o banner).
+function setDataFallbackWarning(active, detail) {
+  const banner = document.getElementById('dataFallbackBanner');
+  const text = document.getElementById('dataFallbackText');
+  if (!banner || !text) return;
+  banner.style.display = active ? 'flex' : 'none';
+  if (active) {
+    text.textContent = `Exibindo DADOS DE EXEMPLO, não o resultado real da QUARTELY.sql. Nenhum endpoint respondeu — ${detail}. Se o status for 404, o servidor publicado ainda não tem estas rotas (verifique se o deploy pegou o commit novo); se for 500, as rotas existem e o erro está na consulta ao Azure SQL (veja os logs do app).`;
+  }
+}
+
+// Caminhos candidatos da API. De dentro do navegador não dá para saber
+// se o app está publicado sob um subcaminho (.../Quartely/quartely.html
+// no Databricks Apps) nem se a plataforma remove esse prefixo antes de
+// chegar ao servidor — e errar essa aposta devolve 404 com o servidor
+// funcionando. Em vez de apostar, tenta os candidatos na ordem e para no
+// primeiro que responder. O servidor registra os MESMOS handlers em
+// todos esses caminhos (ver QUARTELY_BASES no server.js da raiz).
+const QUARTELY_API_BASES = ['api/', '../api/', '/api/', '/Quartely/api/'];
+
+function basesDaApiResolvidas() {
+  const vistas = new Set();
+  for (const base of QUARTELY_API_BASES) {
+    try { vistas.add(new URL(base, location.href).href); } catch (e) { /* base inválida: ignora */ }
+  }
+  return [...vistas];
+}
+
+async function buscarJsonDaApi(baseHref, recurso) {
+  const url = new URL(recurso, baseHref);
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`${url.pathname} → ${res.status}`);
+  return res.json();
+}
+
+async function loadQuartelyData() {
+  const tentativas = [];
+  for (const base of basesDaApiResolvidas()) {
+    try {
+      const [chartRows, sitesList] = await Promise.all([
+        buscarJsonDaApi(base, 'chart-data'),
+        buscarJsonDaApi(base, 'sites')
+      ]);
+      const siteNameById = new Map(sitesList.map(s => [s.ID_SITE ?? s.id_site, s.NM_SITE ?? s.nm_site]));
+      setDataFallbackWarning(false);
+      console.info(`[quartely] dados reais carregados de ${new URL(base).pathname}`);
+      return chartRows
+        .map(r => ({ ...r, NM_SITE: siteNameById.get(r.ID_SITE) ?? null }))
+        .filter(isQuarterlyVisao);
+    } catch (err) {
+      tentativas.push(err.message);
+    }
+  }
+  console.warn('[quartely] nenhum endpoint respondeu, usando fixture local:', tentativas.join(' | '));
+  setDataFallbackWarning(true, tentativas.join(' | '));
+  return buildFallbackRows().filter(isQuarterlyVisao);
+}
+
+// ── Filtros dinâmicos e dependentes ─────────────────────────────────────
+// dadosBase (`allRows`) é sempre o dataset completo e imutável. Para cada
+// campo, suas PRÓPRIAS opções vêm de dadosBase filtrado por TODOS os demais
+// filtros ativos — nunca pelo filtro dele mesmo, e nunca sobre um dataset
+// já reduzido por uma chamada anterior (rowMatchesFilters sempre parte de
+// `allRows`, nunca de um resultado intermediário já filtrado).
+function rowMatchesFilters(r, exceptKey) {
+  if (exceptKey !== 'ano' && filterState.ano.size && !filterState.ano.has(String(r.ORDEM_ANO))) return false;
+  if (exceptKey !== 'sites' && filterState.sites.size && !filterState.sites.has(String(r.ID_SITE))) return false;
+  if (exceptKey !== 'visoes' && filterState.visoes.size && !filterState.visoes.has(r.NM_TYPE)) return false;
+  if (exceptKey !== 'horizontes' && filterState.horizontes.size && !filterState.horizontes.has(r.Type)) return false;
+  if (exceptKey !== 'product' && filterState.product !== null && r.NM_KPI !== filterState.product) return false;
+  return true;
+}
+
+// linhas que passam em TODOS os filtros — usadas para montar o gráfico e
+// para checar a unidade (SG_UNID) do Product selecionado
+function getFilteredRows() {
+  return allRows.filter(r => rowMatchesFilters(r, null));
+}
+
+// ── Extração das opções de UM combobox a partir de um subconjunto de
+//    linhas — nenhuma lista fixa, tudo derivado dos dados; ordenação
+//    sempre por chave técnica, nunca pelo texto exibido. `ensureValues`
+//    (opcional) são valores JÁ SELECIONADOS pelo usuário nesse campo —
+//    entram na lista mesmo que a combinação atual dos DEMAIS filtros não
+//    produza mais nenhuma linha para eles, buscando o rótulo em `allRows`
+//    (não em `rows`, que já veio restrito). Nenhum filtro pode fazer outro
+//    "sumir": a seleção do usuário nunca é removida por conta própria ───
+function extractOptions(key, rows, ensureValues) {
+  const ensure = ensureValues && ensureValues.length ? ensureValues : null;
+  if (key === 'ano') {
+    const set = new Set(rows.map(r => r.ORDEM_ANO));
+    if (ensure) ensure.forEach(v => set.add(Number(v)));
+    return Array.from(set).sort((a, b) => b - a).map(y => ({ value: String(y), label: String(y) }));
+  }
+  if (key === 'sites') {
+    // TODOS os ID_SITE do subconjunto, nome via IBP.SITES; sem nome por
+    // último (mesmo tratamento de ausência: rótulo "Site {ID}")
+    const map = new Map();
+    rows.forEach(r => {
+      if (!map.has(r.ID_SITE)) map.set(r.ID_SITE, { label: r.NM_SITE || `Site ${r.ID_SITE}`, hasName: !!r.NM_SITE });
+    });
+    if (ensure) {
+      ensure.forEach(v => {
+        const id = Number(v);
+        if (map.has(id)) return;
+        const hit = allRows.find(r => r.ID_SITE === id);
+        map.set(id, { label: hit ? (hit.NM_SITE || `Site ${id}`) : `Site ${id}`, hasName: !!(hit && hit.NM_SITE) });
+      });
+    }
+    return Array.from(map, ([value, { label, hasName }]) => ({ value: String(value), label, hasName }))
+      .sort((a, b) => (a.hasName === b.hasName ? 0 : a.hasName ? -1 : 1)
+        || a.label.localeCompare(b.label, 'pt-BR')
+        || (Number(a.value) - Number(b.value)))
+      .map(({ value, label }) => ({ value, label }));
+  }
+  if (key === 'visoes') {
+    // Visão (campo NM_TYPE = "Série" na QUARTELY.sql): ordem de negócio
+    // Budget → Plan → Act/Fcst, nunca alfabética
+    const set = new Set(rows.map(r => r.NM_TYPE));
+    if (ensure) ensure.forEach(v => set.add(v));
+    return Array.from(set).sort((a, b) => serieOrder(a) - serieOrder(b)).map(v => ({ value: v, label: v }));
+  }
+  if (key === 'horizontes') {
+    // Horizonte (campo Type): ordenado pelas chaves técnicas do bloco de
+    // origem — a mesma regra usada para ordenar as barras do gráfico
+    const rep = new Map();
+    rows.forEach(r => { if (!rep.has(r.Type)) rep.set(r.Type, r); });
+    if (ensure) {
+      ensure.forEach(v => {
+        if (rep.has(v)) return;
+        const hit = allRows.find(r => r.Type === v);
+        if (hit) rep.set(v, hit);
+      });
+    }
+    return Array.from(rep.entries()).sort((a, b) => compareByTechnicalKeys(a[1], b[1])).map(([type]) => ({ value: type, label: type }));
+  }
+  if (key === 'product') {
+    const set = new Set();
+    rows.forEach(r => { if (r.NM_KPI && String(r.NM_KPI).trim() !== '') set.add(String(r.NM_KPI).trim()); });
+    if (ensure) ensure.forEach(v => set.add(v));
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'pt-BR')).map(p => ({ value: p, label: p }));
+  }
+  return [];
+}
+
+// Recalcula as opções de TODOS os campos de uma vez, cada uma sobre
+// allRows filtrado pelos demais — nunca sobre um dataset já reduzido
+// (regra técnica #3: "não filtrar repetidamente sobre um dataset já
+// reduzido" — cada extractOptions parte sempre de `allRows`). As seleções
+// já feitas pelo usuário em CADA campo são passadas como `ensureValues`
+// para que nenhuma seleção seja removida por uma mudança em outro filtro
+// — só a combinação final dos dados é que pode ficar vazia, nunca a
+// seleção em si (regra explícita: "nenhum filtro pode limpar/alterar
+// outro"; cada filtro só modifica o próprio estado).
+function recomputeFilterOptions() {
+  FILTER_DEFS.forEach(def => {
+    const narrowed = allRows.filter(r => rowMatchesFilters(r, def.key));
+    const selected = def.multiple
+      ? [...filterState[def.key]]
+      : (filterState[def.key] != null ? [filterState[def.key]] : []);
+    filterOptions[def.key] = extractOptions(def.key, narrowed, selected);
+  });
+}
+
+// ── Aplica o filtro + agrega por Type (mesmo SUM/GROUP BY já usado nas
+//    seções Quarter/Semester/Year da própria QUARTELY.sql), depois ordena
+//    pelas MESMAS chaves técnicas do filtro Horizonte — nunca pelo rótulo
+//    de Type — antes de montar categorias/valores para o gráfico ───────
+function getFilteredChartRows() {
+  const rows = getFilteredRows();
+
+  const sums = new Map(); // Type -> { value, ORDEM_ANO, ORDEM_VISAO, ORDEM_PERIODO, ORDEM_SERIE }
+  rows.forEach(r => {
+    const acc = sums.get(r.Type) || {
+      value: 0, ORDEM_ANO: r.ORDEM_ANO, ORDEM_VISAO: r.ORDEM_VISAO,
+      ORDEM_PERIODO: r.ORDEM_PERIODO, ORDEM_SERIE: r.ORDEM_SERIE
+    };
+    acc.value += r.Value;
+    sums.set(r.Type, acc);
+  });
+
+  // 1) filtrar (já feito acima) -> 2) ordenar pelas chaves técnicas ->
+  // 3) só então montar o array final type/value que o gráfico consome —
+  // categoria e valor seguem sempre o mesmo índice, um único sort.
+  return Array.from(sums, ([type, acc]) => ({ type, ...acc }))
+    .sort(compareByTechnicalKeys)
+    .map(({ type, value }) => ({ type, value }));
+}
+
+// Título = NM_KPI do Product selecionado (seleção única). Sem seleção, usa
+// o NM_KPI se só existir um no subconjunto já filtrado pelos demais campos
+// (caso real de produção, onde a query já é escopada a um único dashboard/
+// KPI); com mais de um (fixture local de teste), mantém o rótulo genérico
+// do card — "comportamento padrão já existente", como pedido.
+function updateChartTitle() {
+  const titleEl = document.getElementById('chartTitle');
+  if (filterState.product) { titleEl.textContent = filterState.product; return; }
+  const distinct = filterOptions.product || [];
+  titleEl.textContent = distinct.length === 1 ? distinct[0].label : 'Turnover';
+}
+
+// Unidade = SG_UNID do MESMO conjunto de linhas filtrado (Ano+Site+Visão+
+// Horizonte+Product), nunca da primeira linha do dataset completo. Se o
+// Product selecionado tiver mais de um SG_UNID distinto no resultado
+// filtrado, isso é uma inconsistência de dados — registrar no console e
+// NÃO escolher uma unidade arbitrária; sem Product selecionado, mantém o
+// "(%)" que já era o padrão da tela antes desta correção.
+function updateChartUnit() {
+  const subEl = document.getElementById('chartSubtitle');
+  if (!filterState.product) { subEl.textContent = '(%)'; return; }
+  const units = new Set(getFilteredRows().map(r => r.SG_UNID).filter(u => u != null && String(u).trim() !== ''));
+  if (units.size === 1) {
+    subEl.textContent = `(${[...units][0]})`;
+  } else if (units.size > 1) {
+    console.warn(`[quartely] SG_UNID inconsistente para "${filterState.product}": ${[...units].join(', ')} — mantendo unidade anterior em vez de escolher uma arbitrariamente.`);
+  } else {
+    subEl.textContent = '(%)';
+  }
+}
+
+// ── Atualização coordenada única por interação ──────────────────────────
+// Uma só chamada por clique/seleção: recalcula as opções de TODOS os
+// campos (dependentes entre si), poda seleções que deixaram de ser
+// válidas, re-renderiza os 5 painéis + rótulos, título, unidade e o
+// gráfico — nessa ordem, uma vez só. Nenhum destes passos dispara sozinho
+// uma nova chamada a refreshFiltersAndChart (sem loop entre eventos).
+function refreshFiltersAndChart() {
+  setFiltersBusy(true);
+  try {
+    recomputeFilterOptions();
+    FILTER_DEFS.forEach(def => {
+      const searchVal = document.querySelector(`[data-panel="${def.key}"] .qf-search input`)?.value;
+      renderFilterOptions(def, searchVal);
+      renderTriggerLabel(def);
+    });
+    updateChartTitle();
+    updateChartUnit();
+    renderColorConfigPanel();
+    renderTurnoverChart(getFilteredChartRows());
+  } finally {
+    setFiltersBusy(false);
+  }
+}
+
+// ── Componente reutilizável de combobox (single ou multi-select, com
+//    badges + "Selecionar Todos"/"Limpar Seleção" para multiseleção) ────
+function renderTriggerLabel(def) {
+  const labelEl = document.querySelector(`[data-field="${def.key}"] .qf-trigger-label`);
+  if (!def.multiple) {
+    if (filterState[def.key] === null) { labelEl.textContent = def.allLabel; return; }
+    const opt = (filterOptions[def.key] || []).find(o => o.value === filterState[def.key]);
+    labelEl.textContent = opt ? opt.label : def.allLabel;
+    return;
+  }
+  const set = filterState[def.key];
+  if (set.size === 0) { labelEl.textContent = def.allLabel; return; }
+  const labels = [...set].map(v => (filterOptions[def.key] || []).find(o => o.value === v)?.label || v);
+  const shown = labels.slice(0, 2);
+  const rest = labels.length - shown.length;
+  labelEl.innerHTML = shown.map(l => `<span class="qf-badge">${escapeHtml(l)}</span>`).join('')
+    + (rest > 0 ? `<span class="qf-badge qf-badge-more">+${rest}</span>` : '');
+}
+
+function optionRowHtml(def, value, label, checked) {
+  const radioClass = def.multiple ? '' : ' qf-radio';
+  const role = def.multiple ? 'checkbox' : 'radio';
+  return `<div class="qf-option${radioClass}${checked ? ' is-checked' : ''}" data-value="${escapeHtml(value)}"
+    role="${role}" aria-checked="${checked}" tabindex="0">
+    <span class="qf-check"><i class="fa-solid fa-check"></i></span><span>${escapeHtml(label)}</span>
+  </div>`;
+}
+
+function selectOption(def, value) {
+  if (value === '__all__') {
+    filterState[def.key] = null; // só ocorre em campos de seleção única
+  } else if (def.multiple) {
+    const set = filterState[def.key];
+    set.has(value) ? set.delete(value) : set.add(value);
+  } else {
+    filterState[def.key] = value;
+    closeAllPanels();
+  }
+  refreshFiltersAndChart();
+}
+
+function renderFilterOptions(def, searchTerm) {
+  const container = document.getElementById(`qfOptions-${def.key}`);
+  const term = (searchTerm || '').trim().toLowerCase();
+  const options = filterOptions[def.key] || [];
+  const visible = term ? options.filter(o => o.label.toLowerCase().includes(term)) : options;
+
+  let html = '';
+  // Seleção única (Product): mantém a linha-rádio "Todos os Products".
+  // Multiseleção (Ano/Site/Visão/Horizonte): sem linha "Todos" na lista —
+  // a ação equivalente vira o link "Limpar Seleção" no topo do painel.
+  if (!def.multiple) {
+    html += optionRowHtml(def, '__all__', def.allLabel, filterState[def.key] === null);
+  }
+
+  if (!visible.length) {
+    html += term
+      ? `<div class="qf-option-empty">Nenhum resultado para "${escapeHtml(searchTerm)}"</div>`
+      : `<div class="qf-option-empty">Nenhuma opção disponível com os demais filtros atuais</div>`;
+  } else {
+    html += visible.map(opt => {
+      const checked = def.multiple ? filterState[def.key].has(opt.value) : filterState[def.key] === opt.value;
+      return optionRowHtml(def, opt.value, opt.label, checked);
+    }).join('');
+  }
+  container.innerHTML = html;
+
+  // Clique + teclado (Enter/Espaço) — checkboxes/rádios navegáveis por Tab
+  container.querySelectorAll('.qf-option').forEach(el => {
+    el.addEventListener('click', () => selectOption(def, el.getAttribute('data-value')));
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        selectOption(def, el.getAttribute('data-value'));
+      }
+    });
+  });
+}
+
+// ── Loader coordenado — desabilita os triggers durante a atualização e
+//    dá um retorno visual mínimo; com dados locais o recálculo é
+//    instantâneo (~1ms), mas o mesmo controle vale quando /api/chart-data
+//    e /api/sites demorarem de verdade. ─────────────────────────────────
+function setFiltersBusy(busy) {
+  const bar = document.getElementById('filtersBar');
+  bar.classList.toggle('is-busy', busy);
+  bar.querySelectorAll('.qf-trigger').forEach(btn => { btn.disabled = busy; });
+}
+
+function resetFilterField(def) {
+  if (def.multiple) filterState[def.key].clear();
+  else filterState[def.key] = null;
+}
+
+function buildFiltersBar() {
+  const bar = document.getElementById('filtersBar');
+  bar.innerHTML = `<div class="qf-fields-center">` + FILTER_DEFS.map(def => `
+    <div class="qf-field" data-field="${def.key}">
+      <button type="button" class="qf-trigger" data-trigger="${def.key}" aria-label="Filtro de ${def.label}" aria-haspopup="true" aria-expanded="false">
+        <i class="fa-solid ${def.icon} qf-icon" aria-hidden="true"></i>
+        <span class="qf-trigger-label">${def.allLabel}</span>
+        <i class="fa-solid fa-chevron-down qf-chevron" aria-hidden="true"></i>
+      </button>
+      <div class="qf-panel" data-panel="${def.key}" role="group" aria-label="Opções de ${def.label}">
+        ${def.searchable ? `<div class="qf-search"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input type="text" placeholder="Buscar ${def.label.toLowerCase()}..." aria-label="Buscar em ${def.label}"/></div>` : ''}
+        ${def.multiple ? `<div class="qf-panel-actions">
+          <button type="button" class="qf-action-link" data-action="select-all">Selecionar Todos</button>
+          <button type="button" class="qf-action-link" data-action="clear-selection">Limpar Seleção</button>
+        </div>` : ''}
+        <div class="qf-options" id="qfOptions-${def.key}"></div>
+      </div>
+    </div>
+  `).join('') + `</div>
+    <button type="button" class="qf-clear-btn" id="qfClearBtn" aria-label="Limpar todos os filtros">
+      <i class="fa-solid fa-arrow-rotate-left" aria-hidden="true"></i> Limpar Filtros
+    </button>
+    <span class="qf-loader" id="qfLoader" aria-hidden="true"></span>
+  `;
+
+  FILTER_DEFS.forEach(def => {
+    renderFilterOptions(def);
+    const field = bar.querySelector(`[data-field="${def.key}"]`);
+    const trigger = field.querySelector('.qf-trigger');
+    const openPanel = () => { closeAllPanels(); field.classList.add('open'); trigger.setAttribute('aria-expanded', 'true'); };
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation(); // senão o listener de document fecharia o painel no mesmo clique
+      field.classList.contains('open') ? closeAllPanels() : openPanel();
+    });
+    // Esc fecha o painel e devolve o foco ao trigger — teclado não perde o lugar
+    field.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && field.classList.contains('open')) {
+        closeAllPanels();
+        trigger.focus();
+      }
+    });
+    const searchInput = field.querySelector('.qf-search input');
+    if (searchInput) {
+      searchInput.addEventListener('input', () => renderFilterOptions(def, searchInput.value));
+      searchInput.addEventListener('click', (e) => e.stopPropagation());
+    }
+    field.querySelector('.qf-panel').addEventListener('click', (e) => e.stopPropagation());
+
+    field.querySelectorAll('.qf-action-link').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const set = filterState[def.key];
+        if (btn.getAttribute('data-action') === 'select-all') {
+          set.clear();
+          (filterOptions[def.key] || []).forEach(o => set.add(o.value));
+        } else {
+          set.clear();
+        }
+        refreshFiltersAndChart();
+      });
+    });
+  });
+
+  document.addEventListener('click', closeAllPanels);
+
+  document.getElementById('qfClearBtn').addEventListener('click', () => {
+    FILTER_DEFS.forEach(resetFilterField);
+    refreshFiltersAndChart();
+  });
+}
+
+// closeAllPanels também repõe aria-expanded="false" nos triggers que
+// estavam abertos (senão um leitor de tela reportaria o menu como aberto
+// mesmo depois de fechado por Esc/clique fora)
+function closeAllPanels() {
+  document.querySelectorAll('.qf-field.open').forEach(f => {
+    f.classList.remove('open');
+    f.querySelector('.qf-trigger')?.setAttribute('aria-expanded', 'false');
+  });
+}
+
+// ── Filtro padrão ao abrir a página: trimestre atual + semestre atual +
+//    ano atual (Horizonte), restritos a Budget e Act/Fcst (Visão), e o
+//    site Copper Business — pedido explícito do usuário. Roda uma única
+//    vez, sobre `allRows` já carregado, antes do primeiro
+//    refreshFiltersAndChart(); depois disso o usuário controla os
+//    filtros normalmente (Limpar Filtros continua limpando tudo).
+//    "Atual" usa a data real do navegador — não há como o front-end
+//    replicar @DT_REF (vem de IBP.CONTROLE_PROCESSOS, só existe no banco).
+//    Se o dataset não tiver linhas do período/site esperado (fixture local
+//    fora da janela, ambiente sem aquele site, etc.), a seleção correspondente
+//    fica vazia e o filtro simplesmente não restringe nada — sem erro.
+// Período "atual" de UMA granularidade (QUARTER/SEMESTER/YEAR), derivado
+// do próprio corte Actual/Forecast que a QUARTELY.sql já calculou a
+// partir de @DT_REF (sufixo 'A' = fechado, 'F' = em aberto) — NUNCA do
+// relógio do navegador. O primeiro período em aberto ('F') É o atual;
+// sem nenhum 'F' presente (nada aberto ainda para essa granularidade),
+// cai no último 'A' (o mais recente já fechado). Isso evita que o
+// default fique "à frente" dos dados reais quando um KPI específico
+// ainda não tem carga para o trimestre corrente do calendário — cada
+// KPI pode fechar em datas diferentes, então isso é varrido sobre TODAS
+// as linhas da granularidade, não só as de um Product/Site já filtrado.
+function detectCurrentPeriod(rows, cdVisao) {
+  const candidates = [];
+  rows.forEach(r => {
+    if (r.CD_VISAO !== cdVisao) return;
+    const lastChar = splitTypeLabel(r.Type.trim()).core.slice(-1).toUpperCase();
+    if (lastChar !== 'A' && lastChar !== 'F') return;
+    candidates.push({ ORDEM_ANO: r.ORDEM_ANO, ORDEM_PERIODO: r.ORDEM_PERIODO, open: lastChar === 'F' });
+  });
+  const open = candidates.filter(c => c.open);
+  const pool = open.length ? open : candidates.filter(c => !c.open);
+  if (!pool.length) return null;
+  const cmp = open.length
+    ? (a, b) => (a.ORDEM_ANO - b.ORDEM_ANO) || (a.ORDEM_PERIODO - b.ORDEM_PERIODO) // 1º em aberto
+    : (a, b) => (b.ORDEM_ANO - a.ORDEM_ANO) || (b.ORDEM_PERIODO - a.ORDEM_PERIODO); // último fechado
+  return [...pool].sort(cmp)[0];
+}
+
+function applyDefaultFilters(rows) {
+  const defaultSeries = new Set(['Budget', 'Act/Fcst']);
+  const quarter = detectCurrentPeriod(rows, 'QUARTER');
+  const semester = detectCurrentPeriod(rows, 'SEMESTER');
+  const year = detectCurrentPeriod(rows, 'YEAR');
+
+  const horizonTypes = new Set();
+  rows.forEach(r => {
+    if (!defaultSeries.has(r.NM_TYPE)) return;
+    if (quarter && r.CD_VISAO === 'QUARTER' && r.ORDEM_ANO === quarter.ORDEM_ANO && r.ORDEM_PERIODO === quarter.ORDEM_PERIODO) horizonTypes.add(r.Type);
+    else if (semester && r.CD_VISAO === 'SEMESTER' && r.ORDEM_ANO === semester.ORDEM_ANO && r.ORDEM_PERIODO === semester.ORDEM_PERIODO) horizonTypes.add(r.Type);
+    else if (year && r.CD_VISAO === 'YEAR' && r.ORDEM_ANO === year.ORDEM_ANO) horizonTypes.add(r.Type);
+  });
+  if (horizonTypes.size) {
+    filterState.visoes = new Set(defaultSeries);
+    filterState.horizontes = horizonTypes;
+  }
+
+  const defaultSite = rows.find(r => r.NM_SITE && r.NM_SITE.toLowerCase().includes('copper business'));
+  if (defaultSite) filterState.sites = new Set([String(defaultSite.ID_SITE)]);
+}
+
+async function initQuartelyPage() {
+  setFiltersInitialLoading(true);
+  loadColorPreferences();    // carrega cores salvas do localStorage
+  applyChartBackgroundColor(); // aplica cor de fundo ao wrapper
+  allRows = await loadQuartelyData();
+  applyDefaultFilters(allRows);
+  buildFiltersBar();     // cria o DOM primeiro — refreshFiltersAndChart já popula tudo
+  refreshFiltersAndChart();
+  setFiltersInitialLoading(false);
+}
+
+// Estado de carga inicial (dataset ainda não chegou) — distinto de
+// setFiltersBusy (recálculo local após um clique, quase instantâneo): aqui
+// a barra de filtros nem existe ainda no DOM.
+function setFiltersInitialLoading(loading) {
+  document.getElementById('filtersBar').classList.toggle('is-loading', loading);
+}
+
+initQuartelyPage();
+window.addEventListener('resize', () => renderTurnoverChart(getFilteredChartRows()));
+
+// ── Memória do tamanho do gráfico (mesmo padrão de 'vdt-theme'/'vdt-lang') ──
+// O redimensionamento em si é 100% CSS (resize:both + unidades %), então
+// nenhum recálculo em JS é necessário; aqui só persistimos a preferência de
+// tamanho do usuário entre sessões, como já é feito para tema e idioma.
+(() => {
+  const chartWrapper = document.getElementById('chartWrapper');
+  const STORAGE_KEY = 'vdt-chart-size';
+
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+    if (saved && saved.w && saved.h) {
+      chartWrapper.style.width = saved.w + 'px';
+      chartWrapper.style.height = saved.h + 'px';
+    }
+  } catch (e) { /* localStorage indisponível ou dado inválido — usa o padrão */ }
+
+  // offsetWidth/offsetHeight (border-box) — não contentRect do ResizeObserver
+  // (content-box) — para bater exatamente com o que style.width/height
+  // controlam, já que .main-wrapper usa box-sizing:border-box.
+  let saveTimer;
+  const observer = new ResizeObserver(() => {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ w: chartWrapper.offsetWidth, h: chartWrapper.offsetHeight }));
+      } catch (e) { /* localStorage indisponível — sessão segue sem persistir */ }
+    }, 300);
+  });
+  observer.observe(chartWrapper);
+})();
+</script>
+
+</body>
+</html>
