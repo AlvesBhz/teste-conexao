@@ -686,10 +686,33 @@ body:not([data-bg]) .qf-panel { background: rgba(20,32,48,.96); }
   width: 24px; height: 24px; border-radius: 50%;
   border: 2px solid transparent; cursor: pointer;
   transition: transform .15s, border-color .15s;
+  position: relative;
 }
 .palette-color:hover { transform: scale(1.1); }
 .palette-color.active { border-color: #333; }
 [data-bg="dark"] .palette-color.active { border-color: #fff; }
+
+.palette-color:hover::after {
+  content: attr(data-color);
+  position: absolute; bottom: -28px; left: 50%; transform: translateX(-50%);
+  background: rgba(0,0,0,.9); color: #fff; padding: 6px 10px;
+  border-radius: 4px; font-size: .75rem; font-weight: 600;
+  white-space: nowrap; z-index: 10000;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.5px;
+}
+[data-bg="dark"] .palette-color:hover::after {
+  background: rgba(255,255,255,.95); color: #000;
+}
+
+.palette-color:hover::before {
+  content: ''; position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%);
+  width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent;
+  border-top: 4px solid rgba(0,0,0,.9); z-index: 10000;
+}
+[data-bg="dark"] .palette-color:hover::before {
+  border-top-color: rgba(255,255,255,.95);
+}
 
 .color-input { display: none; }
 
