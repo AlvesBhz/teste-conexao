@@ -1098,7 +1098,7 @@ function renderTurnoverChart(sourceRows) {
     // Trimestral começa com "Q", o restante (Semestral, "H1B") cai no piso.
     const isYear = /^\d/.test(core);
     const isQuarter = core.toUpperCase().startsWith('Q');
-    const barOpacity = isYear ? 1 : isQuarter ? 0.8 : 0.6;
+    const barOpacity = isYear ? 1 : isQuarter ? 0.95 : 0.9;
 
     // ── Base de comparação: Budget do mesmo período > coluna anterior ──
     // O Budget correspondente precisa ser do MESMO ano (mesmo yearSuffix),
