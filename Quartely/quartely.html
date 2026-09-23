@@ -613,9 +613,9 @@ html:not([data-bg="dark"]) body:not([data-bg="dark"]) :is(.qf-trigger, .qf-optio
    Só o número, a haste e a faixa carregam a cor do estado (--tint).
    ──────────────────────────────────────────────────────────────────── */
 /* Cores de feedback (VBM): Success, Error, Neutral */
-.is-up   { --ink: #1BA13A; --tint: 27,161,58; }   /* Success Green */
-.is-down { --ink: #DC2626; --tint: 220,38,38; }   /* Error Red */
-.is-flat { --ink: #888888; --tint: 136,136,136; } /* Mid Gray */
+.is-up   { --ink: #1BA13A; --tint: 27,161,58; --ink-text: #15803D; }   /* Success Green (texto AA) */
+.is-down { --ink: #DC2626; --tint: 220,38,38; --ink-text: #B91C1C; }   /* Error Red (texto AA) */
+.is-flat { --ink: #888888; --tint: 136,136,136; --ink-text: #4B5563; } /* Mid Gray (texto AA) */
 .dcnx.no-tint { --tint: 100,116,139; }
 
 .dcnx {
@@ -668,7 +668,7 @@ html:not([data-bg="dark"]) body:not([data-bg="dark"]) :is(.qf-trigger, .qf-optio
   background: var(--glass);
   -webkit-backdrop-filter: blur(12px) saturate(150%);
   backdrop-filter: blur(12px) saturate(150%);
-  color: var(--ink);
+  color: var(--ink-text, var(--ink));
   font-family: 'Vale Sans', 'Segoe UI', sans-serif;
   font-size: clamp(.76rem, 2.2vh, .82rem); font-weight: 400; line-height: 1.15;
   white-space: nowrap; font-variant-numeric: tabular-nums; letter-spacing: .01em;
@@ -816,7 +816,7 @@ html:not([data-bg="dark"]) body:not([data-bg="dark"]) :is(.qf-trigger, .qf-optio
         <p class="chart-title" id="chartTitle"></p>
         <p class="chart-subtitle" id="chartSubtitle">(%)</p>
       </div>
-      <div class="chart-area" id="chartArea"></div>
+      <div class="chart-area" id="chartArea" role="group" aria-label="Colunas do gráfico"></div>
       <div class="chart-pager" id="chartPager" hidden></div>
       <div class="chart-resize-handle" id="chartResizeHandle" title="Redimensionar" aria-hidden="true"></div>
     </div>
@@ -1124,26 +1124,23 @@ function renderTurnoverChart(sourceRows) {
   const fit = Math.floor((chartAreaEl.clientWidth + gapPx) / (56 + gapPx));
   const perPage = Math.min(MAX_COLUMNS, Math.max(2, fit));
 
-  // Par Budget × Plan: mesmo período, ano e tipo de horizonte, identificados
-  // pelo rótulo retornado (nunca pela posição). Só vale se as duas colunas
-  // forem vizinhas, os valores forem numéricos e o Budget ≠ 0.
+  // Delta entre colunas vizinhas do MESMO grupo (período + ano + granularidade,
+  // lidos do rótulo): Budget→Plan→Actual/Forecast. Nunca cruza trimestre,
+  // semestre e ano; exige valores numéricos e base ≠ 0.
+  const groupKey = t => { const { core, yearSuffix } = splitTypeLabel(t.trim()); return core.slice(0, -1).toUpperCase() + '|' + yearSuffix; };
   const pairIndex = {};
   data.forEach((d, i) => {
-    const { core, yearSuffix } = splitTypeLabel(d.type.trim());
-    if (core.slice(-1).toUpperCase() !== 'P' || !Number.isFinite(d.value)) return;
-    const budgetCore = (core.slice(0, -1) + 'B').toUpperCase();
-    const b = data.findIndex(x => {
-      const sx = splitTypeLabel(x.type.trim());
-      return sx.core.toUpperCase() === budgetCore && sx.yearSuffix === yearSuffix && isValidComparison(core, sx.core);
-    });
-    if (b === i - 1 && Number.isFinite(data[b].value) && data[b].value !== 0) pairIndex[i] = b;
+    const prev = data[i - 1];
+    if (!prev || groupKey(prev.type) !== groupKey(d.type)) return;
+    if (!isValidComparison(splitTypeLabel(prev.type.trim()).core, splitTypeLabel(d.type.trim()).core)) return;
+    if (Number.isFinite(d.value) && Number.isFinite(prev.value) && prev.value !== 0) pairIndex[i] = i - 1;
   });
 
-  // Páginas de até perPage colunas, sem separar um par Budget|Plan
+  // Páginas de até perPage colunas, sem separar colunas de um mesmo grupo comparado
   const pages = [];
   for (let start = 0; start < data.length;) {
     let end = Math.min(start + perPage, data.length);
-    if (end < data.length && end - start > 1 && pairIndex[end] === end - 1) end--;
+    while (end < data.length && end - start > 1 && pairIndex[end] === end - 1) end--;
     pages.push([start, end]);
     start = end;
   }
@@ -1174,7 +1171,7 @@ function renderTurnoverChart(sourceRows) {
     const isQuarter = core.toUpperCase().startsWith('Q');
     const barOpacity = isYear ? 1 : isQuarter ? 0.95 : 0.9;
 
-    // ── Delta somente Plan × Budget do mesmo par (ver pairIndex) ──
+    // ── Delta vs. coluna anterior do mesmo grupo (ver pairIndex) ──
     const baseIndex = pairIndex[i];
     const baseValue = baseIndex !== undefined ? data[baseIndex].value : undefined;
     const deltaAbs = baseValue !== undefined ? value - baseValue : undefined;
@@ -1221,7 +1218,8 @@ function renderTurnoverChart(sourceRows) {
       </div>`;
     }
 
-    return `<div class="col-wrapper" data-type="${escapeHtml(type)}" style="--h:${cH}; --pill-bg:${pillColor};">
+    const a11y = `${type}: ${formattedValue}` + (hasDelta ? `; variação de ${deltaText} em relação a ${data[baseIndex].type.trim()}` : '');
+    return `<div class="col-wrapper" data-type="${escapeHtml(type)}" role="img" aria-label="${escapeHtml(a11y)}" style="--h:${cH}; --pill-bg:${pillColor};">
       ${htmlCota}
       <span class="value-label">${formattedValue}</span>
       <div class="bar" style="--c:${barColor}; opacity:${barOpacity};"></div>
