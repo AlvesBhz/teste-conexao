@@ -419,6 +419,62 @@ body:not([data-bg]) .qf-panel { background: rgba(20,32,48,.96); }
 .filters-bar.is-loading .qf-fields-center { opacity: .55; pointer-events: none; }
 .qf-trigger:disabled { cursor: not-allowed; }
 
+/* ── Modo claro: mesmo padrão dos cards da Biblioteca (fundo branco,
+   borda suave, sombra discreta). O tema escuro mantém o vidro acima. ── */
+html:not([data-bg="dark"]) body:not([data-bg="dark"]) {
+  --qf-surface: #FFFFFF; --qf-surface-alt: #F9FAFB; --qf-hover: #F3F4F6;
+  --qf-line: #E5E7EB; --qf-line-strong: #D1D5DB; --qf-text: #374151; --qf-text-strong: #111827;
+  --qf-muted: #56657A; --qf-accent-ink: #0B6E99;
+}
+html:not([data-bg="dark"]) body:not([data-bg="dark"]) .filters-bar {
+  background: var(--qf-surface); border-color: var(--qf-line);
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  box-shadow: 0 4px 16px rgba(15,23,42,.06);
+}
+html:not([data-bg="dark"]) body:not([data-bg="dark"]) .qf-trigger,
+html:not([data-bg="dark"]) body:not([data-bg="dark"]) .qf-clear-btn {
+  background: var(--qf-surface); border-color: var(--qf-line-strong); color: var(--qf-text);
+}
+html:not([data-bg="dark"]) body:not([data-bg="dark"]) .qf-trigger:hover,
+html:not([data-bg="dark"]) body:not([data-bg="dark"]) .qf-clear-btn:hover {
+  background: var(--qf-surface-alt); border-color: var(--qf-muted); color: var(--qf-text-strong);
+}
+html:not([data-bg="dark"]) body:not([data-bg="dark"]) .qf-field.open .qf-trigger {
+  background: var(--qf-surface); border-color: var(--vbm-blue); box-shadow: 0 0 0 3px rgba(60,181,229,.18);
+}
+html:not([data-bg="dark"]) body:not([data-bg="dark"]) .qf-trigger i.qf-icon,
+html:not([data-bg="dark"]) body:not([data-bg="dark"]) .qf-chevron { color: var(--qf-muted); }
+html:not([data-bg="dark"]) body:not([data-bg="dark"]) .qf-field.open .qf-chevron { color: var(--qf-accent-ink); }
+html:not([data-bg="dark"]) body:not([data-bg="dark"]) .qf-badge {
+  background: rgba(60,181,229,.12); border-color: rgba(60,181,229,.45); color: var(--qf-accent-ink);
+}
+html:not([data-bg="dark"]) body:not([data-bg="dark"]) .qf-badge-more {
+  background: var(--qf-hover); border-color: var(--qf-line-strong); color: var(--qf-text);
+}
+html:not([data-bg="dark"]) body:not([data-bg="dark"]) .qf-panel {
+  background: var(--qf-surface); border-color: var(--qf-line);
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  box-shadow: 0 12px 32px rgba(15,23,42,.12);
+}
+html:not([data-bg="dark"]) body:not([data-bg="dark"]) .qf-search { background: var(--qf-surface-alt); border-color: var(--qf-line); }
+html:not([data-bg="dark"]) body:not([data-bg="dark"]) .qf-search i { color: var(--qf-muted); }
+html:not([data-bg="dark"]) body:not([data-bg="dark"]) .qf-search input { color: var(--qf-text-strong); }
+html:not([data-bg="dark"]) body:not([data-bg="dark"]) .qf-search input::placeholder { color: var(--qf-muted); }
+html:not([data-bg="dark"]) body:not([data-bg="dark"]) .qf-panel-actions { border-bottom-color: var(--qf-line); }
+html:not([data-bg="dark"]) body:not([data-bg="dark"]) .qf-action-link { color: var(--qf-accent-ink); }
+html:not([data-bg="dark"]) body:not([data-bg="dark"]) .qf-action-link:hover { color: var(--qf-text-strong); }
+html:not([data-bg="dark"]) body:not([data-bg="dark"]) .qf-options::-webkit-scrollbar-thumb { background: var(--qf-line-strong); }
+html:not([data-bg="dark"]) body:not([data-bg="dark"]) .qf-option { color: var(--qf-text); }
+html:not([data-bg="dark"]) body:not([data-bg="dark"]) .qf-option:hover { background: var(--qf-hover); }
+html:not([data-bg="dark"]) body:not([data-bg="dark"]) .qf-option.is-checked { color: var(--qf-text-strong); font-weight: 500; }
+html:not([data-bg="dark"]) body:not([data-bg="dark"]) .qf-option-empty { color: var(--qf-muted); }
+html:not([data-bg="dark"]) body:not([data-bg="dark"]) .qf-check { border-color: var(--qf-muted); }
+html:not([data-bg="dark"]) body:not([data-bg="dark"]) .qf-option.is-checked .qf-check { background: var(--vbm-blue); border-color: var(--vbm-blue); }
+html:not([data-bg="dark"]) body:not([data-bg="dark"]) .qf-loader { border-color: var(--qf-line-strong); border-top-color: var(--vbm-blue); }
+html:not([data-bg="dark"]) body:not([data-bg="dark"]) :is(.qf-trigger, .qf-option, .qf-action-link, .qf-clear-btn, .qf-search input):focus-visible {
+  outline-color: var(--qf-accent-ink);
+}
+
 /* Telas menores: a grade de 3 colunas vira 1, cada item quebra em sua
    própria linha organizada — grupo de filtros primeiro, botão por último
    (mesma ordem visual do desktop, só empilhada). */
@@ -472,19 +528,23 @@ body:not([data-bg]) .qf-panel { background: rgba(20,32,48,.96); }
 /* Container do gráfico com fundo */
 .chart-container {
   display: flex; flex-direction: column;
-  width: 100%; height: min(76vh, 720px); min-height: 360px;
+  width: 100%; height: min(76vh, 720px); min-height: 260px;
   padding: 20px 20px 14px;
   background: var(--chart-bg); border-radius: 14px; border: 1px solid #E2E8F0;
   box-shadow: 0 12px 40px rgba(10,20,35,.12), 0 2px 8px rgba(10,20,35,.06);
   position: relative;
 }
+/* Card baixo: reduz a folga reservada acima das barras para caber o gráfico */
+.chart-container.is-compact { --folga: 26px; padding-top: 14px; }
+.chart-container.is-compact .chart-area { margin-top: calc(var(--folga) + 32px); margin-bottom: 20px; }
+.chart-container.is-compact .chart-title { font-size: 1.15rem; }
 .chart-header { cursor: move; touch-action: none; user-select: none; }
 .chart-resize-handle {
-  position: absolute; right: 2px; bottom: 2px; width: 16px; height: 16px;
-  cursor: nwse-resize; touch-action: none; opacity: .55;
-  background: linear-gradient(135deg, transparent 50%, #94A3B8 50%, #94A3B8 60%, transparent 60%, transparent 70%, #94A3B8 70%, #94A3B8 80%, transparent 80%);
+  position: absolute; right: 0; bottom: 0; width: 24px; height: 24px;
+  cursor: nwse-resize; touch-action: none; opacity: 0; transition: opacity .25s ease;
+  background: linear-gradient(135deg, transparent 50%, #94A3B8 50%, #94A3B8 58%, transparent 58%, transparent 68%, #94A3B8 68%, #94A3B8 76%, transparent 76%) no-repeat right 4px bottom 4px / 12px 12px;
 }
-.chart-resize-handle:hover { opacity: 1; }
+.chart-resize-handle:hover, .main-wrapper.is-resizing .chart-resize-handle { opacity: .4; }
 .main-wrapper.is-dragging, .main-wrapper.is-resizing { user-select: none; }
 
 /* área do gráfico — gap em px garante que a distância centro-a-centro
@@ -745,7 +805,7 @@ body:not([data-bg]) .qf-panel { background: rgba(20,32,48,.96); }
     </div>
     <div class="chart-container">
       <div class="chart-header">
-        <p class="chart-title" id="chartTitle" data-i18n="chart.title">Turnover</p>
+        <p class="chart-title" id="chartTitle"></p>
         <p class="chart-subtitle" id="chartSubtitle">(%)</p>
       </div>
       <div class="chart-area" id="chartArea"></div>
@@ -788,8 +848,8 @@ document.querySelectorAll('.topnav-link').forEach(link => {
 
 // ─── i18n ───
 const i18n = {
-  'pt-BR': { 'nav.quartely': 'Quartely', 'nav.monthly': 'Monthly', 'chart.title': 'Turnover', 'chart.empty': 'Nenhum dado para os filtros selecionados.' },
-  'en':    { 'nav.quartely': 'Quarterly', 'nav.monthly': 'Monthly', 'chart.title': 'Turnover', 'chart.empty': 'No data for the selected filters.' }
+  'pt-BR': { 'nav.quartely': 'Quartely', 'nav.monthly': 'Monthly', 'chart.empty': 'Nenhum dado para os filtros selecionados.' },
+  'en':    { 'nav.quartely': 'Quarterly', 'nav.monthly': 'Monthly', 'chart.empty': 'No data for the selected filters.' }
 };
 function applyI18n(lang) {
   document.documentElement.lang = lang;
@@ -1045,6 +1105,7 @@ function renderTurnoverChart(sourceRows) {
     return;
   }
 
+  chartAreaEl.closest('.chart-container').classList.toggle('is-compact', chartAreaEl.closest('.chart-container').clientHeight < 340);
   const data = sourceRows.map(d => ({ type: d.type, value: Number(d.value.toFixed(CFG.casasDecimais)) }));
   const maxValue = Math.max(...data.map(d => d.value), 0);
 
@@ -1224,7 +1285,7 @@ const FILTER_DEFS = [
   { key: 'sites',      label: 'Site',       icon: 'fa-location-dot',  multiple: true,  allLabel: 'Todos os sites',      searchable: true  },
   { key: 'visoes',     label: 'Visão',      icon: 'fa-eye',           multiple: true,  allLabel: 'Todas as visões',     searchable: false },
   { key: 'horizontes', label: 'Horizonte',  icon: 'fa-timeline',      multiple: true,  allLabel: 'Todos os horizontes', searchable: true  },
-  { key: 'product',    label: 'Product',    icon: 'fa-tags',          multiple: false, allLabel: 'Todos os Products',   searchable: true  }
+  { key: 'product',    label: 'Product',    icon: 'fa-tags',          multiple: false, allLabel: 'Selecione um Product', searchable: true, required: true }
 ];
 
 // filterState: Set vazio (multi) ou null (single) == "Todos" (sem restrição)
@@ -1570,16 +1631,10 @@ function getFilteredChartRows() {
     .map(({ type, value }) => ({ type, value }));
 }
 
-// Título = NM_KPI do Product selecionado (seleção única). Sem seleção, usa
-// o NM_KPI se só existir um no subconjunto já filtrado pelos demais campos
-// (caso real de produção, onde a query já é escopada a um único dashboard/
-// KPI); com mais de um (fixture local de teste), mantém o rótulo genérico
-// do card — "comportamento padrão já existente", como pedido.
+// Título = NM_KPI do Product selecionado (seleção única obrigatória)
 function updateChartTitle() {
   const titleEl = document.getElementById('chartTitle');
-  if (filterState.product) { titleEl.textContent = filterState.product; return; }
-  const distinct = filterOptions.product || [];
-  titleEl.textContent = distinct.length === 1 ? distinct[0].label : 'Turnover';
+  titleEl.textContent = filterState.product || '';
 }
 
 // Unidade = SG_UNID do MESMO conjunto de linhas filtrado (Ano+Site+Visão+
@@ -1683,7 +1738,7 @@ function renderFilterOptions(def, searchTerm) {
   // Seleção única (Product): mantém a linha-rádio "Todos os Products".
   // Multiseleção (Ano/Site/Visão/Horizonte): sem linha "Todos" na lista —
   // a ação equivalente vira o link "Limpar Seleção" no topo do painel.
-  if (!def.multiple) {
+  if (!def.multiple && !def.required) {
     html += optionRowHtml(def, '__all__', def.allLabel, filterState[def.key] === null);
   }
 
@@ -1791,6 +1846,7 @@ function buildFiltersBar() {
   document.getElementById('qfClearBtn').addEventListener('click', (e) => {
     e.stopPropagation();
     FILTER_DEFS.forEach(d => { filterState[d.key] = d.multiple ? new Set() : null; });
+    filterState.product = getDefaultProduct();
     bar.querySelectorAll('.qf-search input').forEach(i => { i.value = ''; });
     closeAllPanels();
     refreshFiltersAndChart();
@@ -1845,6 +1901,13 @@ function detectCurrentPeriod(rows, cdVisao) {
   return [...pool].sort(cmp)[0];
 }
 
+// Product é seleção única obrigatória: padrão = 1º NM_KPI em ordem alfabética
+// entre os disponíveis para os demais filtros ativos (evita gráfico vazio)
+function getDefaultProduct() {
+  const available = extractOptions('product', allRows.filter(r => rowMatchesFilters(r, 'product')));
+  return (available[0] || extractOptions('product', allRows)[0])?.value ?? null;
+}
+
 function applyDefaultFilters(rows) {
   const defaultSeries = new Set(['Budget', 'Act/Fcst']);
   const quarter = detectCurrentPeriod(rows, 'QUARTER');
@@ -1873,6 +1936,7 @@ async function initQuartelyPage() {
   applyChartBackgroundColor(); // aplica cor de fundo ao wrapper
   allRows = await loadQuartelyData();
   applyDefaultFilters(allRows);
+  filterState.product = getDefaultProduct();
   buildFiltersBar();     // cria o DOM primeiro — refreshFiltersAndChart já popula tudo
   wireChartColorClicks();
   refreshFiltersAndChart();
@@ -1896,7 +1960,7 @@ window.addEventListener('resize', () => renderTurnoverChart(getFilteredChartRows
   const card = wrapper.querySelector('.chart-container');
   const header = card.querySelector('.chart-header');
   const handle = document.getElementById('chartResizeHandle');
-  const SIZE_KEY = 'vdt-chart-size', POS_KEY = 'vdt-chart-pos', M = 8, MIN_H = 320;
+  const SIZE_KEY = 'vdt-chart-size', POS_KEY = 'vdt-chart-pos', M = 8, MIN_H = 260;
   let pos = { x: 0, y: 0 };
 
   const read = k => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } };
