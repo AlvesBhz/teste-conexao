@@ -266,7 +266,6 @@ body[data-bg="dark"] {
 }
 
 .qf-fields-center { grid-column: 2; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: .6rem; }
-.qf-clear-btn { grid-column: 3; justify-self: end; }
 .qf-chart-actions { grid-column: 1; justify-self: start; display: flex; gap: .4rem; }
 .qf-chart-btn { justify-content: center; min-width: 34px; padding: .38rem .6rem; font-size: 1rem; line-height: 1; }
 .qf-chart-btn:disabled { opacity: .45; cursor: not-allowed; }
@@ -484,7 +483,7 @@ html:not([data-bg="dark"]) body:not([data-bg="dark"]) :is(.qf-trigger, .qf-optio
 @media (max-width: 960px) {
   .filters-bar { grid-template-columns: 1fr; padding: .75rem 1rem; }
   .qf-fields-center { grid-column: 1; justify-content: flex-start; }
-  .qf-clear-btn { grid-column: 1; justify-self: stretch; justify-content: center; }
+  .qf-fields-center .qf-clear-btn { flex: 1 1 auto; min-width: 130px; justify-content: center; }
   .qf-field { flex: 1 1 auto; min-width: 130px; }
   .qf-trigger { min-width: 0; width: 100%; }
 }
@@ -1804,10 +1803,11 @@ function buildFiltersBar() {
         <div class="qf-options" id="qfOptions-${def.key}"></div>
       </div>
     </div>
-  `).join('') + `</div>
-    <button type="button" class="qf-clear-btn" id="qfClearBtn" aria-label="Limpar todos os filtros">
-      <i class="fa-solid fa-arrow-rotate-left" aria-hidden="true"></i> Limpar Filtros
-    </button>
+  `).join('') + `
+      <button type="button" class="qf-clear-btn" id="qfClearBtn" aria-label="Limpar todos os filtros">
+        <i class="fa-solid fa-arrow-rotate-left" aria-hidden="true"></i> Limpar Filtros
+      </button>
+    </div>
     <span class="qf-loader" id="qfLoader" aria-hidden="true"></span>
   `;
 
