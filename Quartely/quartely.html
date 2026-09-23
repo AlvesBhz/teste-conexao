@@ -267,6 +267,9 @@ body[data-bg="dark"] {
 
 .qf-fields-center { grid-column: 2; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: .6rem; }
 .qf-clear-btn { grid-column: 3; justify-self: end; }
+.qf-chart-actions { grid-column: 1; justify-self: start; display: flex; gap: .4rem; }
+.qf-chart-btn { justify-content: center; min-width: 34px; padding: .38rem .6rem; font-size: 1rem; line-height: 1; }
+.qf-chart-btn:disabled { opacity: .45; cursor: not-allowed; }
 
 .qf-field { position: relative; flex: 0 0 auto; }
 
@@ -546,6 +549,12 @@ html:not([data-bg="dark"]) body:not([data-bg="dark"]) :is(.qf-trigger, .qf-optio
 }
 .chart-resize-handle:hover, .main-wrapper.is-resizing .chart-resize-handle { opacity: .4; }
 .main-wrapper.is-dragging, .main-wrapper.is-resizing { user-select: none; }
+/* Vários gráficos: cards posicionados livremente; seleção indicada por um contorno discreto */
+.page-content.charts-board { display: block; position: relative; }
+.charts-board > .main-wrapper { position: absolute; min-width: 0; max-width: none; }
+.charts-board.is-multi > .main-wrapper.is-selected .chart-container {
+  box-shadow: 0 0 0 2px rgba(60,181,229,.55), 0 12px 40px rgba(10,20,35,.12), 0 2px 8px rgba(10,20,35,.06);
+}
 
 /* área do gráfico — gap em px garante que a distância centro-a-centro
    entre colunas vizinhas seja (100% + gap), o que permite ancorar a
@@ -938,9 +947,7 @@ function loadColorPreferences() {
 
 // Persiste cores no localStorage
 function saveColorPreferences() {
-  try {
-    localStorage.setItem('vdt-chart-colors', JSON.stringify(COLORS));
-  } catch (e) { /* localStorage indisponível — sessão segue sem persistir */ }
+  saveCharts();
 }
 
 // Atualiza variável CSS do fundo do gráfico
@@ -950,7 +957,7 @@ function applyChartBackgroundColor() {
     wrapper.style.setProperty('--chart-bg', COLORS.bgChart);
   }
   // Fundo escuro → textos claros, para manter título/eixos/rótulos legíveis
-  const container = document.querySelector('.chart-container');
+  const container = wrapper && wrapper.querySelector('.chart-container');
   const hex = COLORS.bgChart.replace('#', '');
   const [r, g, b] = [0, 2, 4].map(i => parseInt(hex.substr(i, 2), 16) / 255);
   if (container) container.classList.toggle('is-dark-bg', 0.2126 * r + 0.7152 * g + 0.0722 * b < 0.5);
@@ -995,9 +1002,9 @@ function openChartPalette(target, x, y) {
 }
 
 function wireChartColorClicks() {
-  const container = document.querySelector('.chart-container');
   const pal = document.getElementById('chartPalette');
-  container.addEventListener('click', (e) => {
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.chart-container')) return;
     if (e.target.closest('.chart-pager, .chart-header, .chart-resize-handle')) return;
     const bar = e.target.closest('.bar, .value-label');
     const target = bar ? bar.closest('.col-wrapper').dataset.type : 'bgChart';
@@ -1013,7 +1020,8 @@ function wireChartColorClicks() {
       e.target.click();
     }
   });
-  document.getElementById('colorResetIcon').addEventListener('click', () => {
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.color-reset-icon')) return;
     closeChartPalette();
     resetColorsToDefault();
   });
@@ -1032,12 +1040,13 @@ function wireChartColorClicks() {
     if (!e.target.closest('#chartPalette, .chart-container')) closeChartPalette();
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeChartPalette(); });
-  document.getElementById('chartPager').addEventListener('click', (e) => {
-    const btn = e.target.closest('button[data-dir]');
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.chart-pager button[data-dir]');
     if (!btn || btn.disabled) return;
     chartPage += Number(btn.dataset.dir);
     closeChartPalette();
     renderTurnoverChart(getFilteredChartRows());
+    saveCharts();
   });
 }
 
@@ -1656,25 +1665,30 @@ function updateChartUnit() {
 // gráfico — nessa ordem, uma vez só. Nenhum destes passos dispara sozinho
 // uma nova chamada a refreshFiltersAndChart (sem loop entre eventos).
 const renderedFilterSig = {};
+// Só re-renderiza o combobox cujas opções ou seleção mudaram
+function refreshFilterBar() {
+  recomputeFilterOptions();
+  FILTER_DEFS.forEach(def => {
+    const sel = def.multiple ? [...filterState[def.key]] : filterState[def.key];
+    const sig = JSON.stringify([filterOptions[def.key], sel]);
+    if (renderedFilterSig[def.key] === sig) return;
+    renderedFilterSig[def.key] = sig;
+    const searchVal = document.querySelector(`[data-panel="${def.key}"] .qf-search input`)?.value;
+    renderFilterOptions(def, searchVal);
+    renderTriggerLabel(def);
+  });
+}
+
 function refreshFiltersAndChart() {
   setFiltersBusy(true);
   try {
-    recomputeFilterOptions();
-    // Só re-renderiza o combobox cujas opções ou seleção mudaram
-    FILTER_DEFS.forEach(def => {
-      const sel = def.multiple ? [...filterState[def.key]] : filterState[def.key];
-      const sig = JSON.stringify([filterOptions[def.key], sel]);
-      if (renderedFilterSig[def.key] === sig) return;
-      renderedFilterSig[def.key] = sig;
-      const searchVal = document.querySelector(`[data-panel="${def.key}"] .qf-search input`)?.value;
-      renderFilterOptions(def, searchVal);
-      renderTriggerLabel(def);
-    });
+    refreshFilterBar();
     updateChartTitle();
     updateChartUnit();
     chartPage = 0;
     closeChartPalette();
     renderTurnoverChart(getFilteredChartRows());
+    saveCharts();
   } finally {
     setFiltersBusy(false);
   }
@@ -1771,7 +1785,10 @@ function setFiltersBusy(busy) {
 
 function buildFiltersBar() {
   const bar = document.getElementById('filtersBar');
-  bar.innerHTML = `<div class="qf-fields-center">` + FILTER_DEFS.map(def => `
+  bar.innerHTML = `<div class="qf-chart-actions">
+      <button type="button" class="qf-clear-btn qf-chart-btn" id="qfAddChart" title="Adicionar gráfico" aria-label="Adicionar gráfico">+</button>
+      <button type="button" class="qf-clear-btn qf-chart-btn" id="qfRemoveChart" title="Excluir gráfico selecionado" aria-label="Excluir gráfico selecionado">−</button>
+    </div><div class="qf-fields-center">` + FILTER_DEFS.map(def => `
     <div class="qf-field" data-field="${def.key}">
       <button type="button" class="qf-trigger" data-trigger="${def.key}" aria-label="Filtro de ${def.label}" aria-haspopup="true" aria-expanded="false">
         <i class="fa-solid ${def.icon} qf-icon" aria-hidden="true"></i>
@@ -1930,9 +1947,9 @@ async function initQuartelyPage() {
   allRows = await loadQuartelyData();
   applyDefaultFilters(allRows);
   filterState.product = getDefaultProduct();
-  buildFiltersBar();     // cria o DOM primeiro — refreshFiltersAndChart já popula tudo
+  buildFiltersBar();     // cria o DOM primeiro — initCharts já popula tudo
   wireChartColorClicks();
-  refreshFiltersAndChart();
+  initCharts();
   setFiltersInitialLoading(false);
 }
 
@@ -1944,96 +1961,260 @@ function setFiltersInitialLoading(loading) {
 }
 
 initQuartelyPage();
-window.addEventListener('resize', () => renderTurnoverChart(getFilteredChartRows()));
 
-// ── Mover (arrastando o cabeçalho) e redimensionar (alça inferior direita) ──
-// Tamanho e posição persistidos no mesmo padrão de 'vdt-theme'/'vdt-lang'.
-(() => {
-  const wrapper = document.getElementById('chartWrapper');
-  const card = wrapper.querySelector('.chart-container');
-  const header = card.querySelector('.chart-header');
-  const handle = document.getElementById('chartResizeHandle');
-  const SIZE_KEY = 'vdt-chart-size', POS_KEY = 'vdt-chart-pos', M = 8, MIN_H = 260;
-  let pos = { x: 0, y: 0 };
-
-  const read = k => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } };
-  const write = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* sem persistência */ } };
-  const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), Math.max(lo, hi));
-
-  function applySize(w, h) {
-    const maxW = innerWidth - 32;
-    wrapper.style.width = clamp(w, Math.min(420, maxW), maxW) + 'px';
-    card.style.height = clamp(h, MIN_H, Math.max(MIN_H, innerHeight * 0.9)) + 'px';
-  }
-  function applyPos() { wrapper.style.transform = `translate(${pos.x}px, ${pos.y}px)`; }
-  function clampPos(x, y) {
-    const r = wrapper.getBoundingClientRect();
-    const left = r.left - pos.x, top = r.top - pos.y;
-    return {
-      x: clamp(x, M - left, innerWidth - M - left - r.width),
-      y: clamp(y, M - top, innerHeight - M - top - r.height)
-    };
-  }
-  function drag(el, onMove, onEnd) {
-    el.addEventListener('pointerdown', (e) => {
-      if (e.button !== 0) return;
-      e.preventDefault();
-      closeChartPalette();
-      el.setPointerCapture(e.pointerId);
-      const start = onMove(null, e);
-      const move = ev => onMove(start, ev);
-      const up = () => {
-        el.removeEventListener('pointermove', move);
-        el.removeEventListener('pointerup', up);
-        el.removeEventListener('pointercancel', up);
-        onEnd();
-      };
-      el.addEventListener('pointermove', move);
-      el.addEventListener('pointerup', up);
-      el.addEventListener('pointercancel', up);
-    });
-  }
-
-  drag(header, (s, e) => {
-    if (!s) { wrapper.classList.add('is-dragging'); return { dx: e.clientX - pos.x, dy: e.clientY - pos.y }; }
-    pos = clampPos(e.clientX - s.dx, e.clientY - s.dy);
-    applyPos();
-  }, () => { wrapper.classList.remove('is-dragging'); write(POS_KEY, pos); });
-
-  // Card centralizado pelo layout: compensa metade do crescimento na posição
-  // para a borda esquerda/superior ficar fixa e a alça acompanhar o cursor.
-  drag(handle, (s, e) => {
-    if (!s) {
-      wrapper.classList.add('is-resizing');
-      return { x: e.clientX, y: e.clientY, w: wrapper.offsetWidth, h: card.offsetHeight, px: pos.x, py: pos.y };
-    }
-    applySize(s.w + e.clientX - s.x, s.h + e.clientY - s.y);
-    pos = { x: s.px + (wrapper.offsetWidth - s.w) / 2, y: s.py + (card.offsetHeight - s.h) / 2 };
-    applyPos();
-  }, () => {
-    wrapper.classList.remove('is-resizing');
-    pos = clampPos(pos.x, pos.y);
-    applyPos();
-    write(SIZE_KEY, { w: wrapper.offsetWidth, h: card.offsetHeight });
-    write(POS_KEY, pos);
-    renderTurnoverChart(getFilteredChartRows());
-  });
-
-  const savedSize = read(SIZE_KEY);
-  if (savedSize && savedSize.w && savedSize.h) applySize(savedSize.w, savedSize.h);
-  const savedPos = read(POS_KEY);
-  if (savedPos && isFinite(savedPos.x) && isFinite(savedPos.y)) {
-    pos = savedPos;
-    applyPos();
-    requestAnimationFrame(() => { pos = clampPos(pos.x, pos.y); applyPos(); });
-  }
-
-  window.addEventListener('resize', () => {
-    if (wrapper.style.width) applySize(wrapper.offsetWidth, card.offsetHeight);
-    pos = clampPos(pos.x, pos.y);
-    applyPos();
-  });
+// ════════════════════════════════════════════════════════════════════
+// MÚLTIPLOS GRÁFICOS — cada card guarda filtros, produto, cores, página,
+// posição e tamanho próprios. O card selecionado é o "ativo": só ele recebe
+// os ids (#chartArea, #chartTitle...) e o estado global (filterState, COLORS,
+// chartPage) que o restante do código já usa. Persistido no localStorage
+// ('vdt-charts'), no mesmo padrão de 'vdt-theme'/'vdt-lang'.
+// ════════════════════════════════════════════════════════════════════
+const CHARTS_KEY = 'vdt-charts';
+const CHART_IDS = {
+  '.chart-area': 'chartArea', '.chart-title': 'chartTitle', '.chart-subtitle': 'chartSubtitle',
+  '.chart-pager': 'chartPager', '.chart-resize-handle': 'chartResizeHandle', '.color-reset-icon': 'colorResetIcon'
+};
+const BOARD_M = 8, CHART_MIN_H = 260;
+const board = document.querySelector('.page-content');
+// A paleta é única e global: fica fora dos cards (senão clicar nela selecionaria o card que a contém)
+document.body.appendChild(document.getElementById('chartPalette'));
+const chartTemplate = (() => {
+  const t = document.getElementById('chartWrapper').cloneNode(true);
+  t.removeAttribute('id');
+  t.removeAttribute('style');
+  t.querySelectorAll('[id]').forEach(n => n.removeAttribute('id'));
+  return t;
 })();
+let charts = [];
+let activeChart = null;
+let defaultFilters = null;
+
+const serializeFilters = () => Object.fromEntries(FILTER_DEFS.map(d => [d.key, d.multiple ? [...filterState[d.key]] : filterState[d.key]]));
+function loadFilters(obj) {
+  FILTER_DEFS.forEach(d => {
+    const v = obj ? obj[d.key] : undefined;
+    filterState[d.key] = d.multiple ? new Set(Array.isArray(v) ? v : []) : (v ?? null);
+  });
+  if (!allRows.some(r => r.NM_KPI === filterState.product)) filterState.product = getDefaultProduct();
+}
+
+function stashActive() {
+  if (!activeChart) return;
+  activeChart.filters = serializeFilters();
+  activeChart.colors = { ...COLORS };
+  activeChart.page = chartPage;
+}
+
+function setChartIds(c, on) {
+  c.el.id = on ? 'chartWrapper' : '';
+  if (!on) c.el.removeAttribute('id');
+  Object.entries(CHART_IDS).forEach(([sel, id]) => {
+    const n = c.el.querySelector(sel);
+    if (on) n.id = id; else n.removeAttribute('id');
+  });
+}
+
+function activateChart(c) {
+  if (!c || activeChart === c) return;
+  closeChartPalette();
+  closeAllPanels();
+  stashActive();
+  if (activeChart) { setChartIds(activeChart, false); activeChart.el.classList.remove('is-selected'); }
+  activeChart = c;
+  setChartIds(c, true);
+  c.el.classList.add('is-selected');
+  loadFilters(c.filters);
+  Object.keys(COLORS).forEach(k => delete COLORS[k]);
+  Object.assign(COLORS, { bgChart: '#F6F6F6' }, c.colors);
+  chartPage = c.page || 0;
+  document.querySelectorAll('.qf-search input').forEach(i => { i.value = ''; });
+  Object.keys(renderedFilterSig).forEach(k => delete renderedFilterSig[k]);
+  refreshFilterBar();
+  updateChartActionButtons();
+}
+
+function renderActiveChart() {
+  updateChartTitle();
+  updateChartUnit();
+  applyChartBackgroundColor();
+  renderTurnoverChart(getFilteredChartRows());
+}
+
+function renderAllCharts() {
+  const current = activeChart;
+  charts.forEach(c => { activateChart(c); renderActiveChart(); });
+  activateChart(current);
+}
+
+function saveCharts() {
+  if (!charts.length) return;
+  stashActive();
+  try {
+    localStorage.setItem(CHARTS_KEY, JSON.stringify({
+      active: activeChart && activeChart.id,
+      charts: charts.map(c => ({ id: c.id, filters: c.filters, colors: c.colors, page: c.page, size: c.size, pos: c.pos }))
+    }));
+  } catch (e) { /* localStorage indisponível — sessão segue sem persistir */ }
+}
+
+function updateChartActionButtons() {
+  const rm = document.getElementById('qfRemoveChart');
+  if (!rm) return;
+  rm.disabled = !activeChart || charts.length <= 1;
+  rm.title = rm.disabled ? 'Selecione um gráfico (é preciso manter ao menos um)' : 'Excluir gráfico selecionado';
+  board.classList.toggle('is-multi', charts.length > 1);
+}
+
+// ── Layout: cards posicionados livremente dentro da área da página ──
+const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), Math.max(lo, hi));
+function clampSize(w, h) {
+  const maxW = board.clientWidth - 2 * BOARD_M;
+  return { w: clamp(w, Math.min(420, maxW), maxW), h: clamp(h, CHART_MIN_H, Math.max(CHART_MIN_H, innerHeight * 0.9)) };
+}
+function clampPos(c, x, y) {
+  const boardTop = board.getBoundingClientRect().top;
+  const visibleBottom = innerHeight - boardTop - BOARD_M;
+  return {
+    x: clamp(x, BOARD_M, board.clientWidth - BOARD_M - c.el.offsetWidth),
+    y: clamp(y, Math.max(BOARD_M, -boardTop + BOARD_M), visibleBottom - c.el.offsetHeight)
+  };
+}
+function applyChartLayout(c) {
+  c.el.style.left = c.pos.x + 'px';
+  c.el.style.top = c.pos.y + 'px';
+  c.el.style.width = c.size.w + 'px';
+  c.el.querySelector('.chart-container').style.height = c.size.h + 'px';
+}
+function updateBoardHeight() {
+  const bottom = Math.max(0, ...charts.map(c => c.pos.y + c.el.offsetHeight));
+  board.style.minHeight = Math.max(innerHeight - 64, bottom + 24) + 'px';
+}
+function defaultSize() {
+  return clampSize(Math.min(board.clientWidth - 2 * BOARD_M, 1200), Math.min(innerHeight * 0.76, 720));
+}
+
+function drag(el, onMove, onEnd) {
+  el.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    closeChartPalette();
+    el.setPointerCapture(e.pointerId);
+    const start = onMove(null, e);
+    const move = ev => onMove(start, ev);
+    const up = () => {
+      el.removeEventListener('pointermove', move);
+      el.removeEventListener('pointerup', up);
+      el.removeEventListener('pointercancel', up);
+      onEnd();
+    };
+    el.addEventListener('pointermove', move);
+    el.addEventListener('pointerup', up);
+    el.addEventListener('pointercancel', up);
+  });
+}
+
+function attachMoveResize(c) {
+  drag(c.el.querySelector('.chart-header'), (s, e) => {
+    if (!s) { c.el.classList.add('is-dragging'); return { dx: e.clientX - c.pos.x, dy: e.clientY - c.pos.y }; }
+    c.pos = clampPos(c, e.clientX - s.dx, e.clientY - s.dy);
+    applyChartLayout(c);
+  }, () => { c.el.classList.remove('is-dragging'); updateBoardHeight(); saveCharts(); });
+
+  drag(c.el.querySelector('.chart-resize-handle'), (s, e) => {
+    if (!s) { c.el.classList.add('is-resizing'); return { x: e.clientX, y: e.clientY, w: c.size.w, h: c.size.h }; }
+    c.size = clampSize(s.w + e.clientX - s.x, s.h + e.clientY - s.y);
+    applyChartLayout(c);
+  }, () => {
+    c.el.classList.remove('is-resizing');
+    updateBoardHeight();
+    renderTurnoverChart(getFilteredChartRows());
+    saveCharts();
+  });
+}
+
+function mountChart(saved, el) {
+  const c = {
+    id: saved.id || ('c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)),
+    el: el || chartTemplate.cloneNode(true),
+    filters: saved.filters || { ...defaultFilters },
+    colors: saved.colors || { bgChart: '#F6F6F6' },
+    page: saved.page || 0,
+    size: clampSize((saved.size || defaultSize()).w, (saved.size || defaultSize()).h),
+    pos: saved.pos || { x: 0, y: 0 }
+  };
+  if (!el) board.appendChild(c.el);
+  c.el.classList.add('is-board-item');
+  charts.push(c);
+  applyChartLayout(c);
+  attachMoveResize(c);
+  return c;
+}
+
+function addChart() {
+  stashActive();
+  const size = defaultSize();
+  const bottom = Math.max(0, ...charts.map(c => c.pos.y + c.el.offsetHeight));
+  const c = mountChart({ size, pos: { x: (board.clientWidth - size.w) / 2, y: bottom + 24 } });
+  updateBoardHeight();
+  activateChart(c);
+  renderActiveChart();
+  saveCharts();
+  c.el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function removeSelectedChart() {
+  if (!activeChart || charts.length <= 1) return;
+  if (!window.confirm('Deseja realmente excluir o gráfico selecionado?')) return;
+  const c = activeChart;
+  closeChartPalette();
+  c.el.remove();
+  charts = charts.filter(x => x !== c);
+  activeChart = null;
+  activateChart(charts[charts.length - 1]);
+  updateBoardHeight();
+  saveCharts();
+}
+
+function initCharts() {
+  defaultFilters = serializeFilters();
+  board.classList.add('charts-board');
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(CHARTS_KEY) || 'null'); } catch (e) { saved = null; }
+  const first = document.getElementById('chartWrapper');
+  if (saved && Array.isArray(saved.charts) && saved.charts.length) {
+    saved.charts.forEach((sc, i) => mountChart(sc, i === 0 ? first : null));
+  } else {
+    // Migração do tamanho/cores já salvos por 'vdt-chart-size'/'vdt-chart-colors'
+    let size = null;
+    try { size = JSON.parse(localStorage.getItem('vdt-chart-size') || 'null'); } catch (e) { size = null; }
+    size = size && size.w && size.h ? clampSize(size.w, size.h) : defaultSize();
+    mountChart({ filters: defaultFilters, colors: { ...COLORS }, size, pos: { x: (board.clientWidth - size.w) / 2, y: 16 } }, first);
+  }
+  charts.forEach(c => { c.el.classList.remove('is-selected'); setChartIds(c, false); });
+  activeChart = null;
+  renderAllCharts();
+  activateChart(charts.find(c => c.id === (saved && saved.active)) || charts[0]);
+  updateBoardHeight();
+  saveCharts();
+
+  // Seleciona o card antes de qualquer outra ação (clique, arraste, paleta)
+  document.addEventListener('pointerdown', (e) => {
+    const w = e.target.closest('.is-board-item');
+    if (w) activateChart(charts.find(c => c.el === w));
+  }, true);
+  document.getElementById('qfAddChart').addEventListener('click', (e) => { e.stopPropagation(); addChart(); });
+  document.getElementById('qfRemoveChart').addEventListener('click', (e) => { e.stopPropagation(); removeSelectedChart(); });
+
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      charts.forEach(c => { c.size = clampSize(c.size.w, c.size.h); applyChartLayout(c); c.pos = { x: clampPos(c, c.pos.x, c.pos.y).x, y: c.pos.y }; applyChartLayout(c); });
+      updateBoardHeight();
+      renderAllCharts();
+    }, 120);
+  });
+}
 </script>
 
 </body>
