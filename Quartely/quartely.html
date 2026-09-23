@@ -1193,8 +1193,12 @@ function renderTurnoverChart(sourceRows) {
   const pairIndex = {};
   data.forEach((d, i) => {
     const prev = data[i - 1];
-    if (!prev || groupKey(prev.type) !== groupKey(d.type)) return;
-    if (!isValidComparison(splitTypeLabel(prev.type.trim()).core, splitTypeLabel(d.type.trim()).core)) return;
+    if (!prev) return;
+    const pc = splitTypeLabel(prev.type.trim()).core, dc = splitTypeLabel(d.type.trim()).core;
+    // Real/Forecast vizinhos comparam entre si mesmo em períodos diferentes (mesma granularidade)
+    const realSeq = /[AF]$/i.test(pc) && /[AF]$/i.test(dc);
+    if (!realSeq && groupKey(prev.type) !== groupKey(d.type)) return;
+    if (!isValidComparison(pc, dc)) return;
     if (Number.isFinite(d.value) && Number.isFinite(prev.value) && prev.value !== 0) pairIndex[i] = i - 1;
   });
 
