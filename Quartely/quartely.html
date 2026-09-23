@@ -594,6 +594,13 @@ html:not([data-bg="dark"]) body:not([data-bg="dark"]) :is(.qf-trigger, .qf-optio
   .qf-chart-btn, .qf-modal-close, .qf-modal-btn { min-width: 44px; min-height: 44px; }
   .qf-modal-close { top: 14px; right: 14px; }
 }
+.charts-board.is-arranging {
+  background-image: linear-gradient(rgba(11,110,153,.07) 1px, transparent 1px), linear-gradient(90deg, rgba(11,110,153,.07) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+.snap-guide { position: absolute; display: none; pointer-events: none; z-index: 50; background: rgba(11,110,153,.6); }
+.snap-guide.v { top: 0; bottom: 0; width: 1px; }
+.snap-guide.h { left: 0; right: 0; height: 1px; }
 .board-empty { padding: 48px 16px; text-align: center; color: #4B5563; font-size: .9rem; }
 
 /* Vários gráficos: cards posicionados livremente; seleção indicada por um contorno discreto */
@@ -2230,19 +2237,73 @@ function drag(el, onMove, onEnd) {
   });
 }
 
+// ── Grade e guias de alinhamento (só durante mover/redimensionar) ──
+const SNAP = 8;
+let guideV = null, guideH = null;
+function showGuides(x, y) {
+  if (!guideV) {
+    guideV = document.createElement('div'); guideV.className = 'snap-guide v';
+    guideH = document.createElement('div'); guideH.className = 'snap-guide h';
+    board.append(guideV, guideH);
+  }
+  guideV.style.display = x == null ? 'none' : 'block';
+  if (x != null) guideV.style.left = x + 'px';
+  guideH.style.display = y == null ? 'none' : 'block';
+  if (y != null) guideH.style.top = y + 'px';
+}
+// Geometria dos demais gráficos lida uma vez no início (arraste sem leituras extras de layout)
+function startArrange(c) {
+  board.classList.add('is-arranging');
+  return charts.filter(o => o !== c).map(o => ({ l: o.pos.x, t: o.pos.y, w: o.el.offsetWidth, h: o.el.offsetHeight, ch: o.size.h }));
+}
+function endArrange() { board.classList.remove('is-arranging'); showGuides(null, null); }
+// Menor ajuste (≤ SNAP) que alinha um dos pontos às linhas-alvo
+function nearest(points, targets) {
+  let best = null;
+  points.forEach(p => targets.forEach(t => {
+    const d = t - p;
+    if (Math.abs(d) <= SNAP && (!best || Math.abs(d) < Math.abs(best.d))) best = { d, line: t };
+  }));
+  return best;
+}
+
 function attachMoveResize(c) {
   drag(c.el.querySelector('.chart-header'), (s, e) => {
-    if (!s) { c.el.classList.add('is-dragging'); return { dx: e.clientX - c.pos.x, dy: e.clientY - c.pos.y }; }
-    c.pos = clampPos(c, e.clientX - s.dx, e.clientY - s.dy);
+    if (!s) {
+      c.el.classList.add('is-dragging');
+      return { dx: e.clientX - c.pos.x, dy: e.clientY - c.pos.y, w: c.el.offsetWidth, h: c.el.offsetHeight, others: startArrange(c) };
+    }
+    const pos = clampPos(c, e.clientX - s.dx, e.clientY - s.dy);
+    const sx = nearest([pos.x, pos.x + s.w / 2, pos.x + s.w], s.others.flatMap(o => [o.l, o.l + o.w / 2, o.l + o.w]));
+    const sy = nearest([pos.y, pos.y + s.h / 2, pos.y + s.h], s.others.flatMap(o => [o.t, o.t + o.h / 2, o.t + o.h]));
+    if (sx) pos.x += sx.d;
+    if (sy) pos.y += sy.d;
+    c.pos = pos;
     applyChartLayout(c);
-  }, () => { c.el.classList.remove('is-dragging'); updateBoardHeight(); saveCharts(); });
+    showGuides(sx && sx.line, sy && sy.line);
+  }, () => { c.el.classList.remove('is-dragging'); endArrange(); updateBoardHeight(); saveCharts(); });
 
   drag(c.el.querySelector('.chart-resize-handle'), (s, e) => {
-    if (!s) { c.el.classList.add('is-resizing'); return { x: e.clientX, y: e.clientY, w: c.size.w, h: c.size.h }; }
-    c.size = clampSize(s.w + e.clientX - s.x, s.h + e.clientY - s.y);
+    if (!s) {
+      c.el.classList.add('is-resizing');
+      return { x: e.clientX, y: e.clientY, w: c.size.w, h: c.size.h, extra: c.el.offsetHeight - c.size.h, others: startArrange(c) };
+    }
+    const size = clampSize(s.w + e.clientX - s.x, s.h + e.clientY - s.y);
+    // Borda direita/inferior alinhada a outro gráfico, ou mesma largura/altura de outro
+    const ex = nearest([c.pos.x + size.w], s.others.flatMap(o => [o.l, o.l + o.w]));
+    const ew = nearest([size.w], s.others.map(o => o.w));
+    const ey = nearest([c.pos.y + s.extra + size.h], s.others.flatMap(o => [o.t, o.t + o.h]));
+    const eh = nearest([size.h], s.others.map(o => o.ch));
+    const bx = ex && (!ew || Math.abs(ex.d) <= Math.abs(ew.d)) ? ex : ew;
+    const by = ey && (!eh || Math.abs(ey.d) <= Math.abs(eh.d)) ? ey : eh;
+    if (bx) size.w += bx.d;
+    if (by) size.h += by.d;
+    c.size = size;
     applyChartLayout(c);
+    showGuides(bx ? c.pos.x + size.w : null, by ? c.pos.y + s.extra + size.h : null);
   }, () => {
     c.el.classList.remove('is-resizing');
+    endArrange();
     updateBoardHeight();
     renderTurnoverChart(getFilteredChartRows());
     saveCharts();
