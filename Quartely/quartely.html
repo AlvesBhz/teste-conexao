@@ -454,7 +454,7 @@ body:not([data-bg]) .qf-panel { background: rgba(20,32,48,.96); }
   --glass: rgba(246,246,246,.92);
 
   width: min(92vw, 1200px);
-  min-width: 420px;
+  min-width: min(420px, calc(100vw - 32px));
   max-width: 96vw;
   display: flex; flex-direction: column; gap: 16px;
   font-family: 'Vale Sans Medium', 'Segoe UI', 'system-ui', sans-serif;
@@ -476,8 +476,16 @@ body:not([data-bg]) .qf-panel { background: rgba(20,32,48,.96); }
   padding: 20px 20px 14px;
   background: var(--chart-bg); border-radius: 14px; border: 1px solid #E2E8F0;
   box-shadow: 0 12px 40px rgba(10,20,35,.12), 0 2px 8px rgba(10,20,35,.06);
-  resize: both;
+  position: relative;
 }
+.chart-header { cursor: move; touch-action: none; user-select: none; }
+.chart-resize-handle {
+  position: absolute; right: 2px; bottom: 2px; width: 16px; height: 16px;
+  cursor: nwse-resize; touch-action: none; opacity: .55;
+  background: linear-gradient(135deg, transparent 50%, #94A3B8 50%, #94A3B8 60%, transparent 60%, transparent 70%, #94A3B8 70%, #94A3B8 80%, transparent 80%);
+}
+.chart-resize-handle:hover { opacity: 1; }
+.main-wrapper.is-dragging, .main-wrapper.is-resizing { user-select: none; }
 
 /* área do gráfico — gap em px garante que a distância centro-a-centro
    entre colunas vizinhas seja (100% + gap), o que permite ancorar a
@@ -742,6 +750,7 @@ body:not([data-bg]) .qf-panel { background: rgba(20,32,48,.96); }
       </div>
       <div class="chart-area" id="chartArea"></div>
       <div class="chart-pager" id="chartPager" hidden></div>
+      <div class="chart-resize-handle" id="chartResizeHandle" title="Redimensionar" aria-hidden="true"></div>
     </div>
     <div class="color-palette" id="chartPalette" role="listbox" aria-label="Paleta de cores"></div>
   </div>
@@ -830,9 +839,11 @@ const PALETTE_COLORS = [
   '#7DD3F0', // Light Blue
   '#3DADD8', // Cyan
   '#3CB5E5', // Primary Blue
+  '#0F9ED5', // Vivid Blue
   // Cores Escuras
   '#888888', // Mid Gray
   '#44546A', // Dark Slate
+  '#156082', // Deep Cyan
   '#116080', // Dark Cyan
   '#1B40BF', // Dark Blue
   '#007E79', // Teal
@@ -927,7 +938,7 @@ function wireChartColorClicks() {
   const container = document.querySelector('.chart-container');
   const pal = document.getElementById('chartPalette');
   container.addEventListener('click', (e) => {
-    if (e.target.closest('.chart-pager, .chart-title, .chart-subtitle')) return;
+    if (e.target.closest('.chart-pager, .chart-header, .chart-resize-handle')) return;
     const bar = e.target.closest('.bar, .value-label');
     const target = bar ? bar.closest('.col-wrapper').dataset.type : 'bgChart';
     openChartPalette(target, e.clientX, e.clientY);
@@ -1039,10 +1050,14 @@ function renderTurnoverChart(sourceRows) {
 
   // Máximo de MAX_COLUMNS por página; deltas/comparações seguem calculados
   // sobre `data` completo — só a janela visível é renderizada.
-  const pageCount = Math.ceil(data.length / MAX_COLUMNS);
+  // Card estreito: menos colunas por página (par, p/ não separar pares) para os rótulos caberem
+  const gapPx = parseFloat(getComputedStyle(chartAreaEl).columnGap) || 0;
+  const fit = Math.floor((chartAreaEl.clientWidth + gapPx) / (56 + gapPx));
+  const perPage = Math.min(MAX_COLUMNS, Math.max(2, fit - (fit % 2)));
+  const pageCount = Math.ceil(data.length / perPage);
   chartPage = Math.max(0, Math.min(chartPage, pageCount - 1));
-  const pageStart = chartPage * MAX_COLUMNS;
-  const pageEnd = Math.min(pageStart + MAX_COLUMNS, data.length);
+  const pageStart = chartPage * perPage;
+  const pageEnd = Math.min(pageStart + perPage, data.length);
   renderChartPager(data.length, pageStart, pageEnd, pageCount);
 
   const html = data.map((row, i) => {
@@ -1094,7 +1109,7 @@ function renderTurnoverChart(sourceRows) {
     const isValidPrevSequence = isRealSequence && prevIsValidType;
 
     const usaBudget = !isRealSequence && budgetVal !== undefined && budgetVal !== 0;
-    const usaPrev = !usaBudget && (isValidPrevSequence || index1 % 2 === 0);
+    const usaPrev = !usaBudget && prevIsValidType && (isValidPrevSequence || index1 % 2 === 0);
 
     let baseValue, baseIndex;
     if (usaBudget) { baseValue = budgetVal; baseIndex = budgetIndex; }
@@ -1438,11 +1453,6 @@ function onFilterChanged(key) {
   refreshFiltersAndChart();
 }
 
-let initialFilterState = null;
-function snapshotFilterState() {
-  return Object.fromEntries(FILTER_DEFS.map(d => [d.key, d.multiple ? new Set(filterState[d.key]) : filterState[d.key]]));
-}
-
 // linhas que passam em TODOS os filtros — usadas para montar o gráfico e
 // para checar a unidade (SG_UNID) do Product selecionado
 function getFilteredRows() {
@@ -1776,11 +1786,13 @@ function buildFiltersBar() {
 
   document.addEventListener('click', closeAllPanels);
 
-  // Limpar Filtros restaura o estado inicial da página (inclusive o Ano)
-  document.getElementById('qfClearBtn').addEventListener('click', () => {
-    FILTER_DEFS.forEach(d => {
-      filterState[d.key] = d.multiple ? new Set(initialFilterState[d.key]) : initialFilterState[d.key];
-    });
+  // Limpar Filtros: zera o estado de TODOS os filtros (sem reaplicar padrões)
+  // e as buscas internas; refresh reconsulta o dataset completo e volta à pág. 1
+  document.getElementById('qfClearBtn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    FILTER_DEFS.forEach(d => { filterState[d.key] = d.multiple ? new Set() : null; });
+    bar.querySelectorAll('.qf-search input').forEach(i => { i.value = ''; });
+    closeAllPanels();
     refreshFiltersAndChart();
   });
 }
@@ -1861,7 +1873,6 @@ async function initQuartelyPage() {
   applyChartBackgroundColor(); // aplica cor de fundo ao wrapper
   allRows = await loadQuartelyData();
   applyDefaultFilters(allRows);
-  initialFilterState = snapshotFilterState();
   buildFiltersBar();     // cria o DOM primeiro — refreshFiltersAndChart já popula tudo
   wireChartColorClicks();
   refreshFiltersAndChart();
@@ -1878,35 +1889,93 @@ function setFiltersInitialLoading(loading) {
 initQuartelyPage();
 window.addEventListener('resize', () => renderTurnoverChart(getFilteredChartRows()));
 
-// ── Memória do tamanho do gráfico (mesmo padrão de 'vdt-theme'/'vdt-lang') ──
-// O redimensionamento em si é 100% CSS (resize:both + unidades %), então
-// nenhum recálculo em JS é necessário; aqui só persistimos a preferência de
-// tamanho do usuário entre sessões, como já é feito para tema e idioma.
+// ── Mover (arrastando o cabeçalho) e redimensionar (alça inferior direita) ──
+// Tamanho e posição persistidos no mesmo padrão de 'vdt-theme'/'vdt-lang'.
 (() => {
-  const chartWrapper = document.getElementById('chartWrapper');
-  const STORAGE_KEY = 'vdt-chart-size';
+  const wrapper = document.getElementById('chartWrapper');
+  const card = wrapper.querySelector('.chart-container');
+  const header = card.querySelector('.chart-header');
+  const handle = document.getElementById('chartResizeHandle');
+  const SIZE_KEY = 'vdt-chart-size', POS_KEY = 'vdt-chart-pos', M = 8, MIN_H = 320;
+  let pos = { x: 0, y: 0 };
 
-  try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-    if (saved && saved.w && saved.h) {
-      chartWrapper.style.width = saved.w + 'px';
-      chartWrapper.style.height = saved.h + 'px';
+  const read = k => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } };
+  const write = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* sem persistência */ } };
+  const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), Math.max(lo, hi));
+
+  function applySize(w, h) {
+    const maxW = innerWidth - 32;
+    wrapper.style.width = clamp(w, Math.min(420, maxW), maxW) + 'px';
+    card.style.height = clamp(h, MIN_H, Math.max(MIN_H, innerHeight * 0.9)) + 'px';
+  }
+  function applyPos() { wrapper.style.transform = `translate(${pos.x}px, ${pos.y}px)`; }
+  function clampPos(x, y) {
+    const r = wrapper.getBoundingClientRect();
+    const left = r.left - pos.x, top = r.top - pos.y;
+    return {
+      x: clamp(x, M - left, innerWidth - M - left - r.width),
+      y: clamp(y, M - top, innerHeight - M - top - r.height)
+    };
+  }
+  function drag(el, onMove, onEnd) {
+    el.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      closeChartPalette();
+      el.setPointerCapture(e.pointerId);
+      const start = onMove(null, e);
+      const move = ev => onMove(start, ev);
+      const up = () => {
+        el.removeEventListener('pointermove', move);
+        el.removeEventListener('pointerup', up);
+        el.removeEventListener('pointercancel', up);
+        onEnd();
+      };
+      el.addEventListener('pointermove', move);
+      el.addEventListener('pointerup', up);
+      el.addEventListener('pointercancel', up);
+    });
+  }
+
+  drag(header, (s, e) => {
+    if (!s) { wrapper.classList.add('is-dragging'); return { dx: e.clientX - pos.x, dy: e.clientY - pos.y }; }
+    pos = clampPos(e.clientX - s.dx, e.clientY - s.dy);
+    applyPos();
+  }, () => { wrapper.classList.remove('is-dragging'); write(POS_KEY, pos); });
+
+  // Card centralizado pelo layout: compensa metade do crescimento na posição
+  // para a borda esquerda/superior ficar fixa e a alça acompanhar o cursor.
+  drag(handle, (s, e) => {
+    if (!s) {
+      wrapper.classList.add('is-resizing');
+      return { x: e.clientX, y: e.clientY, w: wrapper.offsetWidth, h: card.offsetHeight, px: pos.x, py: pos.y };
     }
-  } catch (e) { /* localStorage indisponível ou dado inválido — usa o padrão */ }
-
-  // offsetWidth/offsetHeight (border-box) — não contentRect do ResizeObserver
-  // (content-box) — para bater exatamente com o que style.width/height
-  // controlam, já que .main-wrapper usa box-sizing:border-box.
-  let saveTimer;
-  const observer = new ResizeObserver(() => {
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({ w: chartWrapper.offsetWidth, h: chartWrapper.offsetHeight }));
-      } catch (e) { /* localStorage indisponível — sessão segue sem persistir */ }
-    }, 300);
+    applySize(s.w + e.clientX - s.x, s.h + e.clientY - s.y);
+    pos = { x: s.px + (wrapper.offsetWidth - s.w) / 2, y: s.py + (card.offsetHeight - s.h) / 2 };
+    applyPos();
+  }, () => {
+    wrapper.classList.remove('is-resizing');
+    pos = clampPos(pos.x, pos.y);
+    applyPos();
+    write(SIZE_KEY, { w: wrapper.offsetWidth, h: card.offsetHeight });
+    write(POS_KEY, pos);
+    renderTurnoverChart(getFilteredChartRows());
   });
-  observer.observe(chartWrapper);
+
+  const savedSize = read(SIZE_KEY);
+  if (savedSize && savedSize.w && savedSize.h) applySize(savedSize.w, savedSize.h);
+  const savedPos = read(POS_KEY);
+  if (savedPos && isFinite(savedPos.x) && isFinite(savedPos.y)) {
+    pos = savedPos;
+    applyPos();
+    requestAnimationFrame(() => { pos = clampPos(pos.x, pos.y); applyPos(); });
+  }
+
+  window.addEventListener('resize', () => {
+    if (wrapper.style.width) applySize(wrapper.offsetWidth, card.offsetHeight);
+    pos = clampPos(pos.x, pos.y);
+    applyPos();
+  });
 })();
 </script>
 
