@@ -2150,9 +2150,11 @@ function mountChart(saved, el) {
 
 function addChart() {
   stashActive();
-  const size = defaultSize();
+  // Novo gráfico herda as dimensões atuais do card selecionado
+  const size = activeChart ? clampSize(activeChart.size.w, activeChart.size.h) : defaultSize();
   const bottom = Math.max(0, ...charts.map(c => c.pos.y + c.el.offsetHeight));
-  const c = mountChart({ size, pos: { x: (board.clientWidth - size.w) / 2, y: bottom + 24 } });
+  const x = activeChart ? activeChart.pos.x : (board.clientWidth - size.w) / 2;
+  const c = mountChart({ size, pos: { x, y: bottom + 24 } });
   updateBoardHeight();
   activateChart(c);
   renderActiveChart();
