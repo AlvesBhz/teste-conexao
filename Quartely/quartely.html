@@ -571,21 +571,11 @@ html:not([data-bg="dark"]) body:not([data-bg="dark"]) :is(.qf-trigger, .qf-optio
   display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; line-height: 1;
 }
 .qf-modal-title { margin: 0; font-size: 1rem; font-weight: 600; color: #111827; }
-.qf-modal-msg { margin: 10px 0 0 54px; font-size: .88rem; color: #374151; }
 .qf-modal-close {
   position: absolute; top: 20px; right: 20px; width: 32px; height: 32px; border-radius: 50%;
   border: 0; background: #F3F4F6; color: #4B5563; font-size: 18px; line-height: 1; cursor: pointer;
 }
 .qf-modal-close:hover { background: #E5E7EB; color: #111827; }
-.qf-modal-field { margin: 16px 0 0 54px; display: flex; flex-direction: column; gap: 6px; }
-.qf-modal-field label { font-size: .78rem; font-weight: 600; color: #374151; }
-.qf-modal-field textarea {
-  min-height: 84px; resize: vertical; padding: 8px 10px; border-radius: 8px;
-  border: 1px solid #6B7280; font: inherit; font-size: .85rem; color: #111827;
-}
-.qf-modal-field textarea[aria-invalid="true"] { border-color: #B91C1C; box-shadow: 0 0 0 3px rgba(220,38,38,.18); }
-.qf-modal-error { margin: 0; font-size: .78rem; font-weight: 600; color: #B91C1C; }
-.qf-modal-error[hidden] { display: none; }
 .qf-modal-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
 .qf-modal-btn {
   padding: 8px 16px; border-radius: 8px; font: inherit; font-size: .82rem; font-weight: 600; cursor: pointer;
@@ -593,13 +583,12 @@ html:not([data-bg="dark"]) body:not([data-bg="dark"]) :is(.qf-trigger, .qf-optio
 }
 .qf-modal-btn.danger { background: #B91C1C; border-color: #B91C1C; color: #FFFFFF; }
 .qf-modal-btn.danger:hover { background: #991B1B; }
-.qf-modal :is(button, textarea):focus-visible { outline: 3px solid #0B6E99; outline-offset: 2px; }
+.qf-modal button:focus-visible { outline: 3px solid #0B6E99; outline-offset: 2px; }
 @keyframes qfFade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes qfPop { from { opacity: 0; transform: translateY(6px) scale(.98); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .qf-modal-overlay.open, .qf-modal { animation: none; } }
 @media (max-width: 480px) {
   .qf-modal { padding: 20px 18px; }
-  .qf-modal-msg, .qf-modal-field { margin-left: 0; }
 }
 @media (max-width: 768px), (pointer: coarse) {
   .qf-chart-btn, .qf-modal-close, .qf-modal-btn { min-width: 44px; min-height: 44px; }
@@ -2299,14 +2288,9 @@ function removeSelectedChart() {
   openDeleteModal();
 }
 
-function deleteActiveChart(reason) {
+function deleteActiveChart() {
   const c = activeChart;
   closeChartPalette();
-  try {
-    const log = JSON.parse(localStorage.getItem('vdt-chart-deletions') || '[]');
-    log.push({ id: c.id, product: filterState.product, reason, at: new Date().toISOString() });
-    localStorage.setItem('vdt-chart-deletions', JSON.stringify(log.slice(-100)));
-  } catch (e) { /* localStorage indisponível — segue sem registrar */ }
   const label = c.el.getAttribute('aria-label').replace(', selecionado', '');
   const gap = c.el.offsetHeight + 24, top = c.pos.y, l = c.pos.x, r = c.pos.x + c.el.offsetWidth;
   c.el.remove();
@@ -2325,49 +2309,36 @@ function deleteActiveChart(reason) {
   announce(label + ' excluído.');
 }
 
-// ── Modal "Campo obrigatório": motivo da exclusão (focus trap, Esc, retorno de foco) ──
+// ── Confirmação simples de exclusão (focus trap, Esc, retorno de foco) ──
 let modalOrigin = null;
 function buildDeleteModal() {
   const ov = document.createElement('div');
   ov.className = 'qf-modal-overlay';
   ov.innerHTML = `
-    <div class="qf-modal" role="dialog" aria-modal="true" aria-labelledby="qfModalTitle" aria-describedby="qfModalMsg">
+    <div class="qf-modal" role="alertdialog" aria-modal="true" aria-labelledby="qfModalTitle">
       <div class="qf-modal-head">
         <div class="qf-modal-icon" aria-hidden="true"><span>✕</span></div>
-        <h2 class="qf-modal-title" id="qfModalTitle">Campo obrigatório</h2>
+        <h2 class="qf-modal-title" id="qfModalTitle">Excluir o gráfico selecionado?</h2>
       </div>
       <button type="button" class="qf-modal-close" data-modal-cancel aria-label="Fechar e cancelar exclusão">✕</button>
-      <p class="qf-modal-msg" id="qfModalMsg">Descreva o motivo.</p>
-      <div class="qf-modal-field">
-        <label for="qfModalReason">Motivo da exclusão do gráfico</label>
-        <textarea id="qfModalReason" required aria-required="true" aria-invalid="false" aria-describedby="qfModalError"></textarea>
-        <p class="qf-modal-error" id="qfModalError" role="alert" hidden>Informe o motivo para excluir o gráfico.</p>
-      </div>
       <div class="qf-modal-actions">
         <button type="button" class="qf-modal-btn" data-modal-cancel>Cancelar</button>
-        <button type="button" class="qf-modal-btn danger" data-modal-confirm>Excluir gráfico</button>
+        <button type="button" class="qf-modal-btn danger" data-modal-confirm>Confirmar</button>
       </div>
     </div>`;
   document.body.appendChild(ov);
-  const reason = ov.querySelector('#qfModalReason');
-  const err = ov.querySelector('#qfModalError');
-  const setInvalid = (on) => { reason.setAttribute('aria-invalid', String(on)); err.hidden = !on; };
   ov.addEventListener('click', (e) => {
     if (e.target === ov || e.target.closest('[data-modal-cancel]')) closeDeleteModal();
     else if (e.target.closest('[data-modal-confirm]')) {
-      const txt = reason.value.trim();
-      if (!txt) { setInvalid(true); reason.focus(); return; }
       closeDeleteModal();
-      deleteActiveChart(txt);
-      const rm = document.getElementById('qfRemoveChart');
-      (rm.disabled ? document.getElementById('qfAddChart') : rm).focus();
+      deleteActiveChart();
+      document.getElementById('qfAddChart').focus();
     }
   });
-  reason.addEventListener('input', () => { if (reason.value.trim()) setInvalid(false); });
   ov.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') { e.preventDefault(); closeDeleteModal(); return; }
     if (e.key !== 'Tab') return;
-    const f = [...ov.querySelectorAll('button, textarea')].filter(n => !n.disabled);
+    const f = [...ov.querySelectorAll('button')];
     const first = f[0], last = f[f.length - 1];
     if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
     else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
@@ -2377,12 +2348,8 @@ function buildDeleteModal() {
 function openDeleteModal() {
   const ov = document.querySelector('.qf-modal-overlay') || buildDeleteModal();
   modalOrigin = document.activeElement;
-  const reason = ov.querySelector('#qfModalReason');
-  reason.value = '';
-  reason.setAttribute('aria-invalid', 'false');
-  ov.querySelector('#qfModalError').hidden = true;
   ov.classList.add('open');
-  reason.focus();
+  ov.querySelector('.qf-modal-actions [data-modal-cancel]').focus();
 }
 function closeDeleteModal() {
   const ov = document.querySelector('.qf-modal-overlay');
