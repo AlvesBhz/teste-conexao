@@ -1163,6 +1163,7 @@ function isValidComparison(core1, core2) {
 
 function renderTurnoverChart(sourceRows) {
   const chartAreaEl = document.getElementById('chartArea');
+  if (!chartAreaEl) return; // nenhum gráfico selecionado
 
   // Combinação de filtros sem nenhuma linha correspondente — estado vazio,
   // não um gráfico quebrado (pode acontecer com filtros muito restritivos).
@@ -2448,7 +2449,15 @@ function initCharts() {
   document.addEventListener('pointerdown', (e) => {
     const w = e.target.closest('.is-board-item');
     if (w) activateChart(charts.find(c => c.el === w));
+    // Clique no fundo da página (fora de gráficos, filtros, paleta e modal) remove a seleção
+    else if (!e.target.closest('.filters-bar-wrap, .qf-panel, #chartPalette, .qf-modal-overlay, .topnav')) deselectChart();
   }, true);
+  // Teclado: Esc sobre um gráfico remove a seleção (se não houver paleta/modal aberto)
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || !e.target.closest || !e.target.closest('.is-board-item')) return;
+    if (document.querySelector('#chartPalette.active, .qf-modal-overlay.open')) return;
+    deselectChart();
+  });
   document.addEventListener('focusin', (e) => {
     const w = e.target.closest && e.target.closest('.is-board-item');
     if (w) activateChart(charts.find(c => c.el === w));
