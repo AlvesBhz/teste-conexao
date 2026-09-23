@@ -1014,7 +1014,8 @@ function applyChartBackgroundColor() {
 }
 
 // ── Paleta por clique no gráfico: barra → cor daquela barra; área vazia → fundo ──
-const MAX_COLUMNS = 10;
+// Largura mínima por coluna (+ vão do gráfico): mantém barras, rótulos, valores e deltas sem sobreposição
+const MIN_COL_W = 56;
 let chartPage = 0;
 let chartPaletteTarget = null;
 
@@ -1168,12 +1169,12 @@ function renderTurnoverChart(sourceRows) {
   const data = sourceRows.map(d => ({ type: d.type, value: Number(d.value.toFixed(CFG.casasDecimais)) }));
   const maxValue = Math.max(...data.map(d => d.value), 0);
 
-  // Máximo de MAX_COLUMNS por página; deltas/comparações seguem calculados
+  // Colunas por página conforme a largura disponível; deltas/comparações seguem calculados
   // sobre `data` completo — só a janela visível é renderizada.
   // Card estreito: menos colunas por página para os rótulos caberem
   const gapPx = parseFloat(getComputedStyle(chartAreaEl).columnGap) || 0;
-  const fit = Math.floor((chartAreaEl.clientWidth + gapPx) / (56 + gapPx));
-  const perPage = Math.min(MAX_COLUMNS, Math.max(2, fit));
+  const fit = Math.floor((chartAreaEl.clientWidth + gapPx) / (MIN_COL_W + gapPx));
+  const perPage = Math.max(2, fit);
 
   // Delta entre colunas vizinhas do MESMO grupo (período + ano + granularidade,
   // lidos do rótulo): Budget→Plan→Actual/Forecast. Nunca cruza trimestre,
