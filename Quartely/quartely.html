@@ -899,16 +899,11 @@ function closeChartPalette() {
   document.getElementById('chartPalette')?.classList.remove('active');
 }
 
-function hexToRgb(hex) {
-  const n = parseInt(hex.replace('#', ''), 16);
-  return `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`;
-}
-
 function showPaletteTip(sw) {
   const tip = document.querySelector('#chartPalette .palette-tip');
   if (!tip) return;
   if (!sw) { tip.hidden = true; return; }
-  tip.textContent = sw.dataset.rgb;
+  tip.textContent = sw.dataset.hex;
   tip.style.left = (sw.offsetLeft + sw.offsetWidth / 2) + 'px';
   tip.hidden = false;
 }
@@ -918,8 +913,8 @@ function openChartPalette(target, x, y) {
   const current = currentColorFor(target).toUpperCase();
   pal.innerHTML = PALETTE_COLORS.map(c => {
     const on = c.toUpperCase() === current;
-    return `<div class="palette-color${on ? ' active' : ''}" data-color="${c}" data-rgb="${hexToRgb(c)}" role="option" tabindex="0"
-      aria-selected="${on}" aria-label="${hexToRgb(c)}" style="background-color:${c};"></div>`;
+    return `<div class="palette-color${on ? ' active' : ''}" data-color="${c}" data-hex="${c}" role="option" tabindex="0"
+      aria-selected="${on}" aria-label="${c}" style="background-color:${c};"></div>`;
   }).join('') + '<span class="palette-tip" role="tooltip" hidden></span>';
   chartPaletteTarget = target;
   pal.style.transform = 'none';
