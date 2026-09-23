@@ -614,85 +614,48 @@ body:not([data-bg]) .qf-panel { background: rgba(20,32,48,.96); }
 }
 
 /* ════════════════════════════════════════════════════════════════════
-   CONFIGURADOR DE CORES — barra horizontal estreita inferior
+   CORES POR CLIQUE — paleta flutuante + botão restaurar acima do card
 ═════════════════════════════════════════════════════════════════════ */
-.color-config-panel {
-  display: flex; flex-direction: row; align-items: center; gap: 10px;
-  padding: 8px 12px;
-  background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 8px;
-  width: 100%; overflow-x: auto; overflow-y: visible; flex-shrink: 0;
-  position: relative; z-index: 10;
-}
-[data-bg="dark"] .color-config-panel {
-  background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.1);
-}
-
+.chart-toolbar { display: flex; justify-content: flex-end; margin-bottom: -8px; }
 .color-reset-icon {
   display: flex; align-items: center; justify-content: center;
   width: 28px; height: 28px; padding: 0;
-  background: #E5E7EB; border: 1px solid #D1D5DB;
-  border-radius: .4rem; cursor: pointer; color: #374151;
-  transition: background .2s; font-size: 14px;
-  flex-shrink: 0;
+  background: rgba(255,255,255,.7); border: 1px solid #D1D5DB;
+  border-radius: .4rem; cursor: pointer; color: #4B5563;
+  transition: background .2s, color .2s; font-size: 14px;
 }
-.color-reset-icon:hover { background: #D1D5DB; }
+.color-reset-icon:hover, .color-reset-icon:focus-visible { background: #E5E7EB; color: #111827; }
 [data-bg="dark"] .color-reset-icon {
-  background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.18);
-  color: rgba(255,255,255,.8);
+  background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.18); color: rgba(255,255,255,.8);
 }
-[data-bg="dark"] .color-reset-icon:hover { background: rgba(255,255,255,.15); }
+[data-bg="dark"] .color-reset-icon:hover { background: rgba(255,255,255,.18); }
 
-.color-item {
-  display: flex; align-items: center; gap: 6px; padding: 4px 8px;
-  border-radius: 4px; cursor: pointer;
-  transition: background .15s;
-  position: relative;
-  flex-shrink: 0;
-}
-.color-item:hover { background: rgba(0,0,0,.03); }
-[data-bg="dark"] .color-item:hover { background: rgba(255,255,255,.05); }
-
-.color-swatch {
-  flex-shrink: 0; width: 16px; height: 16px;
-  border-radius: 2px; cursor: pointer; transition: transform .2s;
-  border: 1px solid rgba(0,0,0,.12); box-shadow: 0 1px 2px rgba(0,0,0,.06);
-}
-.color-swatch:hover { transform: scale(1.1); }
-.color-swatch.has-palette { cursor: pointer; }
-[data-bg="dark"] .color-swatch { border-color: rgba(255,255,255,.2); }
-
-.color-label {
-  font-size: .62rem; font-weight: 500; color: #4B5563;
-  white-space: nowrap; flex: 0 0 auto; overflow: hidden; text-overflow: ellipsis; max-width: 50px;
-}
-[data-bg="dark"] .color-label { color: rgba(255,255,255,.75); }
-
-/* Paleta de cores flutuante — aparece acima da barra, na frente */
 .color-palette {
-  position: fixed; z-index: 9999;
-  display: none; flex-wrap: wrap; gap: 6px;
+  position: fixed; z-index: 9999; display: none;
+  grid-template-columns: repeat(6, 24px); gap: 6px;
   padding: 10px; background: #fff; border: 1px solid #D1D5DB;
   border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.20);
-  width: max-content;
 }
-.color-palette.active { display: flex; }
+.color-palette.active { display: grid; }
 [data-bg="dark"] .color-palette {
   background: rgba(20,32,48,.96); border-color: rgba(255,255,255,.14);
   box-shadow: 0 8px 24px rgba(0,0,0,.40);
 }
-
 .palette-color {
-  width: 24px; height: 24px; border-radius: 50%;
-  border: 2px solid transparent; cursor: pointer;
-  transition: transform .15s, border-color .15s;
+  width: 24px; height: 24px; border-radius: 4px;
+  border: 1px solid rgba(0,0,0,.15); cursor: pointer;
+  transition: transform .15s, box-shadow .15s;
 }
-.palette-color:hover { transform: scale(1.1); }
-.palette-color.active { border-color: #333; }
-[data-bg="dark"] .palette-color.active { border-color: #fff; }
+.palette-color:hover, .palette-color:focus-visible { transform: scale(1.1); outline: none; }
+.palette-color.active { box-shadow: 0 0 0 2px #fff, 0 0 0 4px #1B40BF; }
+[data-bg="dark"] .palette-color.active { box-shadow: 0 0 0 2px rgba(20,32,48,1), 0 0 0 4px #fff; }
+.palette-tip {
+  position: absolute; bottom: calc(100% + 6px); transform: translateX(-50%);
+  background: rgba(15,23,42,.92); color: #fff; padding: 4px 8px; border-radius: 4px;
+  font: 600 .72rem/1.2 'Segoe UI', sans-serif; white-space: nowrap; pointer-events: none;
+}
+.palette-tip[hidden] { display: none; }
 
-.color-input { display: none; }
-
-#chartPalette { max-width: 236px; }
 .chart-container .bar, .chart-container .value-label { cursor: pointer; }
 .chart-container.is-dark-bg { --ink-strong: #FFFFFF; --ink-soft: rgba(255,255,255,.8); }
 .chart-container.is-dark-bg .chart-title { color: #FFFFFF; }
@@ -708,21 +671,10 @@ body:not([data-bg]) .qf-panel { background: rgba(20,32,48,.96); }
 }
 .chart-pager button:disabled { opacity: .35; cursor: default; }
 
-@media (max-width: 768px) {
-  .color-config-panel { gap: 8px; padding: 10px 12px; }
-  .color-label { font-size: .6rem; max-width: 50px; }
-  .color-swatch { width: 16px; height: 16px; }
-  .color-reset-icon { width: 24px; height: 24px; font-size: 12px; }
-}
-
 @media (max-width: 640px) {
   .chart-container { padding: 16px 14px 12px; }
   .chart-title { font-size: 1.15rem; }
   .chart-subtitle { font-size: .9rem; }
-  .color-config-panel { gap: 6px; padding: 8px 10px; }
-  .color-item { padding: 4px 8px; gap: 6px; }
-  .color-label { font-size: .55rem; max-width: 40px; }
-  .color-swatch { width: 14px; height: 14px; }
 }
 </style>
 </head>
@@ -780,6 +732,9 @@ body:not([data-bg]) .qf-panel { background: rgba(20,32,48,.96); }
 <div class="page-content">
 
   <div class="main-wrapper" id="chartWrapper">
+    <div class="chart-toolbar">
+      <button type="button" class="color-reset-icon" id="colorResetIcon" title="Restaurar cores padrão" aria-label="Restaurar cores padrão">↺</button>
+    </div>
     <div class="chart-container">
       <div class="chart-header">
         <p class="chart-title" id="chartTitle" data-i18n="chart.title">Turnover</p>
@@ -788,7 +743,6 @@ body:not([data-bg]) .qf-panel { background: rgba(20,32,48,.96); }
       <div class="chart-area" id="chartArea"></div>
       <div class="chart-pager" id="chartPager" hidden></div>
     </div>
-    <div class="color-config-panel" id="colorConfigPanel"></div>
     <div class="color-palette" id="chartPalette" role="listbox" aria-label="Paleta de cores"></div>
   </div>
 
@@ -945,18 +899,33 @@ function closeChartPalette() {
   document.getElementById('chartPalette')?.classList.remove('active');
 }
 
+function hexToRgb(hex) {
+  const n = parseInt(hex.replace('#', ''), 16);
+  return `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`;
+}
+
+function showPaletteTip(sw) {
+  const tip = document.querySelector('#chartPalette .palette-tip');
+  if (!tip) return;
+  if (!sw) { tip.hidden = true; return; }
+  tip.textContent = sw.dataset.rgb;
+  tip.style.left = (sw.offsetLeft + sw.offsetWidth / 2) + 'px';
+  tip.hidden = false;
+}
+
 function openChartPalette(target, x, y) {
   const pal = document.getElementById('chartPalette');
   const current = currentColorFor(target).toUpperCase();
-  document.querySelectorAll('#colorConfigPanel .color-palette.active').forEach(p => p.classList.remove('active'));
-  pal.innerHTML = PALETTE_COLORS.map(c =>
-    `<div class="palette-color${c.toUpperCase() === current ? ' active' : ''}" data-color="${c}" role="option" style="background-color:${c};"></div>`
-  ).join('');
+  pal.innerHTML = PALETTE_COLORS.map(c => {
+    const on = c.toUpperCase() === current;
+    return `<div class="palette-color${on ? ' active' : ''}" data-color="${c}" data-rgb="${hexToRgb(c)}" role="option" tabindex="0"
+      aria-selected="${on}" aria-label="${hexToRgb(c)}" style="background-color:${c};"></div>`;
+  }).join('') + '<span class="palette-tip" role="tooltip" hidden></span>';
   chartPaletteTarget = target;
   pal.style.transform = 'none';
   pal.classList.add('active');
   pal.style.left = Math.max(8, Math.min(x + 8, innerWidth - pal.offsetWidth - 8)) + 'px';
-  pal.style.top = Math.max(8, Math.min(y + 8, innerHeight - pal.offsetHeight - 8)) + 'px';
+  pal.style.top = Math.max(36, Math.min(y + 8, innerHeight - pal.offsetHeight - 8)) + 'px';
 }
 
 function wireChartColorClicks() {
@@ -967,6 +936,20 @@ function wireChartColorClicks() {
     const bar = e.target.closest('.bar, .value-label');
     const target = bar ? bar.closest('.col-wrapper').dataset.type : 'bgChart';
     openChartPalette(target, e.clientX, e.clientY);
+  });
+  pal.addEventListener('mouseover', (e) => showPaletteTip(e.target.closest('.palette-color')));
+  pal.addEventListener('mouseleave', () => showPaletteTip(null));
+  pal.addEventListener('focusin', (e) => showPaletteTip(e.target.closest('.palette-color')));
+  pal.addEventListener('focusout', () => showPaletteTip(null));
+  pal.addEventListener('keydown', (e) => {
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.closest('.palette-color')) {
+      e.preventDefault();
+      e.target.click();
+    }
+  });
+  document.getElementById('colorResetIcon').addEventListener('click', () => {
+    closeChartPalette();
+    resetColorsToDefault();
   });
   pal.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -1023,121 +1006,6 @@ function formatPct(v) {
   return (v > 0 ? '+' : '') + s + '%';
 }
 
-// Renderiza o painel de configuração de cores com opções dinâmicas para cada barra visível
-function renderColorConfigPanel(visibleBarTypes = []) {
-  const panel = document.getElementById('colorConfigPanel');
-  if (!panel) return;
-
-  let html = `<button type="button" class="color-reset-icon" id="colorResetIcon" title="Restaurar cores padrão">↺</button>`;
-
-  // Gera um item de cor para cada barra visível
-  if (visibleBarTypes.length > 0) {
-    html += visibleBarTypes.map(barType => {
-      const colorKey = barType.trim();
-      const currentColor = COLORS[colorKey] || getDefaultColorForBar(barType);
-      return `
-        <div class="color-item" data-bar-type="${colorKey}">
-          <div class="color-swatch has-palette" data-bar-type="${colorKey}" style="background-color: ${currentColor};" title="Clique para alterar a cor de ${colorKey}"></div>
-          <span class="color-label">${colorKey}</span>
-          <div class="color-palette" data-bar-type="${colorKey}"></div>
-        </div>
-      `;
-    }).join('');
-  }
-
-  // Adiciona opção de cor de fundo
-  html += `
-    <div class="color-item" data-bar-type="bgChart">
-      <div class="color-swatch has-palette" data-bar-type="bgChart" style="background-color: ${COLORS.bgChart};" title="Clique para alterar a cor do fundo"></div>
-      <span class="color-label">Fundo</span>
-      <div class="color-palette" data-bar-type="bgChart"></div>
-    </div>
-  `;
-
-  panel.innerHTML = html;
-
-  // Popula as paletas de cores
-  panel.querySelectorAll('.color-swatch.has-palette').forEach(swatch => {
-    const barType = swatch.getAttribute('data-bar-type');
-    const palette = panel.querySelector(`.color-palette[data-bar-type="${barType}"]`);
-    if (palette) {
-      const current = currentColorFor(barType).toUpperCase();
-      palette.innerHTML = PALETTE_COLORS.map(color => `
-        <div class="palette-color${color.toUpperCase() === current ? ' active' : ''}" data-color="${color}" style="background-color: ${color};"></div>
-      `).join('');
-    }
-  });
-
-  // Listeners para os swatches — abre/fecha a paleta (posicionada em fixed, na frente)
-  panel.querySelectorAll('.color-swatch.has-palette').forEach(swatch => {
-    swatch.addEventListener('click', (e) => {
-      e.stopPropagation();
-      closeChartPalette();
-      const barType = swatch.getAttribute('data-bar-type');
-      const palette = panel.querySelector(`.color-palette[data-bar-type="${barType}"]`);
-
-      // Fecha outras paletas abertas
-      panel.querySelectorAll('.color-palette.active').forEach(p => {
-        if (p !== palette) p.classList.remove('active');
-      });
-
-      // Posiciona a paleta (fixed, acima do swatch, na frente do gráfico)
-      if (!palette.classList.contains('active')) {
-        const rect = swatch.getBoundingClientRect();
-        palette.style.left = (rect.left + rect.width / 2) + 'px';
-        palette.style.top = (rect.top - 8) + 'px';
-        palette.style.transform = 'translateX(-50%) translateY(-100%)';
-        palette.classList.add('active');
-      } else {
-        palette.classList.remove('active');
-      }
-    });
-  });
-
-  // Listeners para as cores na paleta
-  panel.querySelectorAll('.palette-color').forEach(colorOption => {
-    colorOption.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const color = colorOption.getAttribute('data-color');
-      const palette = colorOption.closest('.color-palette');
-      const barType = palette.getAttribute('data-bar-type');
-
-      // Atualiza a cor
-      COLORS[barType] = color;
-
-      // Atualiza o swatch
-      const swatch = palette.previousElementSibling;
-      if (swatch) swatch.style.backgroundColor = color;
-
-      // Atualiza fundo do gráfico se necessário
-      if (barType === 'bgChart') applyChartBackgroundColor();
-
-      // Fecha a paleta
-      palette.classList.remove('active');
-
-      // Persiste e re-renderiza
-      saveColorPreferences();
-      renderTurnoverChart(getFilteredChartRows());
-    });
-  });
-
-  // Listener para o botão de restaurar
-  const resetIcon = document.getElementById('colorResetIcon');
-  if (resetIcon) {
-    resetIcon.addEventListener('click', resetColorsToDefault);
-  }
-
-  // Fecha paletas ao clicar fora (registrado uma única vez)
-  if (!renderColorConfigPanel.outsideClickWired) {
-    renderColorConfigPanel.outsideClickWired = true;
-    document.addEventListener('click', (e) => {
-      if (!e.target.closest('.color-item')) {
-        document.querySelectorAll('#colorConfigPanel .color-palette.active').forEach(p => p.classList.remove('active'));
-      }
-    });
-  }
-}
-
 // Retorna a cor padrão para uma barra baseada no seu tipo
 function getDefaultColorForBar(barType) {
   if (!barType) return DEFAULT_SERIES_COLORS.default;
@@ -1167,7 +1035,6 @@ function renderTurnoverChart(sourceRows) {
   // não um gráfico quebrado (pode acontecer com filtros muito restritivos).
   if (!sourceRows.length) {
     chartAreaEl.innerHTML = '<p class="chart-empty-state" data-i18n="chart.empty">Nenhum dado para os filtros selecionados.</p>';
-    renderColorConfigPanel([]); // Limpa o painel quando não há dados
     renderChartPager(0, 0, 0, 0);
     return;
   }
@@ -1182,10 +1049,6 @@ function renderTurnoverChart(sourceRows) {
   const pageStart = chartPage * MAX_COLUMNS;
   const pageEnd = Math.min(pageStart + MAX_COLUMNS, data.length);
   renderChartPager(data.length, pageStart, pageEnd, pageCount);
-
-  // Extrai os tipos de barra visíveis para atualizar o painel de cores
-  const visibleBarTypes = data.slice(pageStart, pageEnd).map(d => d.type.trim());
-  renderColorConfigPanel(visibleBarTypes);
 
   const html = data.map((row, i) => {
     if (i < pageStart || i >= pageEnd) return '';
