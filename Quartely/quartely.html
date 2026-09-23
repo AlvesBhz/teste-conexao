@@ -1111,19 +1111,40 @@ function renderTurnoverChart(sourceRows) {
 
   // Máximo de MAX_COLUMNS por página; deltas/comparações seguem calculados
   // sobre `data` completo — só a janela visível é renderizada.
-  // Card estreito: menos colunas por página (par, p/ não separar pares) para os rótulos caberem
+  // Card estreito: menos colunas por página para os rótulos caberem
   const gapPx = parseFloat(getComputedStyle(chartAreaEl).columnGap) || 0;
   const fit = Math.floor((chartAreaEl.clientWidth + gapPx) / (56 + gapPx));
-  const perPage = Math.min(MAX_COLUMNS, Math.max(2, fit - (fit % 2)));
-  const pageCount = Math.ceil(data.length / perPage);
-  chartPage = Math.max(0, Math.min(chartPage, pageCount - 1));
-  const pageStart = chartPage * perPage;
-  const pageEnd = Math.min(pageStart + perPage, data.length);
-  renderChartPager(data.length, pageStart, pageEnd, pageCount);
+  const perPage = Math.min(MAX_COLUMNS, Math.max(2, fit));
+
+  // Par Budget × Plan: mesmo período, ano e tipo de horizonte, identificados
+  // pelo rótulo retornado (nunca pela posição). Só vale se as duas colunas
+  // forem vizinhas, os valores forem numéricos e o Budget ≠ 0.
+  const pairIndex = {};
+  data.forEach((d, i) => {
+    const { core, yearSuffix } = splitTypeLabel(d.type.trim());
+    if (core.slice(-1).toUpperCase() !== 'P' || !Number.isFinite(d.value)) return;
+    const budgetCore = (core.slice(0, -1) + 'B').toUpperCase();
+    const b = data.findIndex(x => {
+      const sx = splitTypeLabel(x.type.trim());
+      return sx.core.toUpperCase() === budgetCore && sx.yearSuffix === yearSuffix && isValidComparison(core, sx.core);
+    });
+    if (b === i - 1 && Number.isFinite(data[b].value) && data[b].value !== 0) pairIndex[i] = b;
+  });
+
+  // Páginas de até perPage colunas, sem separar um par Budget|Plan
+  const pages = [];
+  for (let start = 0; start < data.length;) {
+    let end = Math.min(start + perPage, data.length);
+    if (end < data.length && end - start > 1 && pairIndex[end] === end - 1) end--;
+    pages.push([start, end]);
+    start = end;
+  }
+  chartPage = Math.max(0, Math.min(chartPage, pages.length - 1));
+  const [pageStart, pageEnd] = pages[chartPage];
+  renderChartPager(data.length, pageStart, pageEnd, pages.length);
 
   const html = data.map((row, i) => {
     if (i < pageStart || i >= pageEnd) return '';
-    const index1 = i + 1; // índice 1-based, como o VIndex do DAX
     const type = row.type.trim();
     const value = row.value;
     const { core, yearSuffix } = splitTypeLabel(type);
@@ -1145,39 +1166,11 @@ function renderTurnoverChart(sourceRows) {
     const isQuarter = core.toUpperCase().startsWith('Q');
     const barOpacity = isYear ? 1 : isQuarter ? 0.95 : 0.9;
 
-    // ── Base de comparação: Budget do mesmo período > coluna anterior ──
-    // O Budget correspondente precisa ser do MESMO ano (mesmo yearSuffix),
-    // senão um Act/Fcst de 2026 poderia parear com o Budget de 2025.
-    // NOVO: também valida que ambos os períodos são do mesmo tipo (Trimestre,
-    // Semestre ou Anual) — Q4 nunca compara com H1, H2 nunca com Ano.
-    const baseName = core.length > 1 ? core.slice(0, -1) : '';
-    const budgetIndex = data.findIndex(d => {
-      const dSplit = splitTypeLabel(d.type.trim());
-      const budgetCore = (baseName + 'B').toUpperCase();
-      return dSplit.core.toUpperCase() === budgetCore
-        && dSplit.yearSuffix === yearSuffix
-        && isValidComparison(core, dSplit.core);
-    });
-    const budgetVal = budgetIndex >= 0 ? data[budgetIndex].value : undefined;
-
-    const prevRow = i > 0 ? data[i - 1] : undefined;
-    const prevLastChar = prevRow ? splitTypeLabel(prevRow.type.trim()).core.slice(-1).toUpperCase() : undefined;
-    const isPrevActualOrFcst = prevLastChar === 'A' || prevLastChar === 'F';
-    const isRealSequence = isActualOrFcst && isPrevActualOrFcst;
-
-    // NOVO: valida que a coluna anterior também é do mesmo tipo de horizonte
-    const prevIsValidType = prevRow ? isValidComparison(core, splitTypeLabel(prevRow.type.trim()).core) : false;
-    const isValidPrevSequence = isRealSequence && prevIsValidType;
-
-    const usaBudget = !isRealSequence && budgetVal !== undefined && budgetVal !== 0;
-    const usaPrev = !usaBudget && prevIsValidType && (isValidPrevSequence || index1 % 2 === 0);
-
-    let baseValue, baseIndex;
-    if (usaBudget) { baseValue = budgetVal; baseIndex = budgetIndex; }
-    else if (usaPrev && prevRow) { baseValue = prevRow.value; baseIndex = i - 1; }
-
+    // ── Delta somente Plan × Budget do mesmo par (ver pairIndex) ──
+    const baseIndex = pairIndex[i];
+    const baseValue = baseIndex !== undefined ? data[baseIndex].value : undefined;
     const deltaAbs = baseValue !== undefined ? value - baseValue : undefined;
-    const deltaPct = (isActualOrFcst && baseValue !== undefined && baseValue !== 0) ? deltaAbs / baseValue : undefined;
+    const deltaPct = deltaAbs !== undefined ? deltaAbs / baseValue : undefined;
     const hasDelta = deltaPct !== undefined;
 
     const deltaClass = !hasDelta ? '' : deltaPct > 0.001 ? 'is-up' : deltaPct < -0.001 ? 'is-down' : 'is-flat';
