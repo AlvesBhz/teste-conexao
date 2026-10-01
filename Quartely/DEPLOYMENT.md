@@ -1,4 +1,17 @@
-# Deploy — Quartely (Databricks App próprio)
+# Deploy — Quartely
+
+## Modo Portal (em uso): /Quartely/quartely.html no app Portal
+1. Copie a pasta `Quartely/` para a raiz do projeto do Portal.
+2. Garanta no `server.js` do Portal, antes do gate de páginas e do `express.static`:
+   `require("./Quartely/portal")(app);`
+3. Deploy do Portal. Validar:
+   - `…/Quartely/api/health` → `healthy` com `BDIBPBMSA_PRD`
+   - `…/Quartely/quartely.html` → sem o aviso "Exibindo DADOS DE EXEMPLO"
+4. O usuário SQL do Portal precisa de **SELECT** em `IBP.PEDRAVISAOCONSOLIDADA`, `IBP.DASHBOARD`, `IBP.CONTROLE_PROCESSOS` e `IBP.SITES`.
+
+---
+
+# Modo standalone (opcional): Databricks App próprio
 
 ## 1. Pré-requisitos (uma vez)
 1. Usuário SQL com **SELECT** em `IBP.PEDRAVISAOCONSOLIDADA`, `IBP.DASHBOARD`, `IBP.CONTROLE_PROCESSOS` e `IBP.SITES` no `BDIBPBMSA_PRD`.

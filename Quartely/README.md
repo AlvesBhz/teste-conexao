@@ -6,12 +6,21 @@ Conexão **direta ao Azure SQL de produção** (`rdb-ibp-bmsa-prd` / `BDIBPBMSA_
 | Arquivo | Função |
 |---|---|
 | `quartely.html` | Página (HTML/CSS/JS em um arquivo) |
-| `server.js` | Express + pool `mssql` próprio; serve só a página e `assets/` |
+| `portal.js` | **Modo Portal** (em uso): monta rotas, conexão própria ao PRD e bloqueio de arquivos dentro do app Portal |
+| `server.js` | Modo standalone (app próprio, opcional): Express + pool `mssql`; serve só a página e `assets/` |
 | `quartely-api.js` | Rotas `/chart-data`, `/sites`, `/ping` e a SQL (mesma do VBM Kaizen) |
 | `app.yaml` | Configuração do Databricks App (PRD; credenciais via secret) |
 | `assets/images/vale-logo.svg` | Logo |
 
-## Rotas
+## No Portal (em uso)
+O `server.js` do Portal carrega o Quartely com **uma linha**, antes do gate de páginas e do `express.static`:
+```js
+require("./Quartely/portal")(app);
+```
+Banco padrão: `rdb-ibp-bmsa-prd` / `BDIBPBMSA_PRD`, com o usuário/senha do Portal. Opcionais: `QUARTELY_SQL_SERVER`, `QUARTELY_SQL_DATABASE`, `QUARTELY_SQL_PORT`, `QUARTELY_SQL_USER`, `QUARTELY_SQL_PASSWORD`.
+Rotas: `/Quartely/quartely.html`, `/Quartely/api/chart-data`, `/Quartely/api/sites`, `/Quartely/api/ping`, `/Quartely/api/health`.
+
+## Rotas (modo standalone)
 - `GET /` — página
 - `GET /api/chart-data`, `GET /api/sites` — dados (cache de 5 min); também em `/Quartely/api/*`
 - `GET /api/health` — testa o banco (`200` conectado / `503` com o motivo)
