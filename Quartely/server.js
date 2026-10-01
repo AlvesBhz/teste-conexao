@@ -1,211 +1,143 @@
-const express = require("express");
-const path = require("path");
-const { DBSQLClient } = require("@databricks/sql");
+/**
+ * Quartely — app independente (Databricks App próprio).
+ *
+ * Conexão DIRETA ao Azure SQL de PRODUÇÃO (BDIBPBMSA_PRD), com pool
+ * próprio — não depende do servidor do VBM Kaizen. A SQL vem de
+ * quartely-api.js, a mesma usada pelo VBM, para as duas publicações
+ * nunca divergirem.
+ *
+ * Variáveis de ambiente (ver app.yaml / .env.example):
+ *   AZURE_SQL_SERVER, AZURE_SQL_DATABASE, AZURE_SQL_PORT
+ *   AZURE_SQL_USER, AZURE_SQL_PASSWORD   ← secrets, nunca em texto puro
+ */
+const path = require('path');
+const express = require('express');
+const compression = require('compression');
+const sql = require('mssql');
+const { criarQuartelyRouter } = require('./quartely-api');
+
+const DB = {
+  server: process.env.AZURE_SQL_SERVER || '',
+  database: process.env.AZURE_SQL_DATABASE || '',
+  user: process.env.AZURE_SQL_USER || '',
+  password: process.env.AZURE_SQL_PASSWORD || '',
+  port: parseInt(process.env.AZURE_SQL_PORT || '1433', 10),
+};
+
+function configAusente() {
+  return ['server', 'database', 'user', 'password']
+    .filter(k => !DB[k])
+    .map(k => ({ server: 'AZURE_SQL_SERVER', database: 'AZURE_SQL_DATABASE', user: 'AZURE_SQL_USER', password: 'AZURE_SQL_PASSWORD' })[k]);
+}
+
+// ── Pool (criado na 1ª consulta; recriado se cair) ──────────────────
+// Sem banco configurado o servidor SOBE mesmo assim: a página abre e
+// mostra o aviso de dados de exemplo, em vez de derrubar o app inteiro.
+let poolPromise = null;
+// Falha recente de conexão é reaproveitada por 30 s: sem isso cada caminho
+// de API que a página tenta esperaria o timeout de novo (~2 min no total).
+let ultimaFalha = null;
+const JANELA_FALHA_MS = 30000;
+
+function getPool() {
+  if (!poolPromise && ultimaFalha && Date.now() - ultimaFalha.em < JANELA_FALHA_MS) {
+    return Promise.reject(ultimaFalha.erro);
+  }
+  if (!poolPromise) {
+    const faltando = configAusente();
+    if (faltando.length) return Promise.reject(new Error(`Variáveis de ambiente ausentes: ${faltando.join(', ')}`));
+    const pool = new sql.ConnectionPool({
+      server: DB.server,
+      database: DB.database,
+      user: DB.user,
+      password: DB.password,
+      port: DB.port,
+      options: { encrypt: true, trustServerCertificate: false },
+      connectionTimeout: 30000,
+      requestTimeout: 60000,
+      pool: { max: 5, min: 0, idleTimeoutMillis: 30000 },
+    });
+    pool.on('error', err => { console.error('[sql] erro no pool:', err.message); poolPromise = null; });
+    poolPromise = pool.connect().then(p => {
+      ultimaFalha = null;
+      console.log(`[sql] conectado a ${DB.server}/${DB.database}`);
+      return p;
+    }).catch(err => {
+      poolPromise = null;
+      ultimaFalha = { erro: err, em: Date.now() };
+      console.error('[sql] falha ao conectar:', err.message);
+      throw err;
+    });
+  }
+  return poolPromise;
+}
+
+async function runQuery(query) {
+  const t = Date.now();
+  const pool = await getPool();
+  const result = await pool.request().query(query);
+  console.log(`[sql] ${Date.now() - t}ms linhas=${result.recordset.length}`);
+  return result;
+}
+
+// ── App ─────────────────────────────────────────────────────────────
 const app = express();
+app.disable('x-powered-by');
+app.use(compression());
+app.use((req, res, next) => { res.set('X-Content-Type-Options', 'nosniff'); next(); });
 
-// Middleware de compressão
-try {
-  app.use(require("compression")());
-} catch (err) {
-  console.warn("[perf] middleware 'compression' indisponível; servindo sem gzip.");
+// Só a página e os assets são públicos — server.js, app.yaml, .env e
+// package.json nunca são servidos (não há express.static na pasta raiz).
+const PAGINA = path.join(__dirname, 'quartely.html');
+const enviarPagina = (req, res) => { res.set('Cache-Control', 'no-store'); res.sendFile(PAGINA); };
+for (const rota of ['/', '/index.html', '/quartely.html', '/Quartely', '/Quartely/', '/Quartely/quartely.html']) {
+  app.get(rota, enviarPagina);
 }
+const assets = express.static(path.join(__dirname, 'assets'), { index: false, maxAge: '1d' });
+app.use('/assets', assets);
+app.use('/Quartely/assets', assets);
 
-// Servir arquivos estáticos
-app.use(express.static(__dirname, {
-  etag: true,
-  index: false,
-  setHeaders: (res) => res.set("Cache-Control", "no-store"),
-}));
-
-// ── Conexão Databricks ──────────────────────────────────────────
-async function createSession() {
-  const client = new DBSQLClient();
-
-  const host = process.env.DATABRICKS_HOST;
-  const warehouseId = process.env.DATABRICKS_WAREHOUSE_ID;
-  const clientId = process.env.DATABRICKS_CLIENT_ID;
-  const clientSecret = process.env.DATABRICKS_CLIENT_SECRET;
-
-  const missing = [
-    !host && "DATABRICKS_HOST",
-    !warehouseId && "DATABRICKS_WAREHOUSE_ID",
-    !clientId && "DATABRICKS_CLIENT_ID",
-    !clientSecret && "DATABRICKS_CLIENT_SECRET",
-  ].filter(Boolean);
-
-  if (missing.length) {
-    throw new Error(`Variáveis de ambiente ausentes: ${missing.join(", ")}`);
-  }
-
-  await client.connect({
-    authType: "databricks-oauth",
-    useDatabricksOAuthInAzure: true,
-    host,
-    path: `/sql/1.0/warehouses/${warehouseId}`,
-    oauthClientId: clientId,
-    oauthClientSecret: clientSecret,
-  });
-
-  const session = await client.openSession();
-  return { client, session };
-}
-
-let sessionPromise = null;
-
-async function getSession() {
-  if (!sessionPromise) sessionPromise = createSession();
+// Health check com o banco: 200 conectado, 503 com o motivo (sem expor credenciais)
+async function health(req, res) {
+  res.set('Cache-Control', 'no-store');
   try {
-    return await sessionPromise;
+    await runQuery('SELECT 1 AS ok');
+    res.json({ status: 'healthy', database: DB.database, server: DB.server });
   } catch (err) {
-    sessionPromise = null;
-    throw err;
+    res.status(503).json({ status: 'unhealthy', database: DB.database || null, error: err.message });
   }
 }
 
-async function closeSessionQuietly() {
-  const pending = sessionPromise;
-  sessionPromise = null;
-  if (!pending) return;
-  try {
-    const { client, session } = await pending;
-    await session.close();
-    await client.close();
-  } catch (err) {
-    /* sessão já estava morta */
-  }
+// O front-end tenta api/, ../api/, /api/ e /Quartely/api/ (ver
+// QUARTELY_API_BASES em quartely.html): a MESMA instância do router em
+// todos os caminhos compartilha o cache de 5 min.
+const router = criarQuartelyRouter({ runQuery });
+for (const base of ['/api', '/Quartely/api', '/quartely/api']) {
+  app.get(`${base}/health`, health);
+  app.use(base, (req, res, next) => { res.set('Cache-Control', 'no-store'); next(); }, router);
 }
 
-let queue = Promise.resolve();
+app.use((req, res) => res.status(404).json({ error: 'Não encontrado' }));
+app.use((err, req, res, next) => {
+  console.error('[erro]', err);
+  res.status(500).json({ error: 'Erro interno do servidor' });
+});
 
-async function executeOnSession(sql) {
-  const tSession = Date.now();
-  const { session } = await getSession();
-  const msSession = Date.now() - tSession;
+// ── Start / shutdown ────────────────────────────────────────────────
+const PORT = process.env.DATABRICKS_APP_PORT || process.env.PORT || 8000;
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`[quartely] ouvindo na porta ${PORT} — banco: ${DB.server || '(não configurado)'}/${DB.database || '(não configurado)'}`);
+  const faltando = configAusente();
+  if (faltando.length) console.warn(`[quartely] ATENÇÃO: sem conexão com o banco — faltam ${faltando.join(', ')}`);
+  if (DB.database && !/_PRD$/i.test(DB.database)) console.warn(`[quartely] ATENÇÃO: AZURE_SQL_DATABASE="${DB.database}" não é a base de produção (*_PRD)`);
+});
 
-  const tQuery = Date.now();
-  const query = await session.executeStatement(sql);
-  try {
-    const rows = await query.fetchAll();
-    const primeiraLinha = sql.trim().split("\n")[0].trim().slice(0, 48);
-    console.log(
-      `[sql] sessão=${msSession}ms query=${Date.now() - tQuery}ms linhas=${rows.length} :: ${primeiraLinha}`
-    );
-    return rows;
-  } finally {
-    await query.close();
-  }
-}
-
-async function runQuery(sql) {
-  const run = async () => {
-    try {
-      return await executeOnSession(sql);
-    } catch (err) {
-      await closeSessionQuietly();
-      return executeOnSession(sql);
-    }
-  };
-  queue = queue.then(run, run);
-  return queue;
-}
-
-// ── Cache em memória ────────────────────────────────────────────
-const CACHE_TTL_MS = 5 * 60 * 1000;
-const cache = new Map();
-
-async function withCache(key, fetcher) {
-  const hit = cache.get(key);
-  if (hit && hit.expiresAt > Date.now()) return hit.data;
-  const data = await fetcher();
-  cache.set(key, { data, expiresAt: Date.now() + CACHE_TTL_MS });
-  return data;
-}
-
-// ── Função de dados do gráfico ──────────────────────────────────
-async function getChartData() {
-  return withCache("chart-data", async () => {
-    const sql = `
-      DECLARE @DT_INI AS DATE, @DT_FIM AS DATE, @DT_REF AS DATE
-      SET @DT_INI = '2025-01-01'
-      SET @DT_FIM = CAST(DATEADD(MONTH, 0, CONCAT(YEAR(DATEFROMPARTS(YEAR(DATEADD(MONTH, 0, GETDATE()-1)), MONTH(DATEADD(MONTH, -1, GETDATE()-1)), 1)), '-12-01')) AS DATE)
-      SET @DT_REF = (SELECT DATEADD(MONTH, -1, DT_INI) AS DT_INI_MENOS_1_MES FROM IBP.CONTROLE_PROCESSOS WHERE ID_PROCESSO = 2)
-
-      -- MESES
-      SELECT
-        PVC.DT_REF, PVC.ID_SISTEMA, PVC.ID_SITE, PVC.ID_OPERACAO, PVC.ID_KPI,
-        DASH.NM_KPIS_DASH AS NM_KPI, DASH.ID_ORDEM,
-        CASE WHEN UnpivotedData.Type = 'Budget' THEN 0 WHEN UnpivotedData.Type = 'Supply' THEN 1 ELSE 2 END AS ORDEM_GRAFICO,
-        CASE WHEN UnpivotedData.Type = 'Budget' THEN 0 WHEN UnpivotedData.Type = 'Supply' THEN 2 ELSE 1 END AS ID_TYPE,
-        CASE WHEN UnpivotedData.Type = 'Budget' THEN 'Budget' WHEN UnpivotedData.Type = 'Supply' THEN 'Plan' ELSE 'Act/Fcst' END AS NM_TYPE,
-        CASE WHEN UnpivotedData.Type = 'Budget' THEN CONCAT(FORMAT(DT_REF, 'MMM'),' B')
-          WHEN UnpivotedData.Type = 'Supply' THEN CONCAT(FORMAT(DT_REF, 'MMM'),' P')
-          WHEN UnpivotedData.Type = 'Forecast' AND PVC.DT_REF <= @DT_REF THEN CONCAT(FORMAT(DT_REF, 'MMM'),' A')
-          WHEN UnpivotedData.Type = 'Forecast' THEN CONCAT(FORMAT(DT_REF, 'MMM'),' F') END AS Type,
-        CASE WHEN UnpivotedData.Value IS NULL THEN 0 ELSE UnpivotedData.Value END AS Value
-      FROM IBP.PEDRAVISAOCONSOLIDADA PVC
-      INNER JOIN IBP.DASHBOARD DASH ON PVC.ID_SISTEMA = DASH.ID_SISTEMA AND CONCAT(PVC.ID_SITE, PVC.ID_OPERACAO, PVC.ID_KPI) = CONCAT(DASH.ID_SITE, DASH.ID_OPERACAO, DASH.ID_KPI)
-      CROSS APPLY (
-        SELECT 'Budget' AS Type, PVC.VL_ORC * DASH.VL_FATOR AS Value
-        UNION ALL SELECT 'Supply' AS Type, PVC.VL_SUPPLY * DASH.VL_FATOR AS Value
-        UNION ALL SELECT 'Forecast' AS Type,
-          CASE WHEN PVC.DT_REF <= DATEFROMPARTS(YEAR(DATEADD(MONTH, -1, @DT_REF)), MONTH(DATEADD(MONTH, -1, @DT_REF)), 1) AND PVC.VL_REAL IS NULL THEN 0
-            WHEN PVC.DT_REF <= DATEFROMPARTS(YEAR(DATEADD(MONTH, -1, @DT_REF)), MONTH(DATEADD(MONTH, -1, @DT_REF)), 1) AND PVC.VL_REAL IS NOT NULL THEN PVC.VL_REAL * DASH.VL_FATOR
-            ELSE PVC.VL_PROJ * DASH.VL_FATOR END AS Value
-      ) AS UnpivotedData
-      WHERE PVC.DT_REF BETWEEN @DT_INI AND @DT_FIM AND DASH.ID_DASH = 21
-    `;
-
-    const rows = await runQuery(sql);
-    return rows;
+async function encerrar(sinal) {
+  console.log(`[quartely] ${sinal} recebido, encerrando`);
+  server.close(async () => {
+    try { if (poolPromise) await (await poolPromise).close(); } catch (e) { /* pool já fechado */ }
+    process.exit(0);
   });
 }
-
-// ── Middleware de cache para APIs ──────────────────────────────
-app.use("/api", (req, res, next) => {
-  res.set("Cache-Control", "no-store");
-  next();
-});
-
-// ── Endpoint de dados do gráfico ───────────────────────────────
-app.get("/api/chart-data", async (req, res) => {
-  try {
-    const tTotal = Date.now();
-    const data = await getChartData();
-    console.log(`[api] /api/chart-data total=${Date.now() - tTotal}ms rows=${data.length}`);
-    res.json(data);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ── Rotas de página ────────────────────────────────────────────
-app.get("/", (req, res) => {
-  res.set("Cache-Control", "no-store");
-  res.sendFile(path.join(__dirname, "index.html"));
-});
-
-// ── Health check ───────────────────────────────────────────────
-app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString() });
-});
-
-// ── Error handling ─────────────────────────────────────────────
-process.on("uncaughtException", (err) => {
-  console.error("UNCAUGHT EXCEPTION");
-  console.error(err);
-});
-
-process.on("unhandledRejection", (err) => {
-  console.error("UNHANDLED REJECTION");
-  console.error(err);
-});
-
-// ── Iniciar servidor ───────────────────────────────────────────
-const port = process.env.DATABRICKS_APP_PORT || 8000;
-
-app.listen(port, "0.0.0.0", () => {
-  console.log(`[quarterly-dashboard] Server running on port ${port}`);
-  console.log(`  http://localhost:${port}`);
-  console.log(`  API: http://localhost:${port}/api/chart-data`);
-});
+process.on('SIGTERM', () => encerrar('SIGTERM'));
+process.on('SIGINT', () => encerrar('SIGINT'));
