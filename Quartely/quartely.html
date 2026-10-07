@@ -1148,6 +1148,7 @@ function getDefaultColorForBar(barType) {
 
 // Extrai o tipo de horizonte (Trimestre, Semestre, Anual) do core do período
 function getHorizonType(core) {
+  if (/^YTD\d/i.test(core)) return 'YTD';
   if (/^Q\d/i.test(core)) return 'QUARTER';
   if (/^H\d/i.test(core)) return 'SEMESTER';
   if (/^\d{2,4}[A-Z]/i.test(core)) return 'YEAR';
@@ -1478,7 +1479,7 @@ function buildFallbackRows() {
 // mas o filtro fica aqui como segunda camada de defesa — se um dia o
 // bloco MONTH voltar à query (p.ex. para alimentar uma futura página
 // Monthly), a Quarterly continua correta sem precisar de nenhum ajuste.
-const QUARTERLY_VISOES = ['QUARTER', 'SEMESTER', 'YEAR'];
+const QUARTERLY_VISOES = ['QUARTER', 'SEMESTER', 'YEAR', 'YTD'];
 function isQuarterlyVisao(row) { return QUARTERLY_VISOES.includes(row.CD_VISAO); }
 
 // ── Carga de dados: API real, com fallback local ────────────────────────
