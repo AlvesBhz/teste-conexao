@@ -110,8 +110,8 @@ section { display:grid; gap:18px; min-width:0; }
 .phase.later { opacity:.92; }
 .phase.later .phase-side { background:var(--grey-bg); }
 .facts { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
-.fact { display:grid; gap:2px; font-size:.82rem; color:var(--text-2); }
-.fact .eyebrow { font-size:.64rem; }
+.fact { font-size:.82rem; color:var(--text-2); min-width:0; }
+.fact .eyebrow { display:block; font-size:.64rem; margin-bottom:2px; }
 .chips { display:flex; flex-wrap:wrap; gap:6px; }
 .chip { display:inline-flex; align-items:center; gap:6px; font-size:.72rem; font-weight:500; padding:3px 10px; border-radius:100px; background:var(--accent-soft); color:var(--accent); white-space:nowrap; }
 .chip.owner { background:var(--grey-bg); color:var(--text-2); }
