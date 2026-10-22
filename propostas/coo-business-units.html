@@ -8,9 +8,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap">
 <style>
-/* Layout: cabeçalho do VBM Performance Hub → barra de filtros em cascata →
-   destaques do trimestre → grade de cards (Produção 3×3, Financeiro 3×2),
-   cada card com três pequenos múltiplos (Mês | Trimestre | Ano). */
+/* Layout: tela única — cabeçalho do VBM Performance Hub, barra de filtros
+   em cascata e dois painéis lado a lado (Production 3×3 | Financial 2×3),
+   como no print COO – Business Units. */
 :root {
   /* Página (muda com o tema) */
   --page-base: #eef2f7;
@@ -155,164 +155,130 @@ body::before {
 }
 .nav-icon:hover { background: rgba(255,255,255,.08); }
 
-/* ── Página ── */
+
+/* ── Tela única: cabeçalho + barra de filtros + dois painéis que ocupam o resto ── */
+html, body { height: 100%; }
+body { display: flex; flex-direction: column; min-height: 0; }
+.topnav { flex-shrink: 0; }
 .page {
-  max-width: 1480px; margin: 0 auto;
-  padding-block: 20px 48px;
+  flex: 1 1 auto; min-height: 0; width: 100%;
+  padding-block: 10px 12px;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
-  display: flex; flex-direction: column; gap: 22px;
+  display: flex; flex-direction: column; gap: 10px;
 }
 
-.data-banner {
-  display: flex; gap: 10px; align-items: flex-start;
-  padding: 10px 14px; border-radius: 10px; border: 1px solid var(--banner-border);
-  background: var(--banner-bg); color: var(--banner-text); font-size: .8rem; line-height: 1.45;
-}
-.data-banner strong { font-weight: 600; }
-
-/* Título da tela + unidade */
-.page-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 14px 24px; }
-.page-head h2 { margin: 0; font: 500 1.6rem/1.2 var(--font-ui); letter-spacing: -.01em; text-wrap: balance; }
-.page-head h2 span { color: var(--text-soft); font-weight: 400; }
-.eyebrow { margin: 0 0 4px; font-size: .68rem; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--text-soft); }
-.updated { margin: 0; font-size: .76rem; color: var(--text-soft); font-variant-numeric: tabular-nums; }
-
-/* Barra de filtros (cascata Visão → Ano → Trimestre → Mês) */
-.filters {
-  display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: flex-end;
-  padding: 14px 16px; border-radius: 14px; border: 1px solid var(--line);
+/* Barra superior: unidade/período + filtros + legenda, numa faixa compacta */
+.bar {
+  flex-shrink: 0; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 18px;
+  padding: 8px 12px; border-radius: 12px; border: 1px solid var(--line);
   background: color-mix(in srgb, var(--ctl-bg) 60%, transparent);
 }
-.filter { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.filter-label { font-size: .66rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--text-soft); }
-.seg { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 3px; border-radius: 10px; border: 1px solid var(--ctl-border); background: var(--ctl-bg); }
+.bar-title { display: flex; flex-direction: column; gap: 2px; min-width: 0; margin-right: 6px; }
+.bar-title .eyebrow { margin: 0; font-size: .62rem; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--text-soft); }
+.bar-title h2 { margin: 0; font: 500 1.15rem/1.2 var(--font-ui); white-space: nowrap; }
+.bar-title h2 span { color: var(--text-soft); font-weight: 400; }
+.filter { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.filter-label { font-size: .6rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--text-soft); }
+.seg { display: inline-flex; flex-wrap: wrap; gap: 3px; padding: 2px; border-radius: 9px; border: 1px solid var(--ctl-border); background: var(--ctl-bg); }
 .seg button {
-  min-height: 30px; padding: 4px 12px; border: 0; border-radius: 7px; background: transparent;
-  color: var(--ctl-text); font: 500 .78rem var(--font-ui); cursor: pointer; white-space: nowrap;
+  min-height: 26px; padding: 2px 10px; border: 0; border-radius: 7px; background: transparent;
+  color: var(--ctl-text); font: 500 .74rem var(--font-ui); cursor: pointer; white-space: nowrap;
 }
 .seg button:hover { background: color-mix(in srgb, var(--ctl-on-bg) 12%, transparent); }
 .seg button[aria-pressed="true"] { background: var(--ctl-on-bg); color: var(--ctl-on-text); }
-.filters .spacer { flex: 1 1 0; }
+.bar .spacer { flex: 1 1 0; }
+.bar-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.legend { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 14px; margin: 0; padding: 0; list-style: none; font-size: .72rem; color: var(--text-soft); }
+.legend li { display: flex; align-items: center; gap: 6px; }
+.swatch { width: 12px; height: 9px; border-radius: 2px; }
+.updated { margin: 0; font-size: .68rem; color: var(--text-soft); font-variant-numeric: tabular-nums; }
+.demo { display: inline-flex; align-items: center; gap: 5px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--banner-border); background: var(--banner-bg); color: var(--banner-text); font-size: .66rem; font-weight: 500; }
 
-/* Legenda + escala */
-.toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 20px; }
-.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 0; padding: 0; list-style: none; font-size: .78rem; color: var(--text-soft); }
-.legend li { display: flex; align-items: center; gap: 8px; }
-.swatch { width: 14px; height: 10px; border-radius: 2px; }
-.legend .good, .legend .bad { width: 10px; height: 10px; border-radius: 50%; }
-
-/* Destaques do trimestre */
-.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
-.kpi {
+/* Painéis (Production Drivers | Financial Drivers) */
+.dash { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 12px; }
+.panel {
+  min-height: 0; display: flex; flex-direction: column; gap: 6px;
   background: var(--card); border: 1px solid var(--card-border); border-radius: 14px; box-shadow: var(--card-shadow);
-  padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; min-width: 0; color: var(--ink-strong);
+  padding: 10px 12px 8px; color: var(--ink-strong);
 }
-.kpi-label { font: 400 .86rem var(--font-title); color: var(--card-title); }
-.kpi-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-.kpi-value { font: 500 1.7rem/1 var(--font-chart); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
-.kpi-unit { font-size: .8rem; color: var(--ink-soft); }
-.kpi-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: .76rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
-.chip {
-  display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border-radius: 999px;
-  font: 500 .74rem var(--font-chart); font-variant-numeric: tabular-nums; white-space: nowrap;
-}
-.chip.is-good { color: var(--good); background: rgba(0,126,122,.10); }
-.chip.is-bad { color: var(--bad-text); background: rgba(220,38,38,.09); }
-.chip.is-flat { color: #555; background: rgba(116,118,120,.12); }
+.panel-title { margin: 0; flex-shrink: 0; font: italic 400 1rem var(--font-title); color: #374151; }
+.panel-grid { flex: 1 1 auto; min-height: 0; display: grid; grid-template-rows: repeat(3, minmax(0, 1fr)); gap: 6px 14px; }
+.panel-prod .panel-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.panel-fin .panel-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
-/* Seções */
-.section { display: flex; flex-direction: column; gap: 14px; }
-.section-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
-.section-head h3 { margin: 0; font: 500 1.1rem var(--font-ui); }
-.section-head p { margin: 0; font-size: .78rem; color: var(--text-soft); }
-.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-
-/* Card de gráfico (chart-container do Performance Hub) */
-.card {
-  background: var(--card); border: 1px solid var(--card-border); border-radius: 14px; box-shadow: var(--card-shadow);
-  padding: 14px 14px 10px; display: flex; flex-direction: column; gap: 4px; min-width: 0; color: var(--ink-strong);
-}
-.card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
-.card-title { margin: 0; font: 400 1.08rem/1.25 var(--font-title); color: var(--card-title); letter-spacing: -.005em; }
-.card-unit { margin: 0; font: 400 .8rem var(--font-chart); color: var(--card-unit); }
+/* Gráfico (chart-container do Performance Hub, sem moldura própria dentro do painel) */
+.card { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.card-head { flex-shrink: 0; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.card-title { margin: 0; font: 400 .95rem/1.2 var(--font-title); color: var(--card-title); letter-spacing: -.005em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-unit { margin: 0; font: 400 .72rem var(--font-chart); color: var(--card-unit); }
 .card .seg { border-color: rgba(13,38,64,.16); background: #fff; }
-.card .seg button { color: #1F2937; min-height: 26px; padding: 2px 10px; font-size: .72rem; }
+.card .seg button { color: #1F2937; min-height: 22px; padding: 1px 8px; font-size: .68rem; }
 .card .seg button[aria-pressed="true"] { background: #0B6E99; color: #fff; }
 .card .seg button:hover:not([aria-pressed="true"]) { background: #EEF6FB; }
-.chart svg { display: block; width: 100%; height: auto; overflow: visible; font-family: var(--font-chart); }
+.chart { flex: 1 1 auto; min-height: 90px; position: relative; }
+.chart svg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; overflow: visible; font-family: var(--font-chart); }
 
 /* SVG: barras e cota de diferença */
 .b-bar { transform-box: fill-box; transform-origin: 50% 100%; animation: grow .9s cubic-bezier(.16,.84,.28,1) both; }
 .b-bar.neg { transform-origin: 50% 0%; }
 @keyframes grow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
-.b-val { fill: var(--ink-strong); font-size: 11.5px; font-variant-numeric: tabular-nums; }
-.b-axis { fill: var(--ink-soft); font-size: 10.5px; }
-.b-cap { fill: #374151; font-size: 11px; font-weight: 600; letter-spacing: .02em; }
+.b-val { fill: var(--ink-strong); font-size: 11px; font-variant-numeric: tabular-nums; }
+.b-axis { fill: var(--ink-soft); font-size: 10px; }
 .b-sep { stroke: rgba(15,23,42,.08); }
 .b-base { stroke: #CBD5E1; }
 .cota { animation: fade .5s .6s ease-out both; }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+.is-static .b-bar, .is-static .cota { animation: none; }
 .d-ref { stroke: rgba(116,118,120,.45); stroke-dasharray: 3 2; }
 .d-now { stroke: rgba(116,118,120,.45); }
 .d-track { stroke: rgba(116,118,120,.30); }
 .d-pill { fill: rgba(255,255,255,.94); stroke: rgba(15,23,42,.06); }
-.d-txt { font-size: 10.5px; font-variant-numeric: tabular-nums; }
+.d-txt { font-size: 10px; font-variant-numeric: tabular-nums; }
 .is-good .d-span { stroke: rgba(0,126,122,.6); } .is-good .d-txt { fill: var(--good); } .is-good .d-up { fill: rgba(0,126,122,.14); }
 .is-bad  .d-span { stroke: rgba(220,38,38,.6); } .is-bad  .d-txt { fill: var(--bad-text); } .is-bad  .d-up { fill: rgba(220,38,38,.12); }
 .is-flat .d-span { stroke: rgba(116,118,120,.6); } .is-flat .d-txt { fill: #555; } .is-flat .d-up { fill: rgba(116,118,120,.12); }
 .is-good .d-dn { fill: url(#hatch-good); } .is-bad .d-dn { fill: url(#hatch-bad); } .is-flat .d-dn { fill: url(#hatch-flat); }
 
-/* Tabela de composição do All-in */
-.mini-table-wrap { overflow-x: auto; margin-top: 4px; }
-.mini-table { width: 100%; border-collapse: collapse; font: 400 .74rem var(--font-chart); font-variant-numeric: tabular-nums; color: #1F2937; }
-.mini-table th, .mini-table td { padding: 5px 6px; text-align: right; white-space: nowrap; }
+/* Composição do All-in */
+.mini-table-wrap { flex-shrink: 0; overflow-x: auto; }
+.mini-table { width: 100%; border-collapse: collapse; font: 400 .68rem var(--font-chart); font-variant-numeric: tabular-nums; color: #1F2937; }
+.mini-table th, .mini-table td { padding: 2px 5px; text-align: right; white-space: nowrap; }
 .mini-table th:first-child, .mini-table td:first-child { text-align: left; }
 .mini-table thead th { font-weight: 600; color: #fff; background: #0B6E99; }
-.mini-table thead th:first-child { border-radius: 6px 0 0 6px; }
-.mini-table thead th:last-child { border-radius: 0 6px 6px 0; }
+.mini-table thead th:first-child { border-radius: 5px 0 0 5px; }
+.mini-table thead th:last-child { border-radius: 0 5px 5px 0; }
 .mini-table tbody tr + tr td { border-top: 1px solid #E5E7EB; }
 .mini-table tfoot td { font-weight: 600; border-top: 1px solid #94A3B8; }
 .mini-table .b { color: #6B7280; }
 
-/* Tooltip */
 .tip {
   position: fixed; z-index: 200; pointer-events: none; padding: 6px 10px; border-radius: 8px;
   background: #0B3A50; color: #fff; font: 500 .74rem var(--font-ui); box-shadow: 0 6px 18px rgba(15,23,42,.25);
   white-space: nowrap; font-variant-numeric: tabular-nums;
 }
 
-/* Notas da proposta */
-.notes {
-  border-top: 1px solid var(--line); padding-top: 18px;
-  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px 28px;
-}
-.notes h3 { grid-column: 1 / -1; margin: 0; font: 500 1.1rem var(--font-ui); }
-.note h4 { margin: 0 0 6px; font: 600 .7rem var(--font-ui); letter-spacing: .1em; text-transform: uppercase; color: var(--text-soft); }
-.note ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: .82rem; line-height: 1.5; max-width: 62ch; }
-.note code { font-size: .78rem; padding: 1px 5px; border-radius: 4px; background: color-mix(in srgb, var(--text) 8%, transparent); }
-
-@media (max-width: 1180px) {
-  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .notes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+/* Telas menores: a tela única vira rolagem, com altura fixa por gráfico */
+@media (max-width: 1100px), (max-height: 640px) {
+  html, body { height: auto; }
+  body { display: block; }
+  .dash { grid-template-columns: minmax(0, 1fr); }
+  .panel-grid { grid-template-rows: none; grid-auto-rows: 230px; }
+  .panel-fin .panel-grid .card-allin { grid-row: span 2; }
 }
 @media (max-width: 720px) {
-  .grid, .kpis, .notes { grid-template-columns: minmax(0, 1fr); }
+  .panel-prod .panel-grid, .panel-fin .panel-grid { grid-template-columns: minmax(0, 1fr); }
   .topnav { grid-template-columns: auto 1fr auto; }
   .topnav-brand { font-size: .82rem; justify-self: center; }
   .nav-btn .lbl { display: none; }
   .nav-btn { padding: 6px 10px; }
-  .filters .spacer { display: none; }
+  .bar .spacer { display: none; }
+  .bar-meta { align-items: flex-start; }
+  .legend { justify-content: flex-start; }
 }
-@media (max-width: 420px) {
-  .topnav-brand { display: none; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .b-bar, .cota { animation: none; }
-}
+@media (max-width: 420px) { .topnav-brand { display: none; } }
+@media (prefers-reduced-motion: reduce) { .b-bar, .cota { animation: none; } }
 </style>
-
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
   <defs>
     <linearGradient id="g-b" x1="0" y1="0" x2="0" y2="1">
@@ -351,20 +317,11 @@ body::before {
 </header>
 
 <main class="page">
-  <div class="data-banner" role="note">
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" style="flex-shrink:0;margin-top:1px"><path d="M8 1.5 15 14H1L8 1.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M8 6v3.6M8 11.6v.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-    <span><strong>Proposta de layout com dados de exemplo.</strong> Os valores são os do print "COO – Business Units Dashboard" (Sossego, setembro/2026). Trocar unidade ou período aqui só muda a seleção; na integração, cada troca refaz a consulta de <code>chart-data</code>.</span>
-  </div>
-
-  <div class="page-head">
-    <div>
+  <section class="bar" aria-label="Filtros">
+    <div class="bar-title">
       <p class="eyebrow">COO · Business Units</p>
-      <h2><span id="buName">Sossego</span> <span>·</span> <span id="periodName">Set/26 · Q3 · 2026</span></h2>
+      <h2><span id="buName">Sossego</span> <span>·</span> <span id="periodName">Set/26 · Q3 26 · 2026</span></h2>
     </div>
-    <p class="updated">Última atualização: 14/10/2026 08:58</p>
-  </div>
-
-  <section class="filters" aria-label="Filtros">
     <div class="filter">
       <span class="filter-label" id="lblBu">Unidade</span>
       <div class="seg" role="group" aria-labelledby="lblBu" data-filter="bu"></div>
@@ -385,77 +342,30 @@ body::before {
       <span class="filter-label" id="lblMes">Mês</span>
       <div class="seg" role="group" aria-labelledby="lblMes" data-filter="mes"></div>
     </div>
-    <div class="spacer"></div>
     <div class="filter">
-      <span class="filter-label" id="lblEscala">Escala dos gráficos</span>
+      <span class="filter-label" id="lblEscala">Escala</span>
       <div class="seg" role="group" aria-labelledby="lblEscala" data-filter="escala"></div>
     </div>
-  </section>
-
-  <section class="section" aria-labelledby="hKpi">
-    <div class="section-head">
-      <h3 id="hKpi">Destaques do trimestre</h3>
-      <p id="kpiSub">Q3 26 · Actual vs Budget</p>
+    <div class="spacer"></div>
+    <div class="bar-meta">
+      <ul class="legend" aria-label="Legenda">
+        <li><span class="swatch" style="background:var(--serie-b)"></span>Budget | Adjusted Budget (B)</li>
+        <li><span class="swatch" style="background:var(--serie-a)"></span>Forecast | Actual (F | A)</li>
+      </ul>
+      <p class="updated"><span class="demo" title="Valores do print COO – Business Units (Sossego, set/2026). Trocar unidade ou período só muda a seleção; na integração, cada troca refaz a consulta de chart-data.">Dados de exemplo</span> Atualizado em 14/10/2026 08:58</p>
     </div>
-    <div class="kpis" id="kpis"></div>
   </section>
 
-  <div class="toolbar">
-    <ul class="legend" aria-label="Legenda">
-      <li><span class="swatch" style="background:var(--serie-b)"></span>Budget | Adjusted Budget (B)</li>
-      <li><span class="swatch" style="background:var(--serie-a)"></span>Forecast | Actual (F | A)</li>
-      <li><span class="swatch good" style="background:var(--good)"></span>Variação favorável</li>
-      <li><span class="swatch bad" style="background:var(--bad)"></span>Variação desfavorável</li>
-    </ul>
+  <div class="dash">
+    <section class="panel panel-prod" aria-labelledby="hProd">
+      <h3 class="panel-title" id="hProd">Production Drivers</h3>
+      <div class="panel-grid" id="gridProd"></div>
+    </section>
+    <section class="panel panel-fin" aria-labelledby="hFin">
+      <h3 class="panel-title" id="hFin">Financial Drivers</h3>
+      <div class="panel-grid" id="gridFin"></div>
+    </section>
   </div>
-
-  <section class="section" aria-labelledby="hProd">
-    <div class="section-head">
-      <h3 id="hProd">Direcionadores de produção</h3>
-      <p>Production Drivers · 9 indicadores</p>
-    </div>
-    <div class="grid" id="gridProd"></div>
-  </section>
-
-  <section class="section" aria-labelledby="hFin">
-    <div class="section-head">
-      <h3 id="hFin">Direcionadores financeiros</h3>
-      <p>Financial Drivers · 6 indicadores</p>
-    </div>
-    <div class="grid" id="gridFin"></div>
-  </section>
-
-  <section class="notes" aria-labelledby="hNotes">
-    <h3 id="hNotes">Decisões da proposta</h3>
-    <div class="note">
-      <h4>Estrutura</h4>
-      <ul>
-        <li>Mesmo cabeçalho, card off-white, título <code>#316866</code> e cores de série do Performance Hub (Budget cinza, Actual/Forecast azul).</li>
-        <li>Os quatro grupos de botões do print viram uma barra de filtros em cascata: Visão → Ano → Trimestre → Mês. O mês só oferece os meses do trimestre escolhido.</li>
-        <li>Os destaques do trimestre vêm antes dos 15 gráficos, para o resumo aparecer primeiro.</li>
-        <li>Produção e Financeiro ficam em seções empilhadas, com a mesma grade (3 colunas, 2 em telas médias, 1 no celular), em vez de dois painéis lado a lado com larguras diferentes.</li>
-      </ul>
-    </div>
-    <div class="note">
-      <h4>Leitura dos gráficos</h4>
-      <ul>
-        <li>Cada card tem três blocos (Mês, Trimestre, Ano) com escala própria. No print, Set (2 Mt) some ao lado de 2026 (28 Mt). A escala única continua disponível no filtro.</li>
-        <li>Cada par B × A/F ganha a cota de diferença do Performance Hub (linha tracejada, haste e pílula).</li>
-        <li>Indicadores em % mostram a variação em p.p.; os demais, em %.</li>
-        <li>Custos (COGS, CAPEX, All-in) têm polaridade invertida: cair é favorável e aparece em verde.</li>
-        <li>O teor de alimentação troca Cu/Au num controle do card, em vez de duas séries empilhadas com rótulos sobrepostos.</li>
-      </ul>
-    </div>
-    <div class="note">
-      <h4>Pontos para validar</h4>
-      <ul>
-        <li>A tabela do All-in no print repete "26B 26F" no primeiro par; pelas somas, o primeiro par é Set. Aqui o cabeçalho está corrigido.</li>
-        <li>O print mostra o teor de ouro em %, mas os valores (0,17 a 0,22) parecem g/t. A unidade precisa ser confirmada.</li>
-        <li>Para a integração, cada indicador precisa de metadados além do <code>CD_VISAO</code> (MONTH, QUARTER, YEAR): seção, unidade, polaridade, tipo de variação (% ou p.p.) e ordem no card.</li>
-        <li>CAPEX ficou como custo (abaixo do Budget é favorável). Se o negócio ler CAPEX como execução de investimento, a polaridade muda.</li>
-      </ul>
-    </div>
-  </section>
 </main>
 
 <div class="tip" id="tip" hidden></div>
@@ -493,7 +403,6 @@ body::before {
         { lbl: 'Cost', v: [14.9, 12.3, 8.1, 7.8, 6.9, 6.9] }
       ] }
   ];
-  var KPI_IDS = ['cuprod', 'curec', 'ebitda', 'allin'];
 
   // ── Estado dos filtros ──
   var MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
@@ -512,8 +421,12 @@ body::before {
   };
 
   function yy() { return String(state.ano).slice(2); }
-  function captions() { return [MESES[state.mes - 1] + ' ' + yy(), 'Q' + state.tri + ' ' + yy(), String(state.ano)]; }
-  var SEG_A = ['A', 'A', 'F'];
+  // Rótulos do eixo no padrão do print/Performance Hub: "Set B", "Q3A", "26F"
+  function axis() {
+    var m = MESES[state.mes - 1], q = 'Q' + state.tri, y = yy();
+    return [[m + ' B', m + ' A'], [q + 'B', q + 'A'], [y + 'B', y + 'F']];
+  }
+  var PER = ['mês', 'trimestre', 'ano'];
 
   // ── Formatação pt-BR ──
   function fmt(v, dec) {
@@ -544,12 +457,11 @@ body::before {
     return { d: alt.d, u: alt.u, pp: alt.pp !== false, dec: ind.dec };
   }
 
-  // ── Gráfico: três pequenos múltiplos (mês, trimestre, ano) num único SVG ──
-  var W = 360, H = 214, MT = 50, MB = 40, ML = 4, MR = 4;
-  var PW = (W - ML - MR) / 3, BW = 32, GAP = 22;
-
-  function chartSvg(ind) {
-    var v = view(ind), caps = captions();
+  // ── Gráfico: seis barras (3 pares B × A/F) no tamanho exato do espaço do card ──
+  function chartSvg(ind, W, H) {
+    var v = view(ind), ax = axis();
+    var MT = 44, MB = 18, PW = W / 3;
+    var BW = Math.max(14, Math.min(34, PW * 0.3)), GAP = Math.max(10, Math.min(26, PW * 0.2));
     var all = [].concat.apply([], v.d);
     function dom(vals) {
       var lo = Math.min(0, Math.min.apply(null, vals)), hi = Math.max(0, Math.max.apply(null, vals));
@@ -561,29 +473,28 @@ body::before {
     v.d.forEach(function (pair, i) {
       var dm = state.escala === 'unica' ? dom(all) : dom(pair);
       var y = function (val) { return MT + (dm[1] - val) / (dm[1] - dm[0]) * (H - MT - MB); };
-      var x0 = ML + i * PW, cx = x0 + PW / 2;
+      var x0 = i * PW, cx = x0 + PW / 2;
       var xb = cx - GAP / 2 - BW, xa = cx + GAP / 2, y0 = y(0);
       var dl = delta(pair[0], pair[1], ind, v.pp);
-      label.push(caps[i] + ': Budget ' + fmt(pair[0], v.dec) + ', ' + (SEG_A[i] === 'F' ? 'Forecast ' : 'Actual ') + fmt(pair[1], v.dec) + ', variação ' + dl.txt + '.');
+      label.push(PER[i] + ': Budget ' + fmt(pair[0], v.dec) + ', ' + (i === 2 ? 'Forecast ' : 'Actual ') + fmt(pair[1], v.dec) + ', variação ' + dl.txt + '.');
 
-      if (i > 0) out += '<line class="b-sep" x1="' + x0 + '" x2="' + x0 + '" y1="' + (MT - 34) + '" y2="' + (H - 4) + '"/>';
-      out += '<line class="b-base" x1="' + (x0 + 8) + '" x2="' + (x0 + PW - 8) + '" y1="' + y0 + '" y2="' + y0 + '"/>';
+      if (i > 0 && state.escala === 'periodo') out += '<line class="b-sep" x1="' + x0 + '" x2="' + x0 + '" y1="' + (MT - 30) + '" y2="' + (H - 2) + '"/>';
+      out += '<line class="b-base" x1="' + (x0 + 4) + '" x2="' + (x0 + PW - 4) + '" y1="' + y0 + '" y2="' + y0 + '"/>';
 
-      [[xb, pair[0], 'g-b', 'B'], [xa, pair[1], 'g-a', SEG_A[i]]].forEach(function (bar) {
+      [[xb, pair[0], 'g-b', ax[i][0], 'Budget'], [xa, pair[1], 'g-a', ax[i][1], i === 2 ? 'Forecast' : 'Actual']].forEach(function (bar) {
         var yv = y(bar[1]), top = Math.min(yv, y0), h = Math.max(Math.abs(yv - y0), 1.5), neg = bar[1] < 0;
-        var tip = esc(caps[i] + ' · ' + (bar[3] === 'B' ? 'Budget' : bar[3] === 'F' ? 'Forecast' : 'Actual') + ': ' + fmt(bar[1], v.dec) + ' ' + v.u);
+        var tip = esc(bar[3] + ' · ' + bar[4] + ': ' + fmt(bar[1], v.dec) + ' ' + v.u);
         out += '<rect class="b-bar' + (neg ? ' neg' : '') + '" x="' + bar[0] + '" y="' + top + '" width="' + BW + '" height="' + h + '" rx="3" fill="url(#' + bar[2] + ')" data-tip="' + tip + '"/>';
         // Negativo: rótulo acima da linha do zero, para não colidir com o eixo
-        var ly = neg ? y0 - 6 : yv - 6;
+        var ly = neg ? y0 - 5 : yv - 5;
         out += '<text class="b-val" x="' + (bar[0] + BW / 2) + '" y="' + ly + '" text-anchor="middle">' + fmt(bar[1], v.dec) + '</text>';
-        out += '<text class="b-axis" x="' + (bar[0] + BW / 2) + '" y="' + (H - MB + 15) + '" text-anchor="middle">' + bar[3] + '</text>';
+        out += '<text class="b-axis" x="' + (bar[0] + BW / 2) + '" y="' + (H - 4) + '" text-anchor="middle">' + esc(bar[3]) + '</text>';
       });
-      out += '<text class="b-cap" x="' + cx + '" y="' + (H - MB + 31) + '" text-anchor="middle">' + esc(caps[i]) + '</text>';
 
       // Cota de diferença: nível B tracejado, nível A sólido, faixa, haste, fio guia e pílula.
       var x1 = xb + BW, x2 = xa, yb = y(pair[0]), ya = y(pair[1]);
-      var ytop = Math.min(yb, ya, y0), pillH = 18, pillW = Math.max(40, dl.txt.length * 6 + 14);
-      var pillY = ytop - 22 - pillH, up = pair[1] >= pair[0];
+      var ytop = Math.min(yb, ya, y0), pillH = 16, pillW = Math.max(36, dl.txt.length * 5.6 + 12);
+      var pillY = Math.max(0, ytop - 19 - pillH), up = pair[1] >= pair[0];
       out += '<g class="cota ' + dl.cls + '">';
       out += '<line class="d-ref" x1="' + (x1 - 2) + '" x2="' + (x2 + 2) + '" y1="' + yb + '" y2="' + yb + '"/>';
       out += '<line class="d-now" x1="' + (x1 - 2) + '" x2="' + (x2 + 2) + '" y1="' + ya + '" y2="' + ya + '"/>';
@@ -592,25 +503,23 @@ body::before {
         out += '<line class="d-span" stroke-width="2" x1="' + cx + '" x2="' + cx + '" y1="' + yb + '" y2="' + ya + '"/>';
       }
       out += '<line class="d-track" x1="' + cx + '" x2="' + cx + '" y1="' + (ytop - 2) + '" y2="' + (pillY + pillH) + '"/>';
-      out += '<rect class="d-pill" x="' + (cx - pillW / 2) + '" y="' + pillY + '" width="' + pillW + '" height="' + pillH + '" rx="9"/>';
-      out += '<text class="d-txt" x="' + cx + '" y="' + (pillY + 12.5) + '" text-anchor="middle">' + esc(dl.txt) + '</text>';
+      out += '<rect class="d-pill" x="' + (cx - pillW / 2) + '" y="' + pillY + '" width="' + pillW + '" height="' + pillH + '" rx="8"/>';
+      out += '<text class="d-txt" x="' + cx + '" y="' + (pillY + 11.5) + '" text-anchor="middle">' + esc(dl.txt) + '</text>';
       out += '</g>';
     });
     return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(label.join(' ')) + '">' + out + '</svg>';
   }
 
   function compTable(ind) {
-    var caps = captions();
-    var head = ['B', 'A', 'B', 'A', 'B', 'F'].map(function (s, i) {
-      return '<th scope="col">' + esc(caps[Math.floor(i / 2)].replace(' ' + yy(), '').replace(String(state.ano), yy())) + s + '</th>';
-    }).join('');
+    var ax = axis();
+    var head = [].concat.apply([], ax).map(function (s) { return '<th scope="col">' + esc(s.replace(' ', '')) + '</th>'; }).join('');
     var rows = ind.comp.map(function (r) {
       return '<tr><td>' + esc(r.lbl) + '</td>' + r.v.map(function (x, i) { return '<td' + (i % 2 === 0 ? ' class="b"' : '') + '>' + fmt(x, 1) + '</td>'; }).join('') + '</tr>';
     }).join('');
     var tot = [0, 1, 2, 3, 4, 5].map(function (i) { return '<td>' + fmt(ind.d[Math.floor(i / 2)][i % 2], 1) + '</td>'; }).join('');
     return '<div class="mini-table-wrap"><table class="mini-table"><caption class="sr-only">Composição do All-in por período</caption>' +
-      '<thead><tr><th scope="col">Composição</th>' + head + '</tr></thead><tbody>' + rows + '</tbody>' +
-      '<tfoot><tr><td>All-in</td>' + tot + '</tr></tfoot></table></div>';
+      '<thead><tr><th scope="col">All-in</th>' + head + '</tr></thead><tbody>' + rows + '</tbody>' +
+      '<tfoot><tr><td>Total</td>' + tot + '</tr></tfoot></table></div>';
   }
 
   function cardHtml(ind) {
@@ -621,21 +530,36 @@ body::before {
         return '<button type="button" data-grade="' + k + '" aria-pressed="' + (state.grade === k) + '">' + ind.alt[k].lbl + '</button>';
       }).join('') + '</div>';
     }
-    return '<article class="card" id="card-' + ind.id + '">' +
-      '<div class="card-head"><div><h4 class="card-title">' + esc(ind.t) + '</h4><p class="card-unit">(' + esc(v.u) + ')</p></div>' + ctl + '</div>' +
-      '<div class="chart">' + chartSvg(ind) + '</div>' +
+    return '<article class="card card-' + ind.id + '" id="card-' + ind.id + '">' +
+      '<div class="card-head"><div style="min-width:0"><h4 class="card-title" title="' + esc(ind.t) + '">' + esc(ind.t) + '</h4><p class="card-unit">(' + esc(v.u) + ')</p></div>' + ctl + '</div>' +
+      '<div class="chart" data-ind="' + ind.id + '"></div>' +
       (ind.comp ? compTable(ind) : '') +
       '</article>';
   }
 
-  function kpiHtml(ind) {
-    var v = view(ind), p = v.d[1], dl = delta(p[0], p[1], ind, v.pp);
-    return '<div class="kpi"><span class="kpi-label">' + esc(ind.t) + '</span>' +
-      '<div class="kpi-row"><span class="kpi-value">' + fmt(p[1], v.dec) + '</span><span class="kpi-unit">' + esc(v.u) + '</span></div>' +
-      '<div class="kpi-foot"><span>Budget ' + fmt(p[0], v.dec) + '</span><span class="chip ' + dl.cls + '">' + esc(dl.txt) + '</span></div></div>';
+  function byId(id) { return INDICADORES.filter(function (i) { return i.id === id; })[0]; }
+
+  function drawChart(el) {
+    var W = Math.round(el.clientWidth), H = Math.round(el.clientHeight);
+    if (W < 40 || H < 40) return;
+    var key = W + 'x' + H + '|' + state.escala + '|' + state.grade + '|' + state.tri + state.mes + state.ano;
+    if (el._key === key) return;
+    el._key = key;
+    el.innerHTML = chartSvg(byId(el.getAttribute('data-ind')), W, H);
   }
 
-  function byId(id) { return INDICADORES.filter(function (i) { return i.id === id; })[0]; }
+  // Redesenha no tamanho real do card (sem distorcer texto); animação só no 1º desenho
+  var ro = new ResizeObserver(function (entries) {
+    entries.forEach(function (en) { drawChart(en.target); });
+  });
+  var firstPaint = true;
+  function observeCharts() {
+    document.querySelectorAll('.chart[data-ind]').forEach(function (el) { ro.observe(el); drawChart(el); });
+    if (firstPaint) {
+      firstPaint = false;
+      setTimeout(function () { document.documentElement.classList.add('is-static'); }, 1600);
+    }
+  }
 
   function renderFilters() {
     document.querySelectorAll('[data-filter]').forEach(function (g) {
@@ -647,17 +571,16 @@ body::before {
   }
 
   function render() {
-    var caps = captions();
     document.getElementById('buName').textContent = state.bu;
-    document.getElementById('periodName').textContent = caps[0].replace(' ', '/') + ' · ' + caps[1] + ' · ' + caps[2];
-    document.getElementById('kpiSub').textContent = caps[1] + ' · Actual vs Budget';
-    document.getElementById('kpis').innerHTML = KPI_IDS.map(function (id) { return kpiHtml(byId(id)); }).join('');
+    document.getElementById('periodName').textContent = MESES[state.mes - 1] + '/' + yy() + ' · Q' + state.tri + ' ' + yy() + ' · ' + state.ano;
+    ro.disconnect();
     document.getElementById('gridProd').innerHTML = INDICADORES.filter(function (i) { return i.sec === 'prod'; }).map(cardHtml).join('');
     document.getElementById('gridFin').innerHTML = INDICADORES.filter(function (i) { return i.sec === 'fin'; }).map(cardHtml).join('');
+    observeCharts();
   }
 
   // ── Eventos ──
-  document.querySelector('.filters').addEventListener('click', function (e) {
+  document.querySelector('.bar').addEventListener('click', function (e) {
     var btn = e.target.closest('button[data-v]');
     if (!btn) return;
     var k = btn.parentElement.getAttribute('data-filter'), raw = btn.getAttribute('data-v');
@@ -672,7 +595,10 @@ body::before {
     if (!g) return;
     state.grade = g.getAttribute('data-grade');
     var card = document.getElementById('card-grade');
-    card.outerHTML = cardHtml(byId('grade'));
+    var tmp = document.createElement('div');
+    tmp.innerHTML = cardHtml(byId('grade'));
+    card.replaceWith(tmp.firstChild);
+    observeCharts();
     var btn = document.querySelector('#card-grade button[data-grade="' + state.grade + '"]');
     if (btn) btn.focus();
   });
