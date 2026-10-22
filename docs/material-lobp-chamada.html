@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LOBP Produção e Custos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,700&display=swap">
+<style>
+/* Deck 16:9 (1280×720) no VBM Design System — mesmos tokens, tipografia e
+   componentes do Value Driver Tree (topbar azul + logo branca, eyebrow
+   uppercase, título 800 azul-profundo, cards com sombra suave, chips pill,
+   paleta de feedback verde/laranja/vermelho). */
+:root {
+  --vbm-blue:       #3cb5e5;
+  --vbm-blue-dark:  #1a8bbf;
+  --vbm-blue-deep:  #0d2640;
+  --vbm-blue-light: #7dd3f0;
+  --vbm-blue-pale:  #e8f7fd;
+  --vbm-white:      #ffffff;
+  --vbm-off-white:  #f6f6f6;
+  --vbm-dark:       #1a1a1a;
+  --vbm-text:       #333333;
+  --vbm-mid:        #888888;
+  --border:         #e8e8e8;
+  --border-light:   #eef1f6;
+  --border-blue:    rgba(60,181,229,.25);
+  --surface-alt:    #fafcfe;
+  --text-label:     #46525d;
+  --red:   #dc2626; --red-light:   #fef2f2;
+  --green: #16a34a; --green-light: #f0fdf4;
+  --orange:#c2770e; --orange-light:#fff7ea;
+  --grey-light: #f0f2f4;
+  --card-shadow: 0 1px 3px rgba(13,38,64,.03), 0 8px 24px rgba(13,38,64,.06);
+  --radius: 12px;
+  --radius-sm: 8px;
+  --font: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  color-scheme: light;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 19px; }
+html, body { background: #dfe6ec; font-family: var(--font); color: var(--vbm-dark); -webkit-font-smoothing: antialiased; }
+body { display: grid; justify-content: center; gap: 24px; padding: 24px 16px; }
+
+.slide { font-size: 16px; width: 1280px; height: 720px; background: var(--vbm-off-white); position: relative; overflow: hidden;
+  display: grid; grid-template-rows: 56px 1fr 36px; box-shadow: 0 10px 40px rgba(13,38,64,.18); }
+
+/* topbar — mesma do app (.topbar/.logo-img/.header-divider/.header-title) */
+.topbar { background: var(--vbm-blue); display: flex; align-items: center; gap: 14px; padding: 0 48px; box-shadow: 0 2px 20px rgba(13,38,64,.18); z-index: 2; }
+.logo-img { height: 20px; width: auto; filter: brightness(10); }
+.header-divider { width: 1px; height: 20px; background: rgba(255,255,255,.35); }
+.header-title { font-weight: 700; font-style: italic; font-size: 1rem; color: #fff; opacity: .92; }
+.topbar .crumb { margin-left: auto; font-size: .7rem; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: rgba(255,255,255,.9); }
+
+.content { padding: 30px 48px 8px; display: grid; grid-template-rows: auto 1fr; gap: 22px; min-height: 0; }
+.head { display: grid; gap: 4px; }
+.eyebrow { font-weight: 600; font-size: .7rem; letter-spacing: .12em; text-transform: uppercase; color: var(--vbm-blue-dark); }
+h2 { font-weight: 800; font-size: 2rem; line-height: 1.1; letter-spacing: -.015em; color: var(--vbm-blue-deep); text-wrap: balance; }
+.lede { font-size: .95rem; line-height: 1.55; color: var(--vbm-text); max-width: 980px; }
+h3 { font-weight: 600; font-size: 1.05rem; line-height: 1.25; color: var(--vbm-dark); }
+h4 { font-weight: 600; font-size: .9rem; line-height: 1.3; color: var(--vbm-dark); }
+p, li { font-size: .85rem; line-height: 1.55; color: var(--vbm-text); }
+ul { padding-left: 1.1em; display: grid; gap: 4px; }
+strong { font-weight: 600; color: var(--vbm-dark); }
+.small { font-size: .72rem; color: var(--vbm-mid); line-height: 1.45; }
+.label { font-size: .62rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--text-label); }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .78rem; background: var(--grey-light); padding: 1px 6px; border-radius: 4px; color: var(--vbm-dark); }
+
+.footer { display: flex; align-items: center; justify-content: space-between; padding: 0 48px; font-size: .66rem; color: var(--vbm-mid); border-top: 1px solid var(--border); background: #fff; }
+.footer b { color: var(--vbm-blue-dark); font-weight: 700; }
+
+.card { background: #fff; border: 1.5px solid var(--border-light); border-radius: var(--radius); box-shadow: var(--card-shadow); padding: 18px 20px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.card.pale { background: var(--vbm-blue-pale); border-color: var(--border-blue); box-shadow: none; }
+.card.deep { background: var(--vbm-blue-deep); border-color: transparent; }
+.card.deep h3, .card.deep h4, .card.deep strong { color: #fff; }
+.card.deep p, .card.deep li { color: rgba(255,255,255,.85); }
+.card.deep .label { color: var(--vbm-blue-light); }
+
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; min-height: 0; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; min-height: 0; }
+.grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.stack { display: grid; gap: 14px; align-content: start; min-height: 0; }
+
+.chip { display: inline-flex; align-items: center; gap: 6px; font-size: .68rem; font-weight: 600; padding: 3px 10px; border-radius: 100px; background: var(--vbm-blue-pale); color: var(--vbm-blue-dark); white-space: nowrap; width: max-content; }
+.chip.ok   { background: var(--green-light);  color: var(--green); }
+.chip.warn { background: var(--orange-light); color: var(--orange); }
+.chip.stop { background: var(--red-light);    color: var(--red); }
+.chip.na   { background: var(--grey-light);   color: #6b7682; }
+.chip.dark { background: var(--vbm-blue-deep); color: #fff; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; display: inline-block; }
+
+.kpi { background: #fff; border: 1.5px solid var(--border-light); border-radius: var(--radius); box-shadow: var(--card-shadow); padding: 16px 18px; display: grid; gap: 2px; align-content: start; }
+.kpi b { font-weight: 800; font-size: 2.3rem; line-height: 1.05; letter-spacing: -.02em; color: var(--vbm-blue-dark); font-variant-numeric: tabular-nums; }
+.kpi span { font-size: .8rem; color: var(--vbm-text); }
+
+/* nós (mesma linguagem do card da árvore) */
+.node { background: #fff; border: 1.5px solid var(--border-light); border-radius: var(--radius-sm); padding: 8px 12px; font-size: .8rem; font-weight: 500; color: var(--vbm-dark); box-shadow: var(--card-shadow); }
+.node small { display: block; font-size: .6rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--vbm-mid); }
+.node.root { background: var(--vbm-blue-deep); color: #fff; border-color: transparent; }
+.node.root small { color: var(--vbm-blue-light); }
+.node.new { border: 1.5px dashed var(--vbm-blue); background: var(--vbm-blue-pale); box-shadow: none; }
+.node.ask { border: 1.5px dashed var(--orange); background: var(--orange-light); box-shadow: none; }
+.kids { display: grid; gap: 8px; margin-left: 14px; padding-left: 16px; border-left: 2px solid var(--border-blue); }
+
+table { width: 100%; border-collapse: collapse; font-size: .78rem; background: #fff; border-radius: var(--radius); overflow: hidden; box-shadow: var(--card-shadow); }
+th { text-align: left; font-size: .6rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--text-label); background: var(--surface-alt); padding: 9px 14px; border-bottom: 1px solid var(--border); }
+td { padding: 9px 14px; border-bottom: 1px solid var(--border-light); vertical-align: top; color: var(--vbm-text); line-height: 1.4; }
+tr:last-child td { border-bottom: 0; }
+td:first-child { font-weight: 600; color: var(--vbm-dark); }
+.num { font-variant-numeric: tabular-nums; }
+
+.effort { display: inline-flex; gap: 3px; vertical-align: middle; margin-right: 6px; }
+.effort i { width: 14px; height: 6px; border-radius: 3px; background: var(--border); }
+.effort[data-l="1"] i:nth-child(-n+1), .effort[data-l="2"] i:nth-child(-n+2), .effort[data-l="3"] i:nth-child(-n+3) { background: var(--vbm-blue); }
+.effort[data-l="4"] i:nth-child(-n+4), .effort[data-l="5"] i:nth-child(-n+5) { background: var(--vbm-blue-dark); }
+
+.quote { border-left: 3px solid var(--vbm-blue); padding: 4px 0 4px 14px; font-size: .82rem; font-style: italic; color: var(--vbm-text); line-height: 1.5; }
+.quote cite { display: block; font-style: normal; font-size: .66rem; color: var(--vbm-mid); margin-top: 4px; }
+
+/* ── capa ── */
+.cover { grid-template-rows: 1fr 36px; background: var(--vbm-blue-deep); }
+.cover .hero { position: relative; padding: 56px 64px; display: grid; align-content: space-between; overflow: hidden; }
+.cover .hero::before { content: ""; position: absolute; width: 720px; height: 720px; right: -200px; top: -260px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(60,181,229,.45) 0%, rgba(60,181,229,0) 65%); }
+.cover .brand { display: flex; align-items: center; gap: 16px; position: relative; }
+.cover .brand .logo-img { height: 28px; }
+.cover .brand .header-title { font-size: 1.2rem; }
+.cover h1 { font-weight: 800; font-size: 3.4rem; line-height: 1.02; letter-spacing: -.02em; color: #fff; max-width: 900px; position: relative; }
+.cover h1 em { font-style: italic; color: var(--vbm-blue-light); font-weight: 700; }
+.cover .sub { font-size: 1.05rem; color: rgba(255,255,255,.85); max-width: 760px; margin-top: 14px; line-height: 1.5; }
+.cover .meta { display: flex; flex-wrap: wrap; gap: 10px; position: relative; }
+.cover .meta span { font-size: .75rem; font-weight: 500; padding: 6px 14px; border-radius: 100px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.18); color: #fff; }
+.cover .footer { background: transparent; border-top: 1px solid rgba(255,255,255,.12); color: rgba(255,255,255,.6); }
+.cover .footer b { color: var(--vbm-blue-light); }
+
+/* barras de volume */
+.bars { display: grid; gap: 14px; }
+.bar-row { display: grid; grid-template-columns: 190px 1fr 70px; align-items: center; gap: 12px; }
+.bar-row .track { height: 26px; background: var(--grey-light); border-radius: 6px; overflow: hidden; display: flex; }
+.bar-row .seg { height: 100%; }
+.bar-row .v { font-weight: 700; font-size: .95rem; color: var(--vbm-blue-deep); text-align: right; font-variant-numeric: tabular-nums; }
+.bar-row .lab { font-size: .78rem; color: var(--vbm-text); line-height: 1.3; }
+
+/* fluxo */
+.flow { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+.step { background: #fff; border: 1.5px solid var(--border-light); border-radius: var(--radius); padding: 14px; box-shadow: var(--card-shadow); display: grid; gap: 6px; align-content: start; position: relative; }
+.step .n { font-weight: 800; font-size: 1.4rem; color: var(--vbm-blue); line-height: 1; font-variant-numeric: tabular-nums; }
+.step p { font-size: .76rem; }
+.step.gate { background: var(--vbm-blue-deep); border-color: transparent; }
+.step.gate h4 { color: #fff; } .step.gate p { color: rgba(255,255,255,.82); } .step.gate .n { color: var(--vbm-blue-light); }
+.step:not(:last-child)::after { content: "›"; position: absolute; right: -9px; top: 14px; font-size: 1.1rem; font-weight: 700; color: var(--vbm-blue); }
+
+/* agenda */
+.agenda { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px 28px; counter-reset: a; }
+.agenda div { display: grid; grid-template-columns: 44px 1fr; align-items: baseline; gap: 6px; padding: 10px 0; border-bottom: 1px solid var(--border); counter-increment: a; }
+.agenda div::before { content: counter(a, decimal-leading-zero); font-weight: 800; font-size: 1.1rem; color: var(--vbm-blue); }
+.agenda b { font-weight: 600; font-size: .95rem; color: var(--vbm-blue-deep); }
+.agenda span { grid-column: 2; font-size: .75rem; color: var(--vbm-mid); }
+
+@media print {
+  html, body { background: none; }
+  body { display: block; padding: 0; }
+  .slide { box-shadow: none; break-after: page; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+@page { size: 1280px 720px; margin: 0; }
+</style>
+</head>
+<body>
+
+<!-- 01 CAPA -->
+<section class="slide cover">
+  <div class="hero">
+    <div class="brand">
+      <img class="logo-img" src="../assets/vale-logo.svg" alt="Vale">
+      <span class="header-divider"></span>
+      <span class="header-title">Value Driver Tree</span>
+    </div>
+    <div>
+      <h1>Integração do LOBP: <em>estrutura de Produção</em> e preparação de Custos</h1>
+      <p class="sub">O que a chamada definiu sobre sites, operações, indicadores e o método de cadastro, e o que cada um precisa fazer a partir de agora.</p>
+    </div>
+    <div class="meta">
+      <span>Chamada de 22/10/2026 · 16 min</span>
+      <span>Cristian Alves</span>
+      <span>Felipe Santos Souza</span>
+    </div>
+  </div>
+  <div class="footer"><span>Material de trabalho · base: transcrição da chamada</span><span><b>01</b> / 14</span></div>
+</section>
+
+<!-- 02 AGENDA -->
+<section class="slide">
+  <div class="topbar"><img class="logo-img" src="../assets/vale-logo.svg" alt="Vale"><span class="header-divider"></span><span class="header-title">Value Driver Tree</span><span class="crumb">Integração LOBP</span></div>
+  <div class="content">
+    <div class="head"><span class="eyebrow">Roteiro</span><h2>O que este material cobre</h2></div>
+    <div class="agenda">
+      <div><b>Resumo executivo</b><span>Mensagens centrais e ordem de grandeza</span></div>
+      <div><b>Mapa das tabelas</b><span>O que muda em cada estrutura do banco</span></div>
+      <div><b>Sistema e Site</b><span>Ajustes de nomes e 20 a 30 novos sites</span></div>
+      <div><b>Sossego Complexo</b><span>Unidade separada sem perder histórico</span></div>
+      <div><b>Copper Cliff</b><span>Abertura Norte e Sul para o LOBP</span></div>
+      <div><b>Operações</b><span>Códigos 1, 11 e 12 e o sistema global</span></div>
+      <div><b>Indicadores</b><span>Grupo, subgrupo e o volume a cadastrar</span></div>
+      <div><b>Custos</b><span>Tabelas separadas, escopo e fontes</span></div>
+      <div><b>Método Cadastro Inicial</b><span>Planilha primeiro, SQL depois</span></div>
+      <div><b>Plano de ação</b><span>Responsáveis, esforço e próximos passos</span></div>
+    </div>
+  </div>
+  <div class="footer"><span>Integração LOBP · Chamada 22/10/2026</span><span><b>02</b> / 14</span></div>
+</section>
+
+<!-- 03 RESUMO -->
+<section class="slide">
+  <div class="topbar"><img class="logo-img" src="../assets/vale-logo.svg" alt="Vale"><span class="header-divider"></span><span class="header-title">Value Driver Tree</span><span class="crumb">Resumo executivo</span></div>
+  <div class="content">
+    <div class="head"><span class="eyebrow">Resumo executivo</span><h2>A estrutura serve. O trabalho está no cadastro.</h2>
+      <p class="lede">A base de Produção não precisa ser refeita. O LOBP exige ajustes pequenos em Sistema e Operação, novos sites e, principalmente, a classificação de todos os indicadores em grupo e subgrupo.</p></div>
+    <div class="stack">
+      <div class="grid4">
+        <div class="kpi"><span class="label">Indicadores hoje</span><b>615</b><span>cadastrados no banco</span></div>
+        <div class="kpi"><span class="label">Novos de Produção</span><b>~200</b><span>sem Infraestrutura, ainda com duplicidade</span></div>
+        <div class="kpi"><span class="label">Novos sites</span><b>20–30</b><span>a mapear e cadastrar</span></div>
+        <div class="kpi"><span class="label">Indicadores de custo</span><b>~80</b><span>levantamento preliminar</span></div>
+      </div>
+      <div class="grid3">
+        <div class="card"><span class="chip ok"><span class="dot"></span>Reaproveitar</span><h4>Sistema, Site e Operação</h4><p>Pequenas adequações. A operação pode ganhar novos códigos, mas isso ainda será avaliado.</p></div>
+        <div class="card"><span class="chip warn"><span class="dot"></span>Maior esforço</span><h4>Grupo e subgrupo</h4><p>Classificar os 615 atuais e os novos para consultar famílias de equipamento entre ativos.</p></div>
+        <div class="card"><span class="chip na"><span class="dot"></span>Depois</span><h4>Custos</h4><p>Tabela própria com tipo e categoria de custo. Não é criada agora: Produção tem prioridade.</p></div>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>Integração LOBP · Chamada 22/10/2026</span><span><b>03</b> / 14</span></div>
+</section>
+
+<!-- 04 MAPA DAS TABELAS -->
+<section class="slide">
+  <div class="topbar"><img class="logo-img" src="../assets/vale-logo.svg" alt="Vale"><span class="header-divider"></span><span class="header-title">Value Driver Tree</span><span class="crumb">Mapa das tabelas</span></div>
+  <div class="content">
+    <div class="head"><span class="eyebrow">Mapa das tabelas</span><h2>O que muda em cada estrutura</h2></div>
+    <table>
+      <thead><tr><th style="width:18%">Tabela</th><th style="width:17%">Situação</th><th>O que foi definido</th><th style="width:16%">Responsável</th></tr></thead>
+      <tbody>
+        <tr><td>Sistema</td><td><span class="chip ok">Pequena adequação</span></td><td>Revisar os nomes de região e global. O país já está no cadastro de site. O sistema 5 representa o global.</td><td>Felipe</td></tr>
+        <tr><td>Site</td><td><span class="chip warn">Novos cadastros</span></td><td>Mapear e cadastrar 20 a 30 sites. Casos especiais: Sossego Complexo e Copper Cliff Norte/Sul.</td><td>Felipe</td></tr>
+        <tr><td>Operação</td><td><span class="chip stop">Avaliar</span></td><td>Usar códigos distintos para visão consolidada, de mina e de complexo. Pode exigir operações novas.</td><td>Cristian</td></tr>
+        <tr><td>Indicador, Grupo, Subgrupo</td><td><span class="chip warn">Remodelar</span></td><td>Cada indicador com grupo e subgrupo bem definidos, gravados pela Central de Importes.</td><td>Cristian e Felipe</td></tr>
+        <tr><td>LOBP Produção</td><td><span class="chip">Nova tabela</span></td><td>Tabela específica para os dados de Produção do LOBP.</td><td>Felipe</td></tr>
+        <tr><td>LOBP Custo, Tipo, Categoria</td><td><span class="chip na">Fora desta etapa</span></td><td>Tabela de custo e duas auxiliares. Estrutura conhecida, criação adiada.</td><td>Cristian</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="footer"><span>Integração LOBP · Chamada 22/10/2026</span><span><b>04</b> / 14</span></div>
+</section>
+
+<!-- 05 SISTEMA E SITE -->
+<section class="slide">
+  <div class="topbar"><img class="logo-img" src="../assets/vale-logo.svg" alt="Vale"><span class="header-divider"></span><span class="header-title">Value Driver Tree</span><span class="crumb">Sistema e Site</span></div>
+  <div class="content">
+    <div class="head"><span class="eyebrow">Sistema e Site</span><h2>Ajuste de nomes e 20 a 30 novos sites</h2>
+      <p class="lede">O LOBP passa a acompanhar todos os indicadores das novas frentes de mina, e não só a movimentação total. Isso pede sites mais granulares.</p></div>
+    <div class="grid2">
+      <div class="card">
+        <span class="label">Tabela Sistema</span>
+        <h3>Adequação pequena</h3>
+        <ul>
+          <li>Revisar os nomes hoje cadastrados como região e global.</li>
+          <li>O país (Brasil, Canadá) já vem do cadastro de <strong>site</strong>; não precisa duplicar em sistema.</li>
+          <li><strong>Sistema 5 = global</strong>: considera todas as geografias juntas, não só Brasil, Canadá ou Ásia.</li>
+        </ul>
+        <div class="quote">"Sistemas não, sites. Nós temos que criar novos sites."<cite>Cristian, 0:55</cite></div>
+      </div>
+      <div class="card">
+        <span class="label">Tabela Site</span>
+        <h3>Mapeamento antes do cadastro</h3>
+        <ul>
+          <li>Estimativa de 20 a 30 sites novos, perto de 30.</li>
+          <li>Definir nome, descrição, país, sistema e complexo de cada um antes de cadastrar.</li>
+          <li>No passado Sossego teve visões de pré-strip e da Mata, mas só de movimentação total.</li>
+          <li>A Mata (fase 6) entra como parte de Sossego.</li>
+        </ul>
+        <div class="quote">"Para atender o LOBP e os novos projetos, a gente vai olhar todos os indicadores para essas frentes."<cite>Cristian, 1:49</cite></div>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>Integração LOBP · Chamada 22/10/2026</span><span><b>05</b> / 14</span></div>
+</section>
+
+<!-- 06 SOSSEGO -->
+<section class="slide">
+  <div class="topbar"><img class="logo-img" src="../assets/vale-logo.svg" alt="Vale"><span class="header-divider"></span><span class="header-title">Value Driver Tree</span><span class="crumb">Sossego Complexo</span></div>
+  <div class="content">
+    <div class="head"><span class="eyebrow">Caso especial · Sossego</span><h2>Medir a unidade e o complexo, sem perder o histórico</h2></div>
+    <div class="grid2" style="grid-template-columns: 1.1fr 1fr">
+      <div class="card" style="gap:14px">
+        <div style="display:grid;grid-template-columns:1fr 32px 1fr;align-items:center;gap:8px">
+          <div class="node"><small>Hoje</small>Sossego</div>
+          <span style="text-align:center;color:var(--vbm-blue);font-weight:800;font-size:1.2rem">→</span>
+          <div class="node root"><small>Mesmo registro, renomeado</small>Sossego Complexo</div>
+        </div>
+        <div class="kids" style="margin-left:auto;width:calc(50% - 20px)">
+          <div class="node new"><small>Novo site</small>Sossego (unidade)</div>
+          <div class="node new"><small>Novo site</small>Bacaba</div>
+          <div class="node new"><small>A mapear</small>Demais projetos do complexo</div>
+        </div>
+        <p class="small">O registro atual guarda o histórico e passa a significar o complexo, consolidando a parte de mina de todos os projetos.</p>
+      </div>
+      <div class="stack">
+        <div class="card pale">
+          <span class="label">Passo a passo</span>
+          <ul>
+            <li>Renomear o site <strong>Sossego</strong> para <strong>Sossego Complexo</strong>.</li>
+            <li>Criar o site <strong>Sossego</strong> com descrição "unidade Sossego".</li>
+            <li>Copiar o histórico do complexo para a unidade, até a entrada de um novo ativo.</li>
+            <li>A partir daí, popular unidade e complexo separadamente.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <span class="label">Precedente</span>
+          <p>É o mesmo trabalho já feito no <strong>Salobo Complexo</strong>: cópia do dado, replicação e o complexo passando a somar os projetos internos.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>Integração LOBP · Chamada 22/10/2026</span><span><b>06</b> / 14</span></div>
+</section>
+
+<!-- 07 COPPER CLIFF -->
+<section class="slide">
+  <div class="topbar"><img class="logo-img" src="../assets/vale-logo.svg" alt="Vale"><span class="header-divider"></span><span class="header-title">Value Driver Tree</span><span class="crumb">Canadá</span></div>
+  <div class="content">
+    <div class="head"><span class="eyebrow">Caso especial · Canadá</span><h2>Copper Cliff: abrir Norte e Sul só se o realizado existir</h2></div>
+    <div class="grid2" style="grid-template-columns: 1fr 1.1fr">
+      <div class="card" style="gap:14px">
+        <div class="node root"><small>Site existente · gravado só no complexo</small>Copper Cliff</div>
+        <div class="kids">
+          <div class="node ask"><small>A confirmar</small>Copper Cliff North</div>
+          <div class="node ask"><small>A confirmar</small>Copper Cliff South</div>
+        </div>
+        <p class="small">Objetivo: acompanhar Norte e Sul separados e ver a soma no complexo.</p>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <span class="chip stop"><span class="dot"></span>Bloqueio</span>
+          <h3>A pergunta que decide o cadastro</h3>
+          <p>O LOBP precisa da abertura. Falta saber se o <strong>realizado</strong> de Norte e Sul será acompanhado. Sem esse dado, criar os dois sites gera indicadores vazios.</p>
+        </div>
+        <div class="card pale">
+          <span class="label">Dever de casa</span>
+          <ul>
+            <li>Verificar se as movimentações de mina do Canadá já trazem a abertura por mina.</li>
+            <li>Se trouxerem, estruturar a captação do dado aberto e separado.</li>
+            <li>Responsável: Cristian, com apoio de Felipe.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>Integração LOBP · Chamada 22/10/2026</span><span><b>07</b> / 14</span></div>
+</section>
+
+<!-- 08 OPERAÇÕES -->
+<section class="slide">
+  <div class="topbar"><img class="logo-img" src="../assets/vale-logo.svg" alt="Vale"><span class="header-divider"></span><span class="header-title">Value Driver Tree</span><span class="crumb">Operações</span></div>
+  <div class="content">
+    <div class="head"><span class="eyebrow">Operações</span><h2>O código da operação define o nível da leitura</h2>
+      <p class="lede">A mesma lógica vale para Finanças e Produção: uma operação para o consolidado, outra para o ativo específico.</p></div>
+    <div class="stack">
+      <div class="grid3">
+        <div class="card deep"><span class="label">Operação 11</span><h3>Consolidado financeiro</h3><p>EBITDA de Vale Base Metals, de Sossego ou de Salobo como um todo. Usada para a visão global de um indicador financeiro.</p></div>
+        <div class="card"><span class="label">Operação 1</span><h3>Mina</h3><p>Indicador financeiro de uma mina específica, como o EBITDA da mina.</p></div>
+        <div class="card"><span class="label">Operação 12 + Sistema 5</span><h3>Complexo de Produção</h3><p>Soma minas ou usinas de Brasil e Canadá. Exemplos: resultado de cobre, níquel e cobalto.</p></div>
+      </div>
+      <div class="card pale" style="grid-template-columns:auto 1fr;align-items:center;gap:16px">
+        <span class="chip stop"><span class="dot"></span>Em avaliação</span>
+        <p><strong>Novas operações:</strong> a expectativa é que sejam necessárias, mas nenhuma será criada antes do mapeamento mostrar quais visões o LOBP precisa.</p>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>Integração LOBP · Chamada 22/10/2026</span><span><b>08</b> / 14</span></div>
+</section>
+
+<!-- 09 GRUPO SUBGRUPO -->
+<section class="slide">
+  <div class="topbar"><img class="logo-img" src="../assets/vale-logo.svg" alt="Vale"><span class="header-divider"></span><span class="header-title">Value Driver Tree</span><span class="crumb">Indicadores</span></div>
+  <div class="content">
+    <div class="head"><span class="eyebrow">Indicadores · principal esforço</span><h2>Todo indicador com grupo e subgrupo bem definidos</h2></div>
+    <div class="grid2">
+      <div class="card" style="gap:10px">
+        <span class="label">Exemplo da chamada</span>
+        <div class="node root"><small>Grupo</small>Caminhões de pequeno porte</div>
+        <div class="kids">
+          <div class="node"><small>Indicador · Sossego</small>Caminhões de pequeno porte</div>
+          <div class="node"><small>Indicador · Salobo</small>Caminhões de pequeno porte</div>
+          <div class="node"><small>Indicador · Bacaba</small>Caminhões de pequeno porte</div>
+        </div>
+        <p class="small">Uma consulta pelo grupo devolve os indicadores equivalentes de todos os ativos. O mesmo vale para perfuratrizes de grande porte.</p>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <span class="label">Regra</span>
+          <ul>
+            <li>Classificar os <strong>615 indicadores atuais</strong> e todos os novos.</li>
+            <li>Grupo e subgrupo são gravados na tabela de indicadores pela <strong>Central de Importes</strong>.</li>
+            <li>Primeiro agrupar o que já existe no banco; depois casar com o LOBP.</li>
+            <li>Reaproveitar o que tiver correspondência e criar só o que faltar.</li>
+          </ul>
+        </div>
+        <div class="quote">"Essa adequação é importante. Acho que é o que vai dar mais trabalho aqui."<cite>Cristian, 8:50</cite></div>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>Integração LOBP · Chamada 22/10/2026</span><span><b>09</b> / 14</span></div>
+</section>
+
+<!-- 10 VOLUME -->
+<section class="slide">
+  <div class="topbar"><img class="logo-img" src="../assets/vale-logo.svg" alt="Vale"><span class="header-divider"></span><span class="header-title">Value Driver Tree</span><span class="crumb">Indicadores</span></div>
+  <div class="content">
+    <div class="head"><span class="eyebrow">Volume de indicadores</span><h2>De 615 para perto de 1.000 no longo prazo</h2>
+      <p class="lede">As estimativas mudaram durante a chamada conforme filtros foram aplicados na planilha do LOBP. Os números abaixo são os citados e ainda têm duplicidade.</p></div>
+    <div class="grid2" style="grid-template-columns:1.35fr 1fr">
+      <div class="card" style="gap:16px">
+        <span class="label">Escala comum · 0 a 1.000 indicadores</span>
+        <div class="bars">
+          <div class="bar-row"><span class="lab">Cadastro atual</span><div class="track"><div class="seg" style="width:61.5%;background:var(--vbm-blue-deep)"></div></div><span class="v">615</span></div>
+          <div class="bar-row"><span class="lab">Atual + novos de Produção</span><div class="track"><div class="seg" style="width:61.5%;background:var(--vbm-blue-deep)"></div><div class="seg" style="width:20%;background:var(--vbm-blue)"></div></div><span class="v">~815</span></div>
+          <div class="bar-row"><span class="lab">Visão de longo prazo citada</span><div class="track"><div class="seg" style="width:61.5%;background:var(--vbm-blue-deep)"></div><div class="seg" style="width:38.5%;background:var(--vbm-blue-light)"></div></div><span class="v">~1.000</span></div>
+        </div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap" class="small">
+          <span><span class="dot" style="color:var(--vbm-blue-deep)"></span> Atual</span>
+          <span><span class="dot" style="color:var(--vbm-blue)"></span> Novos de Produção (~200)</span>
+          <span><span class="dot" style="color:var(--vbm-blue-light)"></span> Estimativa inicial (+400)</span>
+        </div>
+      </div>
+      <div class="card">
+        <span class="label">Como a estimativa foi refinada</span>
+        <table style="box-shadow:none">
+          <tbody>
+            <tr><td class="num">400–500</td><td>Primeiro palpite de novos indicadores</td></tr>
+            <tr><td class="num">250–280</td><td>Linhas marcadas como novas; há duplicidade</td></tr>
+            <tr><td class="num">~120</td><td>Visão filtrada após tirar Infraestrutura de mina e planta</td></tr>
+            <tr><td class="num">~200</td><td>Estimativa final de novos de Produção</td></tr>
+            <tr><td class="num">200–300</td><td>Linhas da planilha ainda por revisar</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>Integração LOBP · Chamada 22/10/2026</span><span><b>10</b> / 14</span></div>
+</section>
+
+<!-- 11 CUSTOS -->
+<section class="slide">
+  <div class="topbar"><img class="logo-img" src="../assets/vale-logo.svg" alt="Vale"><span class="header-divider"></span><span class="header-title">Value Driver Tree</span><span class="crumb">Custos</span></div>
+  <div class="content">
+    <div class="head"><span class="eyebrow">Custos · próxima frente</span><h2>Estrutura separada, criada depois de Produção</h2></div>
+    <div class="grid3">
+      <div class="card">
+        <span class="label">Estrutura</span>
+        <h3>Três tabelas</h3>
+        <div class="node root"><small>Principal</small>LOBP Custo</div>
+        <div class="kids">
+          <div class="node new"><small>Auxiliar</small>Tipo de custo</div>
+          <div class="node new"><small>Auxiliar</small>Categoria de custo</div>
+        </div>
+        <span class="chip na">Não será criada agora</span>
+      </div>
+      <div class="card">
+        <span class="label">Escopo</span>
+        <h3>Vai além do custo operacional</h3>
+        <ul>
+          <li><strong>OPEX</strong>: custo operacional</li>
+          <li><strong>CAPEX</strong>: investimentos</li>
+          <li><strong>Sustaining</strong>: manutenção da capacidade</li>
+          <li><strong>Growth</strong>: projetos de crescimento</li>
+        </ul>
+        <p class="small">Cerca de 80 indicadores levantados até agora.</p>
+      </div>
+      <div class="card">
+        <span class="label">Fontes para conectar</span>
+        <h3>Cubos de custo existentes</h3>
+        <div class="node"><small>Brasil</small>Cubo de custo do Brasil</div>
+        <div class="node"><small>Canadá</small>Cubo de custo do Canadá</div>
+        <p><strong>Checar antes:</strong> a nomenclatura do LOBP é a mesma dos cubos? Sem isso, a conexão perde precisão.</p>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>Integração LOBP · Chamada 22/10/2026</span><span><b>11</b> / 14</span></div>
+</section>
+
+<!-- 12 MÉTODO -->
+<section class="slide">
+  <div class="topbar"><img class="logo-img" src="../assets/vale-logo.svg" alt="Vale"><span class="header-divider"></span><span class="header-title">Value Driver Tree</span><span class="crumb">Método</span></div>
+  <div class="content">
+    <div class="head"><span class="eyebrow">Método · Cadastro Inicial</span><h2>Planilha validada primeiro, banco depois</h2>
+      <p class="lede">As tabelas estão amarradas entre si. Um erro de cadastro se propaga, por isso tudo é montado e conferido em planilha antes de qualquer carga.</p></div>
+    <div class="stack" style="gap:18px">
+      <div class="flow">
+        <div class="step"><span class="n">1</span><h4>Agrupar o banco</h4><p>Grupos e subgrupos dos 615 atuais</p></div>
+        <div class="step"><span class="n">2</span><h4>Casar com o LOBP</h4><p>De/para: o que tem match é reaproveitado</p></div>
+        <div class="step"><span class="n">3</span><h4>Marcar novos</h4><p>Sites, grupos, subgrupos e indicadores a criar</p></div>
+        <div class="step"><span class="n">4</span><h4>Cadastro Inicial</h4><p>Uma guia por tabela, existentes e novos lado a lado</p></div>
+        <div class="step"><span class="n">5</span><h4>SQL com Copilot</h4><p>Planilha na nuvem da Vale gera proposta de estrutura</p></div>
+        <div class="step gate"><span class="n">6</span><h4>Validar e subir</h4><p>Testar a proposta antes de carregar no banco</p></div>
+      </div>
+      <div class="grid2">
+        <div class="card"><span class="label">Guias da planilha</span>
+          <p><span class="mono">Sistema</span> <span class="mono">Site</span> <span class="mono">Operação</span> <span class="mono">Grupo</span> <span class="mono">Subgrupo</span> <span class="mono">Indicador</span> <span class="mono">DePara_LOBP</span></p>
+          <p class="small">Cada linha marca se o item já existe, é novo, está duplicado, fica fora do escopo ou precisa de validação.</p></div>
+        <div class="quote" style="align-self:center">"Tem que estar muito certinho na planilha para rodar no banco."<cite>Cristian, 12:20 · Felipe: "Gostei."</cite></div>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>Integração LOBP · Chamada 22/10/2026</span><span><b>12</b> / 14</span></div>
+</section>
+
+<!-- 13 PLANO DE AÇÃO -->
+<section class="slide">
+  <div class="topbar"><img class="logo-img" src="../assets/vale-logo.svg" alt="Vale"><span class="header-divider"></span><span class="header-title">Value Driver Tree</span><span class="crumb">Plano de ação</span></div>
+  <div class="content">
+    <div class="head"><span class="eyebrow">Plano de ação</span><h2>Quem faz o quê, em ordem de prioridade</h2></div>
+    <table>
+      <thead><tr><th>Tarefa</th><th style="width:15%">Responsável</th><th style="width:17%">Esforço</th><th style="width:14%">Prioridade</th></tr></thead>
+      <tbody>
+        <tr><td>Revisar as 200 a 300 linhas restantes de Produção e retirar Infraestrutura</td><td>Cristian</td><td><span class="effort" data-l="4"><i></i><i></i><i></i><i></i><i></i></span>Alto</td><td><span class="chip stop">Hoje</span></td></tr>
+        <tr><td>Agrupar em grupo e subgrupo o que já existe no banco</td><td>Felipe</td><td><span class="effort" data-l="5"><i></i><i></i><i></i><i></i><i></i></span>Muito alto</td><td><span class="chip stop">Imediata</span></td></tr>
+        <tr><td>Proposta de melhoria das tabelas Sistema e Site</td><td>Felipe</td><td><span class="effort" data-l="2"><i></i><i></i><i></i><i></i><i></i></span>Baixo</td><td><span class="chip stop">Imediata</span></td></tr>
+        <tr><td>Criar a planilha Cadastro Inicial com uma guia por tabela</td><td>Felipe</td><td><span class="effort" data-l="3"><i></i><i></i><i></i><i></i><i></i></span>Médio</td><td><span class="chip warn">Alta</span></td></tr>
+        <tr><td>Mapear os 20 a 30 sites novos, com Sossego Complexo e unidade</td><td>Felipe</td><td><span class="effort" data-l="3"><i></i><i></i><i></i><i></i><i></i></span>Médio</td><td><span class="chip warn">Alta</span></td></tr>
+        <tr><td>Confirmar a abertura Norte e Sul de Copper Cliff no realizado</td><td>Cristian</td><td><span class="effort" data-l="3"><i></i><i></i><i></i><i></i><i></i></span>Médio</td><td><span class="chip warn">Alta</span></td></tr>
+        <tr><td>Avaliar a necessidade de novas operações</td><td>Cristian</td><td><span class="effort" data-l="2"><i></i><i></i><i></i><i></i><i></i></span>Baixo</td><td><span class="chip">Média</span></td></tr>
+        <tr><td>Comparar nomenclatura de custo com os cubos Brasil e Canadá</td><td>Cristian</td><td><span class="effort" data-l="4"><i></i><i></i><i></i><i></i><i></i></span>Alto</td><td><span class="chip na">Depois</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="footer"><span>Integração LOBP · Chamada 22/10/2026</span><span><b>13</b> / 14</span></div>
+</section>
+
+<!-- 14 PENDÊNCIAS -->
+<section class="slide">
+  <div class="topbar"><img class="logo-img" src="../assets/vale-logo.svg" alt="Vale"><span class="header-divider"></span><span class="header-title">Value Driver Tree</span><span class="crumb">Próximos passos</span></div>
+  <div class="content">
+    <div class="head"><span class="eyebrow">Fechamento</span><h2>Decisões, pontos em aberto e próximo marco</h2></div>
+    <div class="grid3">
+      <div class="card">
+        <span class="chip ok"><span class="dot"></span>Decidido</span>
+        <ul>
+          <li>Reaproveitar a estrutura de Produção.</li>
+          <li>Sossego vira Sossego Complexo e ganha site de unidade.</li>
+          <li>Produção e Custos em tabelas separadas.</li>
+          <li>Tabela de custos fica para depois.</li>
+          <li>Planilha validada antes de qualquer carga.</li>
+          <li>Copilot gera uma proposta de SQL para teste.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <span class="chip warn"><span class="dot"></span>Em aberto</span>
+        <ul>
+          <li>Copper Cliff Norte e Sul têm realizado separado?</li>
+          <li>Quantas operações novas serão necessárias?</li>
+          <li>Número final de indicadores após tirar duplicidades.</li>
+          <li>A nomenclatura de custo bate com os cubos?</li>
+          <li>Lista e nomes definitivos dos novos sites.</li>
+        </ul>
+      </div>
+      <div class="card deep">
+        <span class="label">Próximo marco</span>
+        <h3>Planilha Cadastro Inicial pronta para revisão</h3>
+        <p>Com levantamento de Produção concluído, grupos e subgrupos do banco organizados e os novos sites mapeados.</p>
+        <p style="margin-top:6px">Só depois dela: proposta de SQL, validação e carga.</p>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>Integração LOBP · Chamada 22/10/2026</span><span><b>14</b> / 14</span></div>
+</section>
+
+</body>
+</html>
