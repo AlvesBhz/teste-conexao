@@ -430,21 +430,12 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
 
-  // Variação de A/F contra B: p.p. para indicadores em %, % relativo nos demais.
-  function delta(b, a, ind, pp) {
-    var d, txt, flat;
-    if (pp) {
-      d = a - b;
-      flat = Math.abs(d) < 0.05;
-      txt = (d > 0 ? '+' : d < 0 ? '−' : '') + fmt(Math.abs(d), Math.abs(d) < 1 ? 2 : 1) + ' p.p.';
-    } else {
-      if (b === 0) return { txt: 'n/a', cls: 'is-flat', d: 0 };
-      d = (a - b) / Math.abs(b);
-      flat = Math.abs(d) < 0.005;
-      txt = (d > 0 ? '+' : d < 0 ? '−' : '') + fmt(Math.abs(d * 100), 1) + '%';
-    }
+  // Delta = A/F − B, na unidade e com as casas decimais do próprio indicador (sem % nem p.p.).
+  function delta(b, a, ind, dec) {
+    var f = Math.pow(10, dec), d = Math.round((a - b) * f) / f;
+    var txt = (d > 0 ? '+' : d < 0 ? '−' : '') + fmt(Math.abs(d), dec);
     var fav = ind.pol === 'down' ? d < 0 : d > 0;
-    return { txt: flat ? '0,0' + (pp ? ' p.p.' : '%') : txt, cls: flat ? 'is-flat' : fav ? 'is-good' : 'is-bad', d: d };
+    return { txt: txt, cls: d === 0 ? 'is-flat' : fav ? 'is-good' : 'is-bad', d: d };
   }
 
   function view(ind) {
@@ -459,7 +450,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
     var v = view(ind), ax = axis();
     var showDelta = state.delta === 'on';
     var MT = showDelta ? 46 : 20, MB = 16, PW = W / 3;
-    var BW = Math.max(16, Math.min(30, PW * 0.3)), GAP = showDelta ? Math.max(14, Math.min(24, PW * 0.2)) : 4;
+    var BW = Math.max(16, Math.min(30, PW * 0.3)), GAP = Math.max(14, Math.min(24, PW * 0.2));
     var all = [].concat.apply([], v.d);
     function dom(vals) {
       var lo = Math.min(0, Math.min.apply(null, vals)), hi = Math.max(0, Math.max.apply(null, vals));
@@ -473,7 +464,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
       var y = function (val) { return MT + (dm[1] - val) / (dm[1] - dm[0]) * (H - MT - MB); };
       var x0 = i * PW, cx = x0 + PW / 2;
       var xb = cx - GAP / 2 - BW, xa = cx + GAP / 2, y0 = y(0);
-      var dl = delta(pair[0], pair[1], ind, v.pp);
+      var dl = delta(pair[0], pair[1], ind, v.dec);
       label.push(PER[i] + ': Budget ' + fmt(pair[0], v.dec) + ', ' + (i === 2 ? 'Forecast ' : 'Actual ') + fmt(pair[1], v.dec) + (showDelta ? ', variação ' + dl.txt : '') + '.');
 
       out += '<line class="b-base" x1="' + (x0 + 2) + '" x2="' + (x0 + PW - 2) + '" y1="' + y0 + '" y2="' + y0 + '"/>';
