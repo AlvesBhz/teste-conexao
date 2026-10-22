@@ -204,6 +204,18 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .card { min-width: 0; min-height: 0; display: flex; flex-direction: column; justify-content: center; gap: 6px; padding-top: 6px; }
 .card-head { flex-shrink: 0; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
 .card-title { margin: 0; font: 400 1rem/1.2 var(--font-display); color: var(--chart-title); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Tela cheia em telas altas: gráficos no MESMO tamanho do modo normal (sem esticar);
+   os painéis ficam do tamanho do conteúdo e são centralizados na altura que sobra */
+@media (min-height: 1000px) {
+  .is-fs .dash { flex: 0 0 auto; margin-block: auto; }
+  .is-fs .panel-grid { flex: none; grid-template-rows: repeat(3, auto); row-gap: clamp(28px, 4vh, 48px); }
+  .is-fs .chart { flex: none; height: 190px; }
+}
+@media (display-mode: fullscreen) and (min-height: 1000px) {
+  .dash { flex: 0 0 auto; margin-block: auto; }
+  .panel-grid { flex: none; grid-template-rows: repeat(3, auto); row-gap: clamp(28px, 4vh, 48px); }
+  .chart { flex: none; height: 190px; }
+}
 .card-unit { margin: 1px 0 0; font: 400 .74rem var(--font-display); color: var(--text-faint); }
 /* Tela cheia (botão ou F11): sem o cabeçalho azul; tela cheia e tema descem para o canto direito */
 .fs-tools { display: none; align-self: flex-end; gap: 4px; margin-left: 4px; }
@@ -216,13 +228,11 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .is-fs .fs-tools { display: flex; }
 .is-fs .page { padding-top: 22px; }
 .is-fs .card { justify-content: flex-start; }
-.is-fs .chart { max-height: 228px; }
 @media (display-mode: fullscreen) {
   .topnav { display: none; }
   .fs-tools { display: flex; }
   .page { padding-top: 22px; }
   .card { justify-content: flex-start; }
-  .chart { max-height: 228px; }
 }
 .card .seg button { transition: background-color .18s ease, color .18s ease; }
 .card .seg button { min-height: 22px; padding: 1px 8px; font-size: .68rem; }
@@ -463,7 +473,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   }
 
   // ── Gráfico: altura e largura contidas (ritmo do print); valores em selos dentro das barras ──
-  var MAX_W = 380, MAX_H = 240; // a altura real vem do CSS (.chart max-height: 190 px normal, 228 px em tela cheia)
+  var MAX_W = 380, MAX_H = 190; // mesmo tamanho no modo normal e em tela cheia
   function chartSvg(ind, W, H) {
     var v = view(ind), ax = axis();
     var showDelta = state.delta === 'on';
