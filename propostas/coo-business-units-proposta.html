@@ -207,18 +207,15 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 /* O título não encolhe: sem espaço, o seletor (Cu/Au, All-in…) desce para baixo dele */
 .card-name { flex: 1 0 auto; max-width: 100%; min-width: 0; }
 .card-title { margin: 0; font: 400 1rem/1.2 var(--font-display); color: var(--chart-title); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-/* Tela cheia em telas altas: gráficos no MESMO tamanho do modo normal (sem esticar);
-   os painéis ficam do tamanho do conteúdo e são centralizados na altura que sobra */
+/* Tela cheia em telas altas: gráficos no MESMO tamanho do modo normal (sem esticar).
+   Os painéis seguem logo abaixo do cabeçalho até a base; cada linha de gráficos tem a
+   mesma faixa de altura, com o gráfico no topo dela, e a sobra vira respiro igual por linha */
 @media (min-height: 1000px) {
-  .is-fs .page { justify-content: center; }
-  .is-fs .dash { flex: 0 0 auto; }
-  .is-fs .panel-grid { flex: none; grid-template-rows: repeat(3, auto); row-gap: clamp(28px, 4vh, 48px); }
+  .is-fs .panel-grid { row-gap: 20px; }
   .is-fs .chart { flex: none; height: 190px; }
 }
 @media (display-mode: fullscreen) and (min-height: 1000px) {
-  .page { justify-content: center; }
-  .dash { flex: 0 0 auto; }
-  .panel-grid { flex: none; grid-template-rows: repeat(3, auto); row-gap: clamp(28px, 4vh, 48px); }
+  .panel-grid { row-gap: 20px; }
   .chart { flex: none; height: 190px; }
 }
 .card-unit { margin: 1px 0 0; font: 400 .74rem var(--font-display); color: var(--text-faint); }

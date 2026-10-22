@@ -163,11 +163,11 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 }
 
 /* Cabeçalho editorial + filtros */
-.head { position: relative; flex-shrink: 0; display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 14px 32px;  }
+.head { position: relative; flex-shrink: 0; display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 14px 32px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
 .title-block { min-width: 0; margin-bottom: -4px; } /* centro óptico do título na altura dos botões */
 .title-block h2 { margin: 0; font: italic 300 clamp(1.7rem, 2.6vw, 2.5rem)/1.05 var(--font-display); color: var(--accent); letter-spacing: -.01em; text-wrap: balance; }
 /* Unidade em linha própria (como no print), legenda e atualização alinhadas à direita */
-.site-row { flex-shrink: 0; display: flex; align-items: flex-end; margin-top: -8px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.site-row { flex-shrink: 0; display: flex; justify-content: space-between; align-items: flex-end; gap: 8px 24px; flex-wrap: wrap; margin-top: -2px; }
 .site { margin: 0; font: italic 400 2rem/1.1 var(--font-display); color: var(--accent); letter-spacing: -.005em; }
 
 .filters { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: flex-end; }
@@ -206,18 +206,15 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 /* O título não encolhe: sem espaço, o seletor (Cu/Au, All-in…) desce para baixo dele */
 .card-name { flex: 1 0 auto; max-width: 100%; min-width: 0; }
 .card-title { margin: 0; font: 400 1rem/1.2 var(--font-display); color: var(--chart-title); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-/* Tela cheia em telas altas: gráficos no MESMO tamanho do modo normal (sem esticar);
-   os painéis ficam do tamanho do conteúdo e são centralizados na altura que sobra */
+/* Tela cheia em telas altas: gráficos no MESMO tamanho do modo normal (sem esticar).
+   Os painéis seguem logo abaixo do cabeçalho até a base; cada linha de gráficos tem a
+   mesma faixa de altura, com o gráfico no topo dela, e a sobra vira respiro igual por linha */
 @media (min-height: 1000px) {
-  .is-fs .page { justify-content: center; }
-  .is-fs .dash { flex: 0 0 auto; }
-  .is-fs .panel-grid { flex: none; grid-template-rows: repeat(3, auto); row-gap: clamp(28px, 4vh, 48px); }
+  .is-fs .panel-grid { row-gap: 20px; }
   .is-fs .chart { flex: none; height: 190px; }
 }
 @media (display-mode: fullscreen) and (min-height: 1000px) {
-  .page { justify-content: center; }
-  .dash { flex: 0 0 auto; }
-  .panel-grid { flex: none; grid-template-rows: repeat(3, auto); row-gap: clamp(28px, 4vh, 48px); }
+  .panel-grid { row-gap: 20px; }
   .chart { flex: none; height: 190px; }
 }
 .card-unit { margin: 1px 0 0; font: 400 .74rem var(--font-display); color: var(--text-faint); }
@@ -376,6 +373,13 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 
   <div class="site-row">
     <h3 class="site" id="buName">Sossego</h3>
+    <div class="panel-meta">
+          <ul class="legend" aria-label="Legenda">
+            <li><span class="swatch" style="background:var(--serie-b)"></span>Budget | Adjusted Budget (B)</li>
+            <li><span class="swatch" style="background:var(--serie-a)"></span>Forecast | Actual (F | A)</li>
+          </ul>
+          <p class="updated"><span class="demo" title="Valores do print COO – Business Units (Sossego, set/2026). Trocar unidade ou período só muda a seleção; na integração, cada troca refaz a consulta de chart-data.">dados de exemplo</span>Last updated: 14/10/2026 08:58</p>
+    </div>
   </div>
 
   <div class="dash">
@@ -386,13 +390,6 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
     <section class="panel panel-fin" aria-labelledby="hFin">
       <div class="panel-head">
         <h3 class="panel-title" id="hFin">Financial Drivers</h3>
-        <div class="panel-meta">
-              <ul class="legend" aria-label="Legenda">
-                <li><span class="swatch" style="background:var(--serie-b)"></span>Budget | Adjusted Budget (B)</li>
-                <li><span class="swatch" style="background:var(--serie-a)"></span>Forecast | Actual (F | A)</li>
-              </ul>
-              <p class="updated"><span class="demo" title="Valores do print COO – Business Units (Sossego, set/2026). Trocar unidade ou período só muda a seleção; na integração, cada troca refaz a consulta de chart-data.">dados de exemplo</span>Last updated: 14/10/2026 08:58</p>
-        </div>
       </div>
       <div class="panel-grid" id="gridFin"></div>
     </section>
