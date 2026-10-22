@@ -202,6 +202,8 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .card-head { flex-shrink: 0; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
 .card-title { margin: 0; font: 400 1rem/1.2 var(--font-display); color: var(--chart-title); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .card-unit { margin: 1px 0 0; font: 400 .74rem var(--font-display); color: var(--text-faint); }
+.card-sub { margin-left: 4px; padding: 0 7px; border-radius: 999px; background: color-mix(in srgb, var(--serie-a) 16%, transparent); color: var(--accent-strong); font-size: .68rem; }
+.card .seg button { transition: background-color .18s ease, color .18s ease; }
 .card .seg button { min-height: 22px; padding: 1px 8px; font-size: .68rem; }
 .chart { flex: 1 1 auto; min-height: 56px; position: relative; }
 .chart svg { display: block; overflow: visible; font-family: var(--font-display); }
@@ -215,7 +217,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .b-base { stroke: var(--base-line); }
 .cota { animation: fade .5s .6s ease-out both; }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
-.is-static .b-bar, .is-static .cota { animation: none; }
+.is-static .card:not(.replay) .b-bar, .is-static .card:not(.replay) .cota { animation: none; }
 .d-ref { stroke: var(--d-stroke); stroke-dasharray: 3 2; }
 .d-now { stroke: var(--d-stroke); }
 .d-track { stroke: var(--d-hair); }
@@ -231,19 +233,8 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 @keyframes dline { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 @keyframes dspan { from { transform: scaleY(0); } to { transform: scaleY(1); } }
 @keyframes dpill { from { opacity: 0; transform: translateY(6px) scale(.96); } to { opacity: 1; transform: none; } }
-.is-static .cota * { animation: none !important; }
+.is-static .card:not(.replay) .cota * { animation: none; }
 
-/* All-in */
-.mini-table-wrap { flex-shrink: 0; overflow-x: auto; max-width: 420px; }
-.mini-table { width: 100%; border-collapse: collapse; font: 400 .68rem var(--font-display); font-variant-numeric: tabular-nums; color: var(--text); }
-.mini-table th, .mini-table td { padding: 2px 6px; text-align: right; white-space: nowrap; }
-.mini-table th:first-child, .mini-table td:first-child { text-align: left; }
-.mini-table thead th { font-weight: 500; color: #fff; background: var(--table-head); }
-.mini-table thead th:first-child { border-radius: 5px 0 0 5px; }
-.mini-table thead th:last-child { border-radius: 0 5px 5px 0; }
-.mini-table tbody tr + tr td { border-top: 1px solid var(--line); }
-.mini-table tfoot td { font-weight: 600; border-top: 1px solid var(--text-faint); }
-.mini-table .b { color: var(--text-soft); }
 
 .tip { position: fixed; z-index: 200; pointer-events: none; padding: 6px 10px; border-radius: 8px; background: #0B3A50; color: #fff; font: 500 .74rem var(--font-ui); box-shadow: 0 6px 18px rgba(15,23,42,.25); white-space: nowrap; font-variant-numeric: tabular-nums; }
 
@@ -270,7 +261,6 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   body { display: block; }
   .dash { grid-template-columns: minmax(0, 1fr); }
   .panel-grid { grid-template-rows: none; grid-auto-rows: 210px; }
-  .panel-fin .panel-grid .card-allin { grid-row: span 2; }
 }
 @media (max-width: 720px) {
   .page { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
@@ -375,7 +365,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   var INDICADORES = [
     { id: 'mine', sec: 'prod', t: 'Mine Movement', u: 'Mt', dec: 0, pol: 'up', d: [[2, 2], [6, 6], [26, 28]] },
     { id: 'ore', sec: 'prod', t: 'Ore Milled | ROP (Dry)', u: 'Mt', dec: 1, pol: 'up', d: [[0.2, 0.3], [1.5, 1.5], [9.2, 10.1]] },
-    { id: 'grade', sec: 'prod', t: 'Copper + Gold Feed Grade', u: '%', dec: 2, pol: 'up', pp: true,
+    { id: 'grade', sec: 'prod', t: 'Copper + Gold Feed Grade', u: '%', dec: 2, pol: 'up', pp: true, altLabel: 'Teor exibido',
       alt: {
         cu: { lbl: 'Cu', u: '%', d: [[0.89, 0.96], [0.89, 0.84], [0.89, 0.86]] },
         au: { lbl: 'Au', u: 'g/t (a confirmar)', d: [[0.17, 0.22], [0.17, 0.19], [0.21, 0.21]], pp: false }
@@ -392,18 +382,19 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
     { id: 'ebitda', sec: 'fin', t: 'EBITDA', u: 'US$ M', dec: 0, pol: 'up', d: [[6, 10], [134, 138], [696, 782]] },
     { id: 'capex', sec: 'fin', t: 'CAPEX', u: 'US$ M', dec: 0, pol: 'down', d: [[7, 8], [20, 33], [108, 95]] },
     { id: 'scf', sec: 'fin', t: 'Simple Cash Flow', u: 'US$ M', dec: 0, pol: 'up', d: [[-1, 2], [114, 105], [588, 687]] },
-    { id: 'allin', sec: 'fin', t: 'All-in', u: 'US$ k/t', dec: 1, pol: 'down', d: [[18.4, 16.4], [7.6, 6.6], [5.6, 4.5]],
-      comp: [
-        { lbl: 'By Product', v: [0.0, -1.0, -1.8, -4.0, -2.8, -3.7] },
-        { lbl: 'Sustaining', v: [3.5, 5.2, 1.3, 2.8, 1.5, 1.3] },
-        { lbl: 'Cost', v: [14.9, 12.3, 8.1, 7.8, 6.9, 6.9] }
-      ] }
+    // All-in e seus componentes (o print traz a composição numa tabela; aqui vira seletor no card)
+    { id: 'allin', sec: 'fin', t: 'All-in', u: 'US$ k/t', dec: 1, pol: 'down', altLabel: 'Componente exibido',
+      alt: {
+        allin: { lbl: 'All-in', u: 'US$ k/t', d: [[18.4, 16.4], [7.6, 6.6], [5.6, 4.5]] },
+        byp: { lbl: 'By Product', u: 'US$ k/t', sub: 'By Product', d: [[0.0, -1.0], [-1.8, -4.0], [-2.8, -3.7]] },
+        sus: { lbl: 'Sustaining', u: 'US$ k/t', sub: 'Sustaining', d: [[3.5, 5.2], [1.3, 2.8], [1.5, 1.3]] }
+      } }
   ];
 
   // ── Estado dos filtros ──
   var MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
   var MESES_LONGOS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-  var state = { bu: 'Sossego', visao: 'Plan', ano: 2026, tri: 3, mes: 9, escala: 'periodo', delta: 'on', grade: 'cu' };
+  var state = { bu: 'Sossego', visao: 'Plan', ano: 2026, tri: 3, mes: 9, escala: 'periodo', delta: 'on', sel: { grade: 'cu', allin: 'allin' } };
   var OPTS = {
     bu: function () { return [['Sossego', 'Sossego'], ['Salobo', 'Salobo']]; },
     visao: function () { return [['Plan', 'Plan']]; },
@@ -440,8 +431,8 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 
   function view(ind) {
     if (!ind.alt) return { d: ind.d, u: ind.u, pp: !!ind.pp, dec: ind.dec };
-    var alt = ind.alt[state.grade];
-    return { d: alt.d, u: alt.u, pp: alt.pp !== false, dec: ind.dec };
+    var alt = ind.alt[state.sel[ind.id]];
+    return { d: alt.d, u: alt.u, sub: alt.sub, pp: alt.pp !== false, dec: ind.dec };
   }
 
   // ── Gráfico: altura e largura contidas (ritmo do print); valores em selos dentro das barras ──
@@ -457,7 +448,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
       if (hi === lo) hi = lo + 1;
       return [lo, hi];
     }
-    var label = [ind.t + ' (' + v.u + ').'];
+    var label = [ind.t + (v.sub ? ' – ' + v.sub : '') + ' (' + v.u + ').'];
     var out = '';
     v.d.forEach(function (pair, i) {
       var dm = state.escala === 'unica' ? dom(all) : dom(pair);
@@ -499,29 +490,16 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
     return '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(label.join(' ')) + '">' + out + '</svg>';
   }
 
-  function compTable(ind) {
-    var ax = axis();
-    var head = [].concat.apply([], ax).map(function (s) { return '<th scope="col">' + esc(s.replace(' ', '')) + '</th>'; }).join('');
-    var rows = ind.comp.map(function (r) {
-      return '<tr><td>' + esc(r.lbl) + '</td>' + r.v.map(function (x, i) { return '<td' + (i % 2 === 0 ? ' class="b"' : '') + '>' + fmt(x, 1) + '</td>'; }).join('') + '</tr>';
-    }).join('');
-    var tot = [0, 1, 2, 3, 4, 5].map(function (i) { return '<td>' + fmt(ind.d[Math.floor(i / 2)][i % 2], 1) + '</td>'; }).join('');
-    return '<div class="mini-table-wrap"><table class="mini-table"><caption class="sr-only">Composição do All-in por período</caption>' +
-      '<thead><tr><th scope="col">All-in</th>' + head + '</tr></thead><tbody>' + rows + '</tbody>' +
-      '<tfoot><tr><td>Total</td>' + tot + '</tr></tfoot></table></div>';
-  }
-
   function cardHtml(ind) {
     var v = view(ind), ctl = '';
     if (ind.alt) {
-      ctl = '<div class="seg" role="group" aria-label="Teor exibido">' + Object.keys(ind.alt).map(function (k) {
-        return '<button type="button" data-grade="' + k + '" aria-pressed="' + (state.grade === k) + '">' + ind.alt[k].lbl + '</button>';
+      ctl = '<div class="seg" role="group" aria-label="' + esc(ind.altLabel) + '">' + Object.keys(ind.alt).map(function (k) {
+        return '<button type="button" data-alt="' + k + '" data-for="' + ind.id + '" aria-pressed="' + (state.sel[ind.id] === k) + '">' + esc(ind.alt[k].lbl) + '</button>';
       }).join('') + '</div>';
     }
     return '<article class="card card-' + ind.id + '" id="card-' + ind.id + '">' +
-      '<div class="card-head"><div style="min-width:0"><h4 class="card-title" title="' + esc(ind.t) + '">' + esc(ind.t) + '</h4><p class="card-unit">(' + esc(v.u) + ')</p></div>' + ctl + '</div>' +
+      '<div class="card-head"><div style="min-width:0"><h4 class="card-title" title="' + esc(ind.t) + '">' + esc(ind.t) + '</h4><p class="card-unit">(' + esc(v.u) + ')' + (v.sub ? ' <span class="card-sub">' + esc(v.sub) + '</span>' : '') + '</p></div>' + ctl + '</div>' +
       '<div class="chart" data-ind="' + ind.id + '"></div>' +
-      (ind.comp ? compTable(ind) : '') +
       '</article>';
   }
 
@@ -530,7 +508,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   function drawChart(el) {
     var W = Math.min(MAX_W, Math.round(el.clientWidth)), H = Math.min(MAX_H, Math.round(el.clientHeight));
     if (W < 60 || H < 44) return;
-    var key = W + 'x' + H + '|' + state.escala + '|' + state.delta + '|' + state.grade + '|' + state.tri + state.mes + state.ano;
+    var key = W + 'x' + H + '|' + state.escala + '|' + state.delta + '|' + (state.sel[el.getAttribute('data-ind')] || '') + '|' + state.tri + state.mes + state.ano;
     if (el._key === key) return;
     el._key = key;
     el.innerHTML = chartSvg(byId(el.getAttribute('data-ind')), W, H);
@@ -576,14 +554,19 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   });
 
   document.addEventListener('click', function (e) {
-    var g = e.target.closest('button[data-grade]');
+    var g = e.target.closest('button[data-alt]');
     if (!g) return;
-    state.grade = g.getAttribute('data-grade');
+    var id = g.getAttribute('data-for'), k = g.getAttribute('data-alt');
+    if (state.sel[id] === k) return;
+    state.sel[id] = k;
     var tmp = document.createElement('div');
-    tmp.innerHTML = cardHtml(byId('grade'));
-    document.getElementById('card-grade').replaceWith(tmp.firstChild);
+    tmp.innerHTML = cardHtml(byId(id));
+    var card = tmp.firstChild;
+    card.classList.add('replay');
+    document.getElementById('card-' + id).replaceWith(card);
     observeCharts();
-    var btn = document.querySelector('#card-grade button[data-grade="' + state.grade + '"]');
+    setTimeout(function () { card.classList.remove('replay'); }, 1500);
+    var btn = card.querySelector('button[data-alt="' + k + '"]');
     if (btn) btn.focus();
   });
 
