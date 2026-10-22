@@ -193,12 +193,14 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 :root[data-theme="dark"] .demo { color: #FCD34D; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .demo { color: #FCD34D; } }
 
-.panel-grid { flex: 1 1 auto; min-height: 0; display: grid; grid-template-rows: repeat(3, minmax(0, 1fr)); column-gap: 28px; row-gap: 22px; }
+.panel-grid { flex: 1 1 auto; min-height: 0; display: grid; grid-template-rows: repeat(3, minmax(0, 1fr)); column-gap: 28px; row-gap: 8px; }
 .panel-prod .panel-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .panel-fin .panel-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 40px; }
 
 /* Indicador: título + unidade, gráfico com altura contida, espaço livre abaixo */
-.card { min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 6px; padding-top: 6px; }
+/* Título + gráfico centralizados na faixa da linha: em telas altas a sobra se divide acima e abaixo,
+   e o bloco desce em direção à base sem aumentar os gráficos */
+.card { min-width: 0; min-height: 0; display: flex; flex-direction: column; justify-content: center; gap: 6px; padding-top: 6px; }
 .card-head { flex-shrink: 0; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
 .card-title { margin: 0; font: 400 1rem/1.2 var(--font-display); color: var(--chart-title); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .card-unit { margin: 1px 0 0; font: 400 .74rem var(--font-display); color: var(--text-faint); }
@@ -217,7 +219,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 }
 .card .seg button { transition: background-color .18s ease, color .18s ease; }
 .card .seg button { min-height: 22px; padding: 1px 8px; font-size: .68rem; }
-.chart { flex: 1 1 auto; min-height: 56px; position: relative; }
+.chart { flex: 1 1 auto; min-height: 56px; max-height: 190px; position: relative; }
 .chart svg { display: block; overflow: visible; font-family: var(--font-display); }
 
 /* SVG */
@@ -451,7 +453,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   }
 
   // ── Gráfico: altura e largura contidas (ritmo do print); valores em selos dentro das barras ──
-  var MAX_W = 400, MAX_H = 270;
+  var MAX_W = 380, MAX_H = 190;
   function chartSvg(ind, W, H) {
     var v = view(ind), ax = axis();
     var showDelta = state.delta === 'on';
