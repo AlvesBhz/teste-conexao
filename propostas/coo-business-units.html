@@ -163,8 +163,8 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 }
 
 /* Cabeçalho editorial + filtros */
-.head { position: relative; flex-shrink: 0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 32px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
-.title-block { min-width: 0; }
+.head { position: relative; flex-shrink: 0; display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 14px 32px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.title-block { min-width: 0; margin-bottom: -4px; } /* centro óptico do título na altura dos botões */
 .title-block h2 { margin: 0; font: italic 300 clamp(1.7rem, 2.6vw, 2.5rem)/1.05 var(--font-display); color: var(--accent); letter-spacing: -.01em; text-wrap: balance; }
 /* Unidade em linha própria (como no print), legenda e atualização alinhadas à direita */
 .site-row { flex-shrink: 0; display: flex; justify-content: space-between; align-items: flex-end; gap: 8px 24px; flex-wrap: wrap; margin-top: -2px; }
@@ -214,9 +214,15 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .is-fs .ico-enter { display: none; }
 .is-fs .topnav { display: none; }
 .is-fs .fs-tools { display: flex; }
+.is-fs .page { padding-top: 22px; }
+.is-fs .card { justify-content: flex-start; }
+.is-fs .chart { max-height: 228px; }
 @media (display-mode: fullscreen) {
   .topnav { display: none; }
   .fs-tools { display: flex; }
+  .page { padding-top: 22px; }
+  .card { justify-content: flex-start; }
+  .chart { max-height: 228px; }
 }
 .card .seg button { transition: background-color .18s ease, color .18s ease; }
 .card .seg button { min-height: 22px; padding: 1px 8px; font-size: .68rem; }
@@ -457,7 +463,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   }
 
   // ── Gráfico: altura e largura contidas (ritmo do print); valores em selos dentro das barras ──
-  var MAX_W = 380, MAX_H = 190;
+  var MAX_W = 380, MAX_H = 240; // a altura real vem do CSS (.chart max-height: 190 px normal, 228 px em tela cheia)
   function chartSvg(ind, W, H) {
     var v = view(ind), ax = axis();
     var showDelta = state.delta === 'on';
