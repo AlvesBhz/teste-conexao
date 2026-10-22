@@ -1,0 +1,524 @@
+<title>Plano LOBP Produção</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap">
+<style>
+/* Layout: faixa de marca azul VBM no topo (como a .topbar do app) + coluna única
+   de leitura com seções numeradas pela ordem real de execução. Tokens = VBM Design System. */
+:root {
+  --vbm-blue:       #3cb5e5;
+  --vbm-blue-dark:  #1a8bbf;
+  --vbm-blue-deep:  #0d2640;
+  --vbm-blue-light: #7dd3f0;
+  --vbm-blue-pale:  #e8f7fd;
+
+  --bg:          #f6f6f6;
+  --surface:     #ffffff;
+  --surface-alt: #fafcfe;
+  --border:      #e8e8e8;
+  --border-blue: rgba(60,181,229,.25);
+  --text:        #1a1a1a;
+  --text-2:      #333333;
+  --muted:       #6f7a84;
+  --label:       #46525d;
+  --accent:      var(--vbm-blue-dark);
+  --accent-soft: var(--vbm-blue-pale);
+  --band:        var(--vbm-blue);
+  --band-ink:    #ffffff;
+  --deep:        var(--vbm-blue-deep);
+  --deep-ink:    #ffffff;
+
+  --green: #16a34a;  --green-bg: #f0fdf4;
+  --orange:#c2770e;  --orange-bg:#fff7ea;
+  --red:   #dc2626;  --red-bg:   #fef2f2;
+  --grey-bg: #f0f2f4;
+
+  --e1: #cdeefa; --e2: #7dd3f0; --e3: #3cb5e5; --e4: #1a8bbf; --e5: #0d2640;
+
+  --shadow: 0 1px 3px rgba(13,38,64,.03), 0 8px 24px rgba(13,38,64,.06);
+  --radius: 12px;
+  --radius-sm: 8px;
+  --font: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg:#0a1a2c; --surface:#0f2338; --surface-alt:#122a43; --border:#1e3a57; --border-blue:rgba(60,181,229,.3);
+  --text:#eef4f9; --text-2:#c9d6e2; --muted:#8fa3b6; --label:#a9bccd;
+  --accent:#7dd3f0; --accent-soft:#123552; --band:#0d2640; --band-ink:#ffffff; --deep:#16324f; --deep-ink:#ffffff;
+  --green:#4ade80; --green-bg:#0f2e1f; --orange:#f0a63a; --orange-bg:#33240c; --red:#f87171; --red-bg:#3a1414; --grey-bg:#1a2e44;
+  --e1:#1e3f5c; --e2:#22628a; --e3:#3cb5e5; --e4:#7dd3f0; --e5:#e8f7fd;
+  --shadow: 0 1px 3px rgba(0,0,0,.25), 0 8px 24px rgba(0,0,0,.25);
+  color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg:#0a1a2c; --surface:#0f2338; --surface-alt:#122a43; --border:#1e3a57; --border-blue:rgba(60,181,229,.3);
+  --text:#eef4f9; --text-2:#c9d6e2; --muted:#8fa3b6; --label:#a9bccd;
+  --accent:#7dd3f0; --accent-soft:#123552; --band:#0d2640; --band-ink:#ffffff; --deep:#16324f; --deep-ink:#ffffff;
+  --green:#4ade80; --green-bg:#0f2e1f; --orange:#f0a63a; --orange-bg:#33240c; --red:#f87171; --red-bg:#3a1414; --grey-bg:#1a2e44;
+  --e1:#1e3f5c; --e2:#22628a; --e3:#3cb5e5; --e4:#7dd3f0; --e5:#e8f7fd;
+  --shadow: 0 1px 3px rgba(0,0,0,.25), 0 8px 24px rgba(0,0,0,.25);
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--text); font-family:var(--font); font-size:14px; line-height:1.6; -webkit-font-smoothing:antialiased; }
+h1,h2,h3,h4 { margin:0; text-wrap:balance; color:var(--text); }
+h1 { font-weight:700; font-size:clamp(1.6rem,4vw,2.2rem); line-height:1.05; letter-spacing:-.02em; color:var(--band-ink); }
+h2 { font-weight:700; font-size:1.35rem; line-height:1.1; letter-spacing:-.01em; }
+h3 { font-weight:600; font-size:1.02rem; line-height:1.25; }
+h4 { font-weight:600; font-size:.9rem; line-height:1.3; }
+p { margin:0; color:var(--text-2); max-width:72ch; }
+ul, ol { margin:0; padding-left:1.2em; color:var(--text-2); }
+li + li { margin-top:4px; }
+strong { color:var(--text); font-weight:600; }
+.eyebrow { font-size:.7rem; font-weight:500; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
+.wrap { max-width:1120px; margin:0 auto; padding-left:max(16px, env(safe-area-inset-left,0px)); padding-right:max(16px, env(safe-area-inset-right,0px)); }
+
+/* ── faixa de marca ── */
+.band { background:var(--band); color:var(--band-ink); }
+.band .wrap { padding-block:36px 40px; display:grid; gap:14px; }
+.band .eyebrow { color:rgba(255,255,255,.85); }
+.band p { color:rgba(255,255,255,.92); max-width:80ch; }
+.meta { display:flex; flex-wrap:wrap; gap:8px; }
+.meta span { font-size:.75rem; font-weight:500; padding:4px 12px; border-radius:100px; background:rgba(255,255,255,.18); color:#fff; }
+
+main .wrap { padding-block:32px 56px; display:grid; gap:44px; }
+section { display:grid; gap:18px; min-width:0; }
+.sec-head { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; }
+.sec-head .n { font-size:.75rem; font-weight:600; color:var(--accent); font-variant-numeric:tabular-nums; }
+.sec-head p { flex-basis:100%; }
+
+.card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:20px; min-width:0; }
+
+/* ── números ── */
+.kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+.kpi { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px 18px; display:grid; gap:2px; }
+.kpi b { font-size:1.9rem; font-weight:700; letter-spacing:-.02em; line-height:1.1; color:var(--accent); font-variant-numeric:tabular-nums; }
+.kpi span { font-size:.8rem; color:var(--text-2); }
+.kpi small { font-size:.7rem; color:var(--muted); }
+
+/* ── decisões ── */
+.decisions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px 24px; list-style:none; padding:0; counter-reset:d; }
+.decisions li { margin:0; display:grid; grid-template-columns:28px 1fr; gap:8px; padding:10px 0; border-bottom:1px solid var(--border); counter-increment:d; }
+.decisions li::before { content:counter(d,decimal-leading-zero); font-size:.75rem; font-weight:600; color:var(--accent); padding-top:2px; font-variant-numeric:tabular-nums; }
+
+/* ── fases ── */
+.phases { display:grid; gap:14px; }
+.phase { display:grid; grid-template-columns:200px minmax(0,1fr); gap:0; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+.phase-side { background:var(--surface-alt); border-right:1px solid var(--border); padding:18px; display:grid; align-content:start; gap:10px; }
+.phase-side .num { font-size:2rem; font-weight:700; line-height:1; color:var(--accent); font-variant-numeric:tabular-nums; }
+.phase-body { padding:18px 20px; display:grid; gap:14px; min-width:0; }
+.phase.later { opacity:.92; }
+.phase.later .phase-side { background:var(--grey-bg); }
+.facts { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+.fact { display:grid; gap:2px; font-size:.82rem; color:var(--text-2); }
+.fact .eyebrow { font-size:.64rem; }
+.chips { display:flex; flex-wrap:wrap; gap:6px; }
+.chip { display:inline-flex; align-items:center; gap:6px; font-size:.72rem; font-weight:500; padding:3px 10px; border-radius:100px; background:var(--accent-soft); color:var(--accent); white-space:nowrap; }
+.chip.owner { background:var(--grey-bg); color:var(--text-2); }
+.chip.ok { background:var(--green-bg); color:var(--green); }
+.chip.warn { background:var(--orange-bg); color:var(--orange); }
+.chip.stop { background:var(--red-bg); color:var(--red); }
+.chip.na { background:var(--grey-bg); color:var(--muted); }
+
+.effort { display:inline-flex; gap:3px; vertical-align:middle; }
+.effort i { width:14px; height:6px; border-radius:3px; background:var(--border); }
+.effort[data-l="1"] i:nth-child(-n+1),
+.effort[data-l="2"] i:nth-child(-n+2),
+.effort[data-l="3"] i:nth-child(-n+3),
+.effort[data-l="4"] i:nth-child(-n+4),
+.effort[data-l="5"] i:nth-child(-n+5) { background:var(--vbm-blue); }
+.effort[data-l="4"] i:nth-child(-n+4), .effort[data-l="5"] i:nth-child(-n+5) { background:var(--accent); }
+
+/* ── hierarquia / casos ── */
+.two { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.three { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
+.tree { display:grid; gap:8px; font-size:.85rem; }
+.node { border:1px solid var(--border-blue); background:var(--accent-soft); color:var(--text); border-radius:var(--radius-sm); padding:8px 12px; }
+.node small { display:block; font-size:.7rem; color:var(--muted); }
+.node.root { background:var(--deep); color:var(--deep-ink); border-color:transparent; }
+.node.root small { color:rgba(255,255,255,.75); }
+.node.new { border-style:dashed; background:var(--surface); }
+.kids { display:grid; gap:8px; padding-left:18px; border-left:2px solid var(--border-blue); margin-left:12px; }
+.arrow-row { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+.arrow-row .node { flex:1 1 140px; }
+.arrow-row .sep { color:var(--accent); font-weight:600; }
+
+/* ── tabelas ── */
+.table-scroll { overflow-x:auto; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); }
+table { width:100%; border-collapse:collapse; font-size:.82rem; min-width:720px; }
+th { text-align:left; font-size:.66rem; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--label); background:var(--surface-alt); padding:10px 14px; border-bottom:1px solid var(--border); white-space:nowrap; }
+td { padding:10px 14px; border-bottom:1px solid var(--border); vertical-align:top; color:var(--text-2); }
+tr:last-child td { border-bottom:0; }
+td:first-child { color:var(--text); font-weight:500; }
+td code, .mono { font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:.78rem; background:var(--grey-bg); padding:1px 6px; border-radius:4px; color:var(--text); }
+
+/* ── fluxo ── */
+.flow { list-style:none; padding:0; display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:8px; counter-reset:f; }
+.flow li { margin:0; counter-increment:f; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; font-size:.78rem; color:var(--text-2); display:grid; gap:4px; align-content:start; }
+.flow li::before { content:counter(f); font-size:.72rem; font-weight:700; color:var(--accent); }
+.flow li.gate { background:var(--deep); color:var(--deep-ink); border-color:transparent; }
+.flow li.gate::before { color:var(--vbm-blue-light); }
+.flow li.later { background:var(--grey-bg); }
+.legend { display:flex; flex-wrap:wrap; gap:14px; font-size:.75rem; color:var(--muted); }
+.legend i { display:inline-block; width:12px; height:12px; border-radius:3px; vertical-align:-2px; margin-right:6px; border:1px solid var(--border); }
+
+.callout { border:1px solid var(--border-blue); background:var(--accent-soft); border-radius:var(--radius); padding:16px 18px; display:grid; gap:6px; }
+.callout p { color:var(--text); }
+
+.check { list-style:none; padding:0; display:grid; gap:6px; }
+.check li { margin:0; display:grid; grid-template-columns:18px 1fr; gap:8px; font-size:.85rem; }
+.check li::before { content:""; width:14px; height:14px; margin-top:4px; border:1.5px solid var(--accent); border-radius:4px; }
+
+footer .wrap { padding-block:0 40px; font-size:.75rem; color:var(--muted); }
+
+@media (max-width: 900px) {
+  .kpis { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .flow { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .three { grid-template-columns:1fr; }
+}
+@media (max-width: 720px) {
+  .decisions, .two { grid-template-columns:1fr; }
+  .phase { grid-template-columns:1fr; }
+  .phase-side { border-right:0; border-bottom:1px solid var(--border); grid-template-columns:auto 1fr; align-items:center; }
+  .phase-side .chips { grid-column:1 / -1; }
+  .facts { grid-template-columns:1fr; }
+  .flow { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .band .wrap > * { animation:fadeDown .5s cubic-bezier(.2,1,.2,1) both; }
+  @keyframes fadeDown { from { opacity:.0001; transform:translateY(-8px); } to { opacity:1; transform:none; } }
+}
+</style>
+
+<header class="band">
+  <div class="wrap">
+    <span class="eyebrow">Value Driver Tree · Integração LOBP</span>
+    <h1>Plano de estruturação do LOBP: Produção primeiro, Custos em seguida</h1>
+    <p>O banco atual de Produção é reaproveitado com ajustes pontuais. O esforço real está nos dados mestres: sites, operações e a classificação dos indicadores em grupo e subgrupo. Tudo é montado e validado em planilha antes de qualquer carga no banco.</p>
+    <div class="meta">
+      <span>Base: reunião de alinhamento Cristian × Felipe</span>
+      <span>Frente ativa: Produção</span>
+      <span>Custos: estruturar depois</span>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+
+    <!-- 1 -->
+    <section aria-labelledby="s1">
+      <div class="sec-head"><span class="n">01</span><h2 id="s1">Ordem de grandeza</h2>
+        <p>Números da reunião. São estimativas e mudam conforme o levantamento remove duplicidades.</p></div>
+      <div class="kpis">
+        <div class="kpi"><span class="eyebrow">Indicadores no banco</span><b>615</b><span>cadastro atual de Produção</span><small>base do de/para</small></div>
+        <div class="kpi"><span class="eyebrow">Novos de Produção</span><b>~200</b><span>após retirar Infraestrutura</span><small>estimativa inicial era 400–500</small></div>
+        <div class="kpi"><span class="eyebrow">Novos sites</span><b>20–30</b><span>inclui Sossego e Canadá</span><small>nomes ainda a mapear</small></div>
+        <div class="kpi"><span class="eyebrow">Indicadores de custo</span><b>~80</b><span>OPEX, CAPEX, sistemas, growth</span><small>número não fechado</small></div>
+      </div>
+    </section>
+
+    <!-- 2 -->
+    <section aria-labelledby="s2">
+      <div class="sec-head"><span class="n">02</span><h2 id="s2">Decisões tomadas</h2>
+        <p>Valem como premissas do plano. Mudar qualquer uma delas exige nova rodada de alinhamento.</p></div>
+      <ol class="decisions">
+        <li><span>Não reconstruir a estrutura de Produção: <strong>reaproveitar o modelo</strong> e fazer adequações pontuais em Sistema e Site.</span></li>
+        <li><span>Cadastrar <strong>20 a 30 novos sites</strong> após mapeamento e definição de nomes.</span></li>
+        <li><span>Renomear o registro atual para <strong>Sossego Complexo</strong> e criar o site da unidade <strong>Sossego</strong>, preservando o histórico.</span></li>
+        <li><span>Validar a granularidade do Canadá antes de mexer em <strong>Copper Cliff</strong> (aberturas Norte/Sul).</span></li>
+        <li><span>Usar a dimensão <strong>Operação</strong> para separar visão de mina/usina das visões consolidada e global.</span></li>
+        <li><span>Manter <strong>Produção e Custos em estruturas separadas</strong>.</span></li>
+        <li><span><strong>Priorizar Produção agora.</strong> As tabelas de custo não são criadas nesta etapa.</span></li>
+        <li><span>Todo indicador segue a hierarquia <strong>Indicador → Subgrupo → Grupo</strong>.</span></li>
+        <li><span>Fazer o <strong>de/para LOBP × banco</strong> e criar só o que não existir.</span></li>
+        <li><span>Montar a planilha <strong>Cadastro Inicial</strong> e validá-la por inteiro antes do SQL e da carga.</span></li>
+      </ol>
+    </section>
+
+    <!-- 3 -->
+    <section aria-labelledby="s3">
+      <div class="sec-head"><span class="n">03</span><h2 id="s3">Fases de execução</h2>
+        <p>Cada fase tem um critério de saída. A fase seguinte só começa quando ele é atendido, exceto onde a dependência indica trabalho em paralelo.</p></div>
+      <div class="phases">
+
+        <article class="phase">
+          <div class="phase-side"><span class="num">F1</span><h3>Levantamento de Produção</h3>
+            <div class="chips"><span class="chip owner">Cristian</span><span class="chip">Esforço <span class="effort" data-l="4"><i></i><i></i><i></i><i></i><i></i></span></span></div></div>
+          <div class="phase-body">
+            <p>Concluir as 200 a 300 linhas restantes da fonte LOBP e dar a cada linha um status único.</p>
+            <div class="chips"><span class="chip ok">Já existente</span><span class="chip">Novo</span><span class="chip warn">Duplicado</span><span class="chip na">Não aplicável (ex.: Infraestrutura)</span><span class="chip stop">Requer validação</span></div>
+            <div class="facts">
+              <div class="fact"><span class="eyebrow">Entrega</span>Lista de Produção 100% classificada</div>
+              <div class="fact"><span class="eyebrow">Depende de</span>Nada; começa já</div>
+              <div class="fact"><span class="eyebrow">Critério de saída</span>Nenhuma linha sem status; Infraestrutura fora do escopo</div>
+            </div>
+          </div>
+        </article>
+
+        <article class="phase">
+          <div class="phase-side"><span class="num">F2</span><h3>Extração do banco e de/para</h3>
+            <div class="chips"><span class="chip owner">Cristian</span><span class="chip owner">Felipe</span><span class="chip">Esforço <span class="effort" data-l="4"><i></i><i></i><i></i><i></i><i></i></span></span></div></div>
+          <div class="phase-body">
+            <p>Exportar o cadastro atual (Sistema, Site, Operação, Grupo, Subgrupo, Indicador) e casar cada linha LOBP com um indicador existente. A comparação é por <strong>equivalência funcional</strong>: mesmo equipamento, mesma unidade de medida, mesmo conceito. Nome parecido não basta.</p>
+            <div class="facts">
+              <div class="fact"><span class="eyebrow">Entrega</span>Guia <span class="mono">DePara_LOBP</span>: LOBP → indicador existente → precisa cadastrar?</div>
+              <div class="fact"><span class="eyebrow">Depende de</span>F1 (pode rodar em paralelo por bloco de linhas)</div>
+              <div class="fact"><span class="eyebrow">Critério de saída</span>Zero duplicação contra os 615 atuais</div>
+            </div>
+          </div>
+        </article>
+
+        <article class="phase">
+          <div class="phase-side"><span class="num">F3</span><h3>Taxonomia grupo e subgrupo</h3>
+            <div class="chips"><span class="chip owner">Cristian</span><span class="chip owner">Felipe</span><span class="chip">Esforço <span class="effort" data-l="5"><i></i><i></i><i></i><i></i><i></i></span></span></div></div>
+          <div class="phase-body">
+            <p>Frente mais trabalhosa do plano. Primeiro organizar os grupos e subgrupos que já existem no banco; depois encaixar o LOBP nessa taxonomia e criar só o que faltar. Vale para os 615 atuais e para os novos.</p>
+            <div class="facts">
+              <div class="fact"><span class="eyebrow">Entrega</span>Guias <span class="mono">Grupo</span> e <span class="mono">Subgrupo</span> + coluna de classificação em <span class="mono">Indicador</span></div>
+              <div class="fact"><span class="eyebrow">Depende de</span>F2</div>
+              <div class="fact"><span class="eyebrow">Critério de saída</span>Todo indicador com grupo e subgrupo; consulta por família de equipamento traz todos os sites</div>
+            </div>
+          </div>
+        </article>
+
+        <article class="phase">
+          <div class="phase-side"><span class="num">F4</span><h3>Sites, complexos e operações</h3>
+            <div class="chips"><span class="chip owner">Felipe</span><span class="chip owner">Cristian (Canadá, Operações)</span><span class="chip">Esforço <span class="effort" data-l="3"><i></i><i></i><i></i><i></i><i></i></span></span></div></div>
+          <div class="phase-body">
+            <ul>
+              <li>Montar a lista definitiva dos novos sites com nome, país, sistema, operação, unidade, complexo e relação hierárquica.</li>
+              <li>Aplicar o padrão Sossego (seção 04) e replicar para outros complexos.</li>
+              <li>Confirmar com as fontes do Canadá se Copper Cliff Norte/Sul têm realizado separado.</li>
+              <li>Decidir as operações necessárias para mina, usina, complexo e global, sem criar nada antecipadamente.</li>
+              <li>Escrever a proposta de melhoria das tabelas Sistema e Site.</li>
+            </ul>
+            <div class="facts">
+              <div class="fact"><span class="eyebrow">Entrega</span>Guias <span class="mono">Site</span>, <span class="mono">Sistema</span>, <span class="mono">Operação</span> + proposta de ajuste de tabelas</div>
+              <div class="fact"><span class="eyebrow">Depende de</span>Pode rodar em paralelo a F1–F3</div>
+              <div class="fact"><span class="eyebrow">Critério de saída</span>Histórico de Sossego preservado; decisão Norte/Sul registrada</div>
+            </div>
+          </div>
+        </article>
+
+        <article class="phase">
+          <div class="phase-side"><span class="num">F5</span><h3>Planilha Cadastro Inicial e validação</h3>
+            <div class="chips"><span class="chip owner">Felipe</span><span class="chip">Esforço <span class="effort" data-l="3"><i></i><i></i><i></i><i></i><i></i></span></span></div></div>
+          <div class="phase-body">
+            <p>Consolidar F2–F4 em uma planilha com uma guia por tabela (seção 06). Revisar duplicidades, nomes, unidades de medida, relações e o que é de fato novo. A planilha precisa estar "muito certinha" porque as tabelas são inter-relacionadas.</p>
+            <div class="facts">
+              <div class="fact"><span class="eyebrow">Entrega</span>Planilha validada e assinada pelos dois</div>
+              <div class="fact"><span class="eyebrow">Depende de</span>F2, F3, F4</div>
+              <div class="fact"><span class="eyebrow">Critério de saída</span>Checklist da seção 08 completo</div>
+            </div>
+          </div>
+        </article>
+
+        <article class="phase">
+          <div class="phase-side"><span class="num">F6</span><h3>SQL e carga controlada</h3>
+            <div class="chips"><span class="chip owner">Felipe</span><span class="chip">Esforço <span class="effort" data-l="3"><i></i><i></i><i></i><i></i><i></i></span></span></div></div>
+          <div class="phase-body">
+            <p>Subir a planilha em ambiente de nuvem e usar o Copilot para gerar uma proposta de SQL de teste. A proposta é revisada antes de rodar: primeiro em ambiente de teste, depois no banco, na ordem das dependências (Sistema → Site → Operação → Grupo → Subgrupo → Indicador).</p>
+            <div class="facts">
+              <div class="fact"><span class="eyebrow">Entrega</span>Scripts SQL revisados + log de carga</div>
+              <div class="fact"><span class="eyebrow">Depende de</span>F5</div>
+              <div class="fact"><span class="eyebrow">Critério de saída</span>Contagens no banco batem com a planilha; Value Driver Tree abre sem regressão</div>
+            </div>
+          </div>
+        </article>
+
+        <article class="phase later">
+          <div class="phase-side"><span class="num">F7</span><h3>Frente de Custos</h3>
+            <div class="chips"><span class="chip na">Depois de Produção</span><span class="chip owner">Cristian</span><span class="chip">Esforço <span class="effort" data-l="4"><i></i><i></i><i></i><i></i><i></i></span></span></div></div>
+          <div class="phase-body">
+            <p>Mesma metodologia de Produção. O escopo vai além do custo operacional: inclui CAPEX, sistemas e iniciativas de growth.</p>
+            <ul>
+              <li>Comparar a nomenclatura dos ~80 indicadores LOBP com os cubos de custo do Brasil e do Canadá.</li>
+              <li>Definir as tabelas auxiliares <span class="mono">TipoCusto</span> e <span class="mono">CategoriaCusto</span>.</li>
+              <li>Só então criar a tabela de custos e conectar os outputs atuais.</li>
+            </ul>
+          </div>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- 4 -->
+    <section aria-labelledby="s4">
+      <div class="sec-head"><span class="n">04</span><h2 id="s4">Casos especiais de site</h2>
+        <p>Regra comum: ver a unidade isolada sem perder o consolidado do complexo.</p></div>
+      <div class="two">
+        <div class="card" style="display:grid;gap:14px">
+          <h3>Sossego</h3>
+          <div class="arrow-row">
+            <div class="node"><small>Hoje</small>Sossego</div>
+            <span class="sep" aria-hidden="true">→</span>
+            <div class="node root"><small>Mesmo registro, renomeado</small>Sossego Complexo</div>
+          </div>
+          <div class="kids">
+            <div class="node new"><small>Novo site</small>Sossego (unidade)</div>
+            <div class="node new"><small>Novo site, se aplicável</small>Projetos associados ao complexo</div>
+          </div>
+          <p>Manter o ID do registro atual evita reprocessar o histórico: ele passa a significar o complexo. A descrição do novo site precisa identificar a unidade de forma inequívoca.</p>
+        </div>
+        <div class="card" style="display:grid;gap:14px">
+          <h3>Copper Cliff (Canadá)</h3>
+          <div class="node root"><small>Site existente</small>Copper Cliff (consolidado)</div>
+          <div class="kids">
+            <div class="node new"><small>A confirmar</small>Copper Cliff North</div>
+            <div class="node new"><small>A confirmar</small>Copper Cliff South</div>
+            <div class="node new"><small>A confirmar</small>Sophie</div>
+          </div>
+          <p><span class="chip stop">Bloqueio</span> Só criar os registros se o realizado vier aberto nas fontes do Canadá. Felipe apoia a verificação.</p>
+        </div>
+      </div>
+      <div class="card" style="display:grid;gap:10px">
+        <h3>Operações: o que cada uma representa</h3>
+        <div class="three">
+          <div class="node"><small>Específica</small>Mina ou usina: resultado de um ativo</div>
+          <div class="node"><small>Complexo</small>Reúne minas e usinas de Brasil e Canadá</div>
+          <div class="node root"><small>Global</small>Consolidado por metal: cobre, níquel, cobalto</div>
+        </div>
+        <p>Na visão financeira, uma operação global apresenta o consolidado e outra traz o resultado da mina.</p>
+      </div>
+    </section>
+
+    <!-- 5 -->
+    <section aria-labelledby="s5">
+      <div class="sec-head"><span class="n">05</span><h2 id="s5">Hierarquia de indicadores</h2>
+        <p>O objetivo é consultar uma família de equipamento e recuperar indicadores comparáveis de Sossego, Salobo, Bacaba ou qualquer outro ativo.</p></div>
+      <div class="card" style="display:grid;gap:12px">
+        <div class="node root"><small>Grupo</small>Perfuratrizes de grande porte</div>
+        <div class="kids">
+          <div class="node"><small>Subgrupo</small>Disponibilidade e utilização</div>
+          <div class="kids">
+            <div class="node"><small>Indicador · site Salobo</small>Disponibilidade física das perfuratrizes (%)</div>
+            <div class="node"><small>Indicador · site Sossego</small>Disponibilidade física das perfuratrizes (%)</div>
+          </div>
+          <div class="node"><small>Subgrupo</small>Produtividade</div>
+        </div>
+        <p class="eyebrow" style="text-transform:none;letter-spacing:0">Exemplo ilustrativo. Os nomes reais saem da F3.</p>
+      </div>
+    </section>
+
+    <!-- 6 -->
+    <section aria-labelledby="s6">
+      <div class="sec-head"><span class="n">06</span><h2 id="s6">Planilha Cadastro Inicial</h2>
+        <p>Uma guia por tabela, na ordem de carga. Toda guia leva as colunas <span class="mono">status</span> (existente, novo, duplicado, não aplicável, requer validação), <span class="mono">id_banco</span> quando já existe e <span class="mono">observacao</span>.</p></div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Guia</th><th>Colunas principais</th><th>Origem</th><th>Responsável</th><th>Situação</th></tr></thead>
+          <tbody>
+            <tr><td>Sistema</td><td>nome, país, tipo (mina, usina, global)</td><td>Banco atual + novos globais</td><td>Felipe</td><td><span class="chip">Ajuste pontual</span></td></tr>
+            <tr><td>Site</td><td>nome, descrição, país, complexo pai, sistema, ativo desde</td><td>Banco + mapeamento LOBP</td><td>Felipe</td><td><span class="chip warn">20–30 novos</span></td></tr>
+            <tr><td>Operação</td><td>nome, nível (específica, complexo, global), uso</td><td>Banco atual</td><td>Cristian</td><td><span class="chip stop">Em avaliação</span></td></tr>
+            <tr><td>Grupo</td><td>nome, descrição</td><td>Banco atual + LOBP</td><td>Cristian, Felipe</td><td><span class="chip warn">Revisar existentes</span></td></tr>
+            <tr><td>Subgrupo</td><td>nome, grupo pai</td><td>Banco atual + LOBP</td><td>Cristian, Felipe</td><td><span class="chip warn">Revisar existentes</span></td></tr>
+            <tr><td>Indicador</td><td>nome, unidade de medida, subgrupo, site, sistema, operação</td><td>615 atuais + ~200 novos</td><td>Cristian, Felipe</td><td><span class="chip warn">Em classificação</span></td></tr>
+            <tr><td>DePara_LOBP</td><td>linha LOBP, indicador equivalente, ação</td><td>Fonte LOBP</td><td>Cristian</td><td><span class="chip warn">200–300 linhas pendentes</span></td></tr>
+            <tr><td>Pendências</td><td>item, dúvida, dono, decisão</td><td>Todas as guias</td><td>Ambos</td><td><span class="chip">Contínua</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 7 -->
+    <section aria-labelledby="s7">
+      <div class="sec-head"><span class="n">07</span><h2 id="s7">Fluxo consolidado</h2>
+        <p>Sequência de 15 passos. Os blocos escuros são pontos de controle: não avançar sem aprovação.</p></div>
+      <ol class="flow">
+        <li>Finalizar levantamento de Produção</li>
+        <li>Extrair estrutura atual do banco</li>
+        <li>De/para LOBP × banco</li>
+        <li>Identificar novos sites e indicadores</li>
+        <li>Revisar grupos e subgrupos existentes</li>
+        <li>Criar grupos e subgrupos faltantes</li>
+        <li>Definir Sossego e Complexo</li>
+        <li class="gate">Validar granularidade de Copper Cliff</li>
+        <li>Consolidar na Cadastro Inicial</li>
+        <li>Revisar duplicidades e relações</li>
+        <li class="gate">Validação funcional da planilha</li>
+        <li>Preparar SQL e modelo de carga</li>
+        <li class="gate">Carga controlada no banco</li>
+        <li>Validar resultados</li>
+        <li class="later">Iniciar frente de Custos</li>
+      </ol>
+      <div class="legend"><span><i style="background:var(--surface)"></i>Passo</span><span><i style="background:var(--deep)"></i>Ponto de controle</span><span><i style="background:var(--grey-bg)"></i>Próxima frente</span></div>
+    </section>
+
+    <!-- 8 -->
+    <section aria-labelledby="s8">
+      <div class="sec-head"><span class="n">08</span><h2 id="s8">Esforço, riscos e prontidão</h2></div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Frente</th><th>Esforço</th><th>Motivo principal</th></tr></thead>
+          <tbody>
+            <tr><td>Grupo e subgrupo</td><td><span class="effort" data-l="5"><i></i><i></i><i></i><i></i><i></i></span> Muito alto</td><td>Classificação manual de atuais e novos</td></tr>
+            <tr><td>De/para de indicadores</td><td><span class="effort" data-l="4"><i></i><i></i><i></i><i></i><i></i></span> Alto</td><td>Volume e análise funcional</td></tr>
+            <tr><td>Novos indicadores de Produção</td><td><span class="effort" data-l="4"><i></i><i></i><i></i><i></i><i></i></span> Alto</td><td>~200, ainda em validação</td></tr>
+            <tr><td>Estrutura de Custos</td><td><span class="effort" data-l="4"><i></i><i></i><i></i><i></i><i></i></span> Alto</td><td>Nova taxonomia e fontes Brasil/Canadá</td></tr>
+            <tr><td>Canadá / Copper Cliff</td><td><span class="effort" data-l="3"><i></i><i></i><i></i><i></i><i></i></span> Médio/alto</td><td>Depende da granularidade do realizado</td></tr>
+            <tr><td>Cadastro de sites</td><td><span class="effort" data-l="3"><i></i><i></i><i></i><i></i><i></i></span> Médio</td><td>20–30 cadastros e casos especiais</td></tr>
+            <tr><td>Sossego / Complexo</td><td><span class="effort" data-l="3"><i></i><i></i><i></i><i></i><i></i></span> Médio</td><td>Reorganizar sem perder histórico</td></tr>
+            <tr><td>Planilha Cadastro Inicial</td><td><span class="effort" data-l="3"><i></i><i></i><i></i><i></i><i></i></span> Médio</td><td>Consolida toda a preparação</td></tr>
+            <tr><td>Implementação SQL</td><td><span class="effort" data-l="3"><i></i><i></i><i></i><i></i><i></i></span> Médio</td><td>Vem depois da validação funcional</td></tr>
+            <tr><td>Operações</td><td><span class="effort" data-l="2"><i></i><i></i><i></i><i></i><i></i></span> Baixo/médio</td><td>Depende de confirmar necessidade</td></tr>
+            <tr><td>Adequação da tabela Sistema</td><td><span class="effort" data-l="1"><i></i><i></i><i></i><i></i><i></i></span> Baixo</td><td>Estrutura atual reaproveitável</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="two">
+        <div class="card" style="display:grid;gap:10px">
+          <h3>Riscos e pontos em aberto</h3>
+          <ul>
+            <li><strong>Duplicidade:</strong> a planilha LOBP tem registros repetidos e vazios; sem de/para rigoroso, os 615 atuais ganham cópias.</li>
+            <li><strong>Granularidade do Canadá:</strong> se Norte/Sul não tiverem realizado separado, a abertura no LOBP fica sem dado.</li>
+            <li><strong>Histórico de Sossego:</strong> trocar o ID em vez de renomear quebra séries existentes.</li>
+            <li><strong>Nomenclatura de custo:</strong> nomes LOBP podem não bater com os cubos Brasil/Canadá.</li>
+            <li><strong>SQL gerado por IA:</strong> a proposta do Copilot é rascunho; precisa revisão de chaves e ordem de carga.</li>
+          </ul>
+        </div>
+        <div class="card" style="display:grid;gap:10px">
+          <h3>Pronto para carga quando</h3>
+          <ul class="check">
+            <li>Toda linha LOBP de Produção tem status e ação</li>
+            <li>Nenhum indicador novo duplica um dos 615 atuais</li>
+            <li>Todo indicador tem grupo, subgrupo e unidade de medida</li>
+            <li>Todo site novo tem complexo, sistema e país</li>
+            <li>Sossego Complexo mantém o ID e o histórico</li>
+            <li>Decisão sobre Copper Cliff Norte/Sul registrada</li>
+            <li>Operações necessárias definidas</li>
+            <li>SQL revisado e testado fora de produção</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9 -->
+    <section aria-labelledby="s9">
+      <div class="sec-head"><span class="n">09</span><h2 id="s9">Próximos passos por responsável</h2></div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Tarefa</th><th>Responsável</th><th>Fase</th><th>Prioridade</th></tr></thead>
+          <tbody>
+            <tr><td>Concluir as linhas restantes do levantamento de Produção e tirar Infraestrutura do escopo</td><td>Cristian</td><td>F1</td><td><span class="chip stop">Imediata</span></td></tr>
+            <tr><td>Classificar indicadores existentes e novos por grupo e subgrupo, em planilha</td><td>Cristian, Felipe</td><td>F3</td><td><span class="chip stop">Imediata</span></td></tr>
+            <tr><td>Criar a planilha Cadastro Inicial com uma guia por tabela</td><td>Felipe</td><td>F5</td><td><span class="chip stop">Imediata</span></td></tr>
+            <tr><td>Mapear e cadastrar 20–30 novos sites, incluindo Sossego Complexo e unidade Sossego</td><td>Felipe</td><td>F4</td><td><span class="chip warn">Alta</span></td></tr>
+            <tr><td>Proposta de melhoria das tabelas Sistema e Site</td><td>Felipe</td><td>F4</td><td><span class="chip warn">Alta</span></td></tr>
+            <tr><td>Verificar como Copper Cliff, Sophie e North são registrados no Canadá</td><td>Cristian (apoio Felipe)</td><td>F4</td><td><span class="chip warn">Alta</span></td></tr>
+            <tr><td>Avaliar novas operações para mina, usina, complexo e global</td><td>Cristian</td><td>F4</td><td><span class="chip">Média</span></td></tr>
+            <tr><td>Comparar indicadores de custo com os cubos Brasil e Canadá (OPEX, CAPEX, sistemas, growth)</td><td>Cristian</td><td>F7</td><td><span class="chip na">Depois de Produção</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout">
+        <h4>Síntese</h4>
+        <p>Criar e alterar tabelas é a parte controlada do trabalho. O risco e o tempo estão em preparar o dado: de/para, grupo e subgrupo, sites e validação. Com a planilha validada, a carga no banco vira uma etapa curta e segura, e Custos reaproveita o mesmo método.</p>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<footer><div class="wrap">Gerado a partir da transcrição e das anotações da reunião (conteúdo gerado por IA, revisar antes de circular). Paleta e tipografia: VBM Design System, a mesma do Value Driver Tree.</div></footer>
