@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Poppins:wght@400;500;600&display=swap">
 <style>
 /* Layout: tela única com o ritmo do print original — título editorial em itálico,
-   faixa de resumo do trimestre, painel cinza de Produção (3×3) e Financeiro solto
+   painel cinza de Produção (3×3) e Financeiro solto
    na página (2×3). Gráficos com altura contida e barras estreitas; o espaço
    em branco entre as linhas é parte do desenho. Padrão de séries e cota de
    diferença do VBM Performance Hub. */
@@ -27,7 +27,9 @@
   --ink-soft: #6B7280;
   --base-line: #D1D5DB;
   --pill-bg: #FFFFFF;
-  --pill-line: rgba(15,23,42,.08);
+  --pill-line: rgba(15,23,42,.06);
+  --d-stroke: rgba(116,118,120,.45);
+  --d-hair: rgba(116,118,120,.30);
   --badge-bg: rgba(31,41,55,.58);
   --badge-text: #FFFFFF;
   --serie-b: #BCBEC0;
@@ -66,6 +68,8 @@
     --base-line: rgba(255,255,255,.22);
     --pill-bg: #0F2C44;
     --pill-line: rgba(255,255,255,.10);
+    --d-stroke: rgba(226,232,240,.45);
+    --d-hair: rgba(226,232,240,.28);
     --badge-bg: rgba(2,10,20,.55);
     --serie-b: #8E949B;
     --good: #34C3B8;
@@ -99,6 +103,8 @@
   --base-line: rgba(255,255,255,.22);
   --pill-bg: #0F2C44;
   --pill-line: rgba(255,255,255,.10);
+  --d-stroke: rgba(226,232,240,.45);
+  --d-hair: rgba(226,232,240,.28);
   --badge-bg: rgba(2,10,20,.55);
   --serie-b: #8E949B;
   --good: #34C3B8;
@@ -162,7 +168,6 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .title-block h2 { margin: 0; font: italic 300 clamp(1.7rem, 2.6vw, 2.5rem)/1.05 var(--font-display); color: var(--accent); letter-spacing: -.01em; text-wrap: balance; }
 .title-block .bu { margin: 6px 0 0; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
 .title-block .bu strong { font: italic 400 1.35rem var(--font-display); color: var(--accent-strong); }
-.title-block .bu span { font-size: .82rem; color: var(--text-soft); font-variant-numeric: tabular-nums; }
 
 .filters { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: flex-end; }
 .filter { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
@@ -171,22 +176,6 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .seg button { min-height: 26px; padding: 2px 10px; border: 0; border-radius: 7px; background: transparent; color: var(--ctl-text); font: 500 .74rem var(--font-ui); cursor: pointer; white-space: nowrap; }
 .seg button:hover { background: color-mix(in srgb, var(--ctl-on-bg) 12%, transparent); }
 .seg button[aria-pressed="true"] { background: var(--ctl-on-bg); color: var(--ctl-on-text); }
-
-/* Resumo do trimestre: quatro números, sem moldura de card */
-.pulse { flex-shrink: 0; display: grid; grid-template-columns: auto repeat(4, minmax(0, 1fr)); align-items: stretch; gap: 0; }
-.pulse-tag { display: flex; flex-direction: column; justify-content: center; gap: 2px; padding-right: 22px; }
-.pulse-tag b { font: 500 .66rem var(--font-ui); letter-spacing: .14em; text-transform: uppercase; color: var(--text-soft); }
-.pulse-tag span { font: italic 300 1.2rem var(--font-display); color: var(--text); white-space: nowrap; }
-.kpi { display: flex; flex-direction: column; gap: 3px; padding: 2px 22px; border-left: 1px solid var(--line); min-width: 0; }
-.kpi-label { font-size: .78rem; color: var(--chart-title); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.kpi-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-.kpi-value { font: 300 2rem/1 var(--font-display); color: var(--ink-strong); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
-.kpi-unit { font-size: .8rem; color: var(--ink-soft); }
-.kpi-foot { display: flex; align-items: center; gap: 8px; font-size: .74rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
-.chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; font: 500 .72rem var(--font-display); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.chip.is-good { color: var(--good); background: var(--good-bg); }
-.chip.is-bad { color: var(--bad); background: var(--bad-bg); }
-.chip.is-flat { color: var(--flat); background: var(--flat-bg); }
 
 /* Painéis */
 .dash { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(0, .88fr); gap: 32px; }
@@ -221,24 +210,28 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .b-bar { transform-box: fill-box; transform-origin: 50% 100%; animation: grow .9s cubic-bezier(.16,.84,.28,1) both; }
 .b-bar.neg { transform-origin: 50% 0%; }
 @keyframes grow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
-.b-badge { fill: var(--badge-bg); }
-.b-badge-t { fill: var(--badge-text); font-size: 10px; font-weight: 500; font-variant-numeric: tabular-nums; }
-.b-val { fill: var(--ink-strong); font-size: 10px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.b-val { fill: var(--ink-strong); font-size: 11px; font-variant-numeric: tabular-nums; letter-spacing: .01em; }
 .b-axis { fill: var(--ink-soft); font-size: 9.5px; }
 .b-base { stroke: var(--base-line); }
 .cota { animation: fade .5s .6s ease-out both; }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 .is-static .b-bar, .is-static .cota { animation: none; }
-.d-track { stroke: var(--base-line); }
-.d-ref { stroke: var(--base-line); stroke-dasharray: 3 2; }
-.d-pill { fill: var(--pill-bg); stroke: var(--pill-line); }
-.d-txt { font-size: 9.5px; font-weight: 500; font-variant-numeric: tabular-nums; }
-.is-good .d-txt { fill: var(--good); } .is-good .d-span { stroke: var(--good); }
-.is-bad .d-txt { fill: var(--bad); } .is-bad .d-span { stroke: var(--bad); }
-.is-flat .d-txt { fill: var(--flat); } .is-flat .d-span { stroke: var(--flat); }
-.is-good .d-up, .is-good .d-dn { fill: var(--good-bg); }
-.is-bad .d-up, .is-bad .d-dn { fill: var(--bad-bg); }
-.is-flat .d-up, .is-flat .d-dn { fill: var(--flat-bg); }
+.d-ref { stroke: var(--d-stroke); stroke-dasharray: 3 2; }
+.d-now { stroke: var(--d-stroke); }
+.d-track { stroke: var(--d-hair); }
+.d-pill { fill: var(--pill-bg); stroke: var(--pill-line); filter: drop-shadow(0 2px 6px rgba(15,23,42,.06)); }
+.d-txt { font-size: 10.5px; font-variant-numeric: tabular-nums; letter-spacing: .01em; }
+.d-span { stroke-opacity: .6; }
+.is-good .d-txt { fill: var(--good); } .is-good .d-span { stroke: var(--good); } .is-good .d-up { fill: var(--good-bg); } .is-good .d-dn { fill: url(#hatch-good); }
+.is-bad .d-txt { fill: var(--bad); } .is-bad .d-span { stroke: var(--bad); } .is-bad .d-up { fill: var(--bad-bg); } .is-bad .d-dn { fill: url(#hatch-bad); }
+.is-flat .d-txt { fill: var(--flat); } .is-flat .d-span { stroke: var(--flat); } .is-flat .d-up { fill: var(--flat-bg); } .is-flat .d-dn { fill: url(#hatch-flat); }
+.cota .d-ref, .cota .d-now { animation: dline .55s .34s cubic-bezier(.22,.9,.24,1) both; transform-box: fill-box; transform-origin: center; }
+.cota .d-span { animation: dspan .55s .48s cubic-bezier(.2,.85,.25,1) both; transform-box: fill-box; transform-origin: 50% 100%; }
+.cota .d-pill, .cota .d-txt { animation: dpill .5s .78s cubic-bezier(.2,.85,.25,1) both; transform-box: fill-box; transform-origin: center; }
+@keyframes dline { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes dspan { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes dpill { from { opacity: 0; transform: translateY(6px) scale(.96); } to { opacity: 1; transform: none; } }
+.is-static .cota * { animation: none !important; }
 
 /* All-in */
 .mini-table-wrap { flex-shrink: 0; overflow-x: auto; max-width: 420px; }
@@ -267,8 +260,6 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 @media (max-height: 960px) {
   .page { padding-block: 12px 10px; gap: 10px; }
   .head { padding-bottom: 10px; }
-  .kpi-value { font-size: 1.6rem; }
-  .pulse-tag span { font-size: 1.05rem; }
   .panel-prod { padding: 12px 18px 10px; }
   .panel-fin { padding: 12px 4px 10px; }
   .card { padding-top: 2px; }
@@ -280,9 +271,6 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   .dash { grid-template-columns: minmax(0, 1fr); }
   .panel-grid { grid-template-rows: none; grid-auto-rows: 210px; }
   .panel-fin .panel-grid .card-allin { grid-row: span 2; }
-  .pulse { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 14px; }
-  .pulse-tag { grid-column: 1 / -1; padding: 0; }
-  .kpi:nth-of-type(odd) { border-left: 0; padding-left: 0; }
 }
 @media (max-width: 720px) {
   .page { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
@@ -294,8 +282,8 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   .nav-btn { padding: 5px 10px; }
   .panel-meta { align-items: flex-start; }
 }
-@media (max-width: 420px) { .topnav-brand { display: none; } .pulse { grid-template-columns: minmax(0, 1fr); } .kpi { border-left: 0; padding-left: 0; } }
-@media (prefers-reduced-motion: reduce) { .b-bar, .cota { animation: none; } }
+@media (max-width: 420px) { .topnav-brand { display: none; } }
+@media (prefers-reduced-motion: reduce) { .b-bar, .cota, .cota * { animation: none !important; } }
 </style>
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
@@ -306,6 +294,9 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
     <linearGradient id="g-a" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#62C6EC"/><stop offset=".42" stop-color="#3CB5E5"/><stop offset="1" stop-color="#36A9D8"/>
     </linearGradient>
+    <pattern id="hatch-good" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="2.6" height="6" fill="rgba(0,126,122,.24)"/></pattern>
+    <pattern id="hatch-bad" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="2.6" height="6" fill="rgba(220,38,38,.22)"/></pattern>
+    <pattern id="hatch-flat" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="2.6" height="6" fill="rgba(116,118,120,.24)"/></pattern>
   </defs>
 </svg>
 
@@ -339,7 +330,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   <section class="head" aria-label="Dashboard e filtros">
     <div class="title-block">
       <h2>COO – Business Units Dashboard</h2>
-      <p class="bu"><strong id="buName">Sossego</strong><span id="periodName">Set/26 · Q3 26 · 2026</span></p>
+      <p class="bu"><strong id="buName">Sossego</strong></p>
     </div>
     <div class="filters">
       <div class="filter"><span class="filter-label" id="lblBu">Unidade:</span><div class="seg" role="group" aria-labelledby="lblBu" data-filter="bu"></div></div>
@@ -348,15 +339,8 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
       <div class="filter"><span class="filter-label" id="lblTri">Trimestre:</span><div class="seg" role="group" aria-labelledby="lblTri" data-filter="tri"></div></div>
       <div class="filter"><span class="filter-label" id="lblMes">Mês:</span><div class="seg" role="group" aria-labelledby="lblMes" data-filter="mes"></div></div>
       <div class="filter"><span class="filter-label" id="lblEscala">Escala:</span><div class="seg" role="group" aria-labelledby="lblEscala" data-filter="escala"></div></div>
+      <div class="filter"><span class="filter-label" id="lblDelta">Delta:</span><div class="seg" role="group" aria-labelledby="lblDelta" data-filter="delta"></div></div>
     </div>
-  </section>
-
-  <section class="pulse" aria-label="Resumo do trimestre">
-    <div class="pulse-tag"><b>Resumo</b><span id="pulseTitle">Q3 26 vs Budget</span></div>
-    <div class="kpi" data-kpi="cuprod"></div>
-    <div class="kpi" data-kpi="ebitda"></div>
-    <div class="kpi" data-kpi="scf"></div>
-    <div class="kpi" data-kpi="allin"></div>
   </section>
 
   <div class="dash">
@@ -419,7 +403,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   // ── Estado dos filtros ──
   var MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
   var MESES_LONGOS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-  var state = { bu: 'Sossego', visao: 'Plan', ano: 2026, tri: 3, mes: 9, escala: 'periodo', grade: 'cu' };
+  var state = { bu: 'Sossego', visao: 'Plan', ano: 2026, tri: 3, mes: 9, escala: 'periodo', delta: 'on', grade: 'cu' };
   var OPTS = {
     bu: function () { return [['Sossego', 'Sossego'], ['Salobo', 'Salobo']]; },
     visao: function () { return [['Plan', 'Plan']]; },
@@ -429,7 +413,8 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
       var first = (state.tri - 1) * 3;
       return [0, 1, 2].map(function (i) { return [first + i + 1, MESES_LONGOS[first + i]]; });
     },
-    escala: function () { return [['periodo', 'Por período'], ['unica', 'Única']]; }
+    escala: function () { return [['periodo', 'Por período'], ['unica', 'Única']]; },
+    delta: function () { return [['on', 'Exibir'], ['off', 'Ocultar']]; }
   };
 
   function yy() { return String(state.ano).slice(2); }
@@ -469,11 +454,12 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   }
 
   // ── Gráfico: altura e largura contidas (ritmo do print); valores em selos dentro das barras ──
-  var MAX_W = 360, MAX_H = 168;
+  var MAX_W = 380, MAX_H = 190;
   function chartSvg(ind, W, H) {
     var v = view(ind), ax = axis();
-    var MT = 26, MB = 15, PW = W / 3;
-    var BW = Math.max(16, Math.min(30, PW * 0.3)), GAP = Math.max(8, Math.min(14, PW * 0.12));
+    var showDelta = state.delta === 'on';
+    var MT = showDelta ? 46 : 20, MB = 16, PW = W / 3;
+    var BW = Math.max(16, Math.min(30, PW * 0.3)), GAP = showDelta ? Math.max(14, Math.min(24, PW * 0.2)) : 4;
     var all = [].concat.apply([], v.d);
     function dom(vals) {
       var lo = Math.min(0, Math.min.apply(null, vals)), hi = Math.max(0, Math.max.apply(null, vals));
@@ -488,42 +474,35 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
       var x0 = i * PW, cx = x0 + PW / 2;
       var xb = cx - GAP / 2 - BW, xa = cx + GAP / 2, y0 = y(0);
       var dl = delta(pair[0], pair[1], ind, v.pp);
-      var lifted = 0;
-      label.push(PER[i] + ': Budget ' + fmt(pair[0], v.dec) + ', ' + (i === 2 ? 'Forecast ' : 'Actual ') + fmt(pair[1], v.dec) + ', variação ' + dl.txt + '.');
+      label.push(PER[i] + ': Budget ' + fmt(pair[0], v.dec) + ', ' + (i === 2 ? 'Forecast ' : 'Actual ') + fmt(pair[1], v.dec) + (showDelta ? ', variação ' + dl.txt : '') + '.');
 
       out += '<line class="b-base" x1="' + (x0 + 2) + '" x2="' + (x0 + PW - 2) + '" y1="' + y0 + '" y2="' + y0 + '"/>';
 
       [[xb, pair[0], 'g-b', ax[i][0], 'Budget'], [xa, pair[1], 'g-a', ax[i][1], i === 2 ? 'Forecast' : 'Actual']].forEach(function (bar) {
         var yv = y(bar[1]), top = Math.min(yv, y0), h = Math.max(Math.abs(yv - y0), 1.5), neg = bar[1] < 0;
         var tip = esc(bar[3] + ' · ' + bar[4] + ': ' + fmt(bar[1], v.dec) + ' ' + v.u);
-        var txt = fmt(bar[1], v.dec), bx = bar[0] + BW / 2;
-        out += '<rect class="b-bar' + (neg ? ' neg' : '') + '" x="' + bar[0] + '" y="' + top + '" width="' + BW + '" height="' + h + '" rx="2.5" fill="url(#' + bar[2] + ')" data-tip="' + tip + '"/>';
-        if (h >= 24) {
-          // Selo escuro dentro da barra, como no print
-          var bw = Math.max(BW - 6, txt.length * 5.6 + 8), by = neg ? top + h - 19 : top + 5;
-          out += '<rect class="b-badge" x="' + (bx - bw / 2) + '" y="' + by + '" width="' + bw + '" height="14" rx="3"/>';
-          out += '<text class="b-badge-t" x="' + bx + '" y="' + (by + 10.3) + '" text-anchor="middle">' + txt + '</text>';
-        } else {
-          // Barra curta: valor acima dela (ou acima do zero, se negativa)
-          out += '<text class="b-val" x="' + bx + '" y="' + ((neg ? y0 : yv) - 4) + '" text-anchor="middle">' + txt + '</text>';
-          lifted = 13;
-        }
+        var bx = bar[0] + BW / 2;
+        out += '<rect class="b-bar' + (neg ? ' neg' : '') + '" x="' + bar[0] + '" y="' + top + '" width="' + BW + '" height="' + h + '" rx="3" fill="url(#' + bar[2] + ')" data-tip="' + tip + '"/>';
+        // Valor acima da barra (negativo: acima da linha do zero, para não colidir com o eixo)
+        out += '<text class="b-val" x="' + bx + '" y="' + ((neg ? y0 : yv) - 6) + '" text-anchor="middle">' + fmt(bar[1], v.dec) + '</text>';
         out += '<text class="b-axis" x="' + bx + '" y="' + (H - 3) + '" text-anchor="middle">' + esc(bar[3]) + '</text>';
       });
+      if (!showDelta) return;
 
-      // Cota de diferença do Performance Hub, mais discreta: nível B tracejado, haste e pílula.
+      // Cota de diferença do Performance Hub: nível B tracejado, nível A sólido, faixa, haste, fio guia e pílula.
       var x1 = xb + BW, x2 = xa, yb = y(pair[0]), ya = y(pair[1]);
-      var ytop = Math.min(yb, ya, y0) - lifted, pillH = 15, pillW = Math.max(34, dl.txt.length * 5.3 + 12);
-      var pillY = Math.max(0, ytop - 9 - pillH), up = pair[1] >= pair[0];
+      var ytop = Math.min(yb, ya, y0), pillH = 17, pillW = Math.max(38, dl.txt.length * 5.8 + 14);
+      var pillY = Math.max(0, ytop - 22 - pillH), up = pair[1] >= pair[0];
       out += '<g class="cota ' + dl.cls + '">';
-      out += '<line class="d-ref" x1="' + (x1 - 1) + '" x2="' + (x2 + 1) + '" y1="' + yb + '" y2="' + yb + '"/>';
+      out += '<line class="d-ref" x1="' + (x1 - 2) + '" x2="' + (x2 + 2) + '" y1="' + yb + '" y2="' + yb + '"/>';
+      out += '<line class="d-now" x1="' + (x1 - 2) + '" x2="' + (x2 + 2) + '" y1="' + ya + '" y2="' + ya + '"/>';
       if (Math.abs(yb - ya) > 0.5) {
         out += '<rect class="' + (up ? 'd-up' : 'd-dn') + '" x="' + x1 + '" y="' + Math.min(yb, ya) + '" width="' + (x2 - x1) + '" height="' + Math.abs(yb - ya) + '"/>';
-        out += '<line class="d-span" stroke-width="1.6" x1="' + cx + '" x2="' + cx + '" y1="' + yb + '" y2="' + ya + '"/>';
+        out += '<line class="d-span" stroke-width="2" x1="' + cx + '" x2="' + cx + '" y1="' + yb + '" y2="' + ya + '"/>';
       }
-      out += '<line class="d-track" x1="' + cx + '" x2="' + cx + '" y1="' + (Math.min(yb, ya) - 1) + '" y2="' + (pillY + pillH) + '"/>';
-      out += '<rect class="d-pill" x="' + (cx - pillW / 2) + '" y="' + pillY + '" width="' + pillW + '" height="' + pillH + '" rx="7.5"/>';
-      out += '<text class="d-txt" x="' + cx + '" y="' + (pillY + 10.6) + '" text-anchor="middle">' + esc(dl.txt) + '</text>';
+      out += '<line class="d-track" x1="' + cx + '" x2="' + cx + '" y1="' + (ytop - 2) + '" y2="' + (pillY + pillH) + '"/>';
+      out += '<rect class="d-pill" x="' + (cx - pillW / 2) + '" y="' + pillY + '" width="' + pillW + '" height="' + pillH + '" rx="8.5"/>';
+      out += '<text class="d-txt" x="' + cx + '" y="' + (pillY + 12) + '" text-anchor="middle">' + esc(dl.txt) + '</text>';
       out += '</g>';
     });
     return '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(label.join(' ')) + '">' + out + '</svg>';
@@ -555,19 +534,12 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
       '</article>';
   }
 
-  function kpiHtml(ind) {
-    var v = view(ind), p = v.d[1], dl = delta(p[0], p[1], ind, v.pp);
-    return '<span class="kpi-label">' + esc(ind.t) + '</span>' +
-      '<div class="kpi-row"><span class="kpi-value">' + fmt(p[1], v.dec) + '</span><span class="kpi-unit">' + esc(v.u) + '</span></div>' +
-      '<div class="kpi-foot"><span class="chip ' + dl.cls + '">' + esc(dl.txt) + '</span><span>Budget ' + fmt(p[0], v.dec) + '</span></div>';
-  }
-
   function byId(id) { return INDICADORES.filter(function (i) { return i.id === id; })[0]; }
 
   function drawChart(el) {
     var W = Math.min(MAX_W, Math.round(el.clientWidth)), H = Math.min(MAX_H, Math.round(el.clientHeight));
     if (W < 60 || H < 44) return;
-    var key = W + 'x' + H + '|' + state.escala + '|' + state.grade + '|' + state.tri + state.mes + state.ano;
+    var key = W + 'x' + H + '|' + state.escala + '|' + state.delta + '|' + state.grade + '|' + state.tri + state.mes + state.ano;
     if (el._key === key) return;
     el._key = key;
     el.innerHTML = chartSvg(byId(el.getAttribute('data-ind')), W, H);
@@ -595,9 +567,6 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 
   function render() {
     document.getElementById('buName').textContent = state.bu;
-    document.getElementById('periodName').textContent = MESES[state.mes - 1] + '/' + yy() + ' · Q' + state.tri + ' ' + yy() + ' · ' + state.ano;
-    document.getElementById('pulseTitle').textContent = 'Q' + state.tri + ' ' + yy() + ' vs Budget';
-    document.querySelectorAll('[data-kpi]').forEach(function (el) { el.innerHTML = kpiHtml(byId(el.getAttribute('data-kpi'))); });
     ro.disconnect();
     document.getElementById('gridProd').innerHTML = INDICADORES.filter(function (i) { return i.sec === 'prod'; }).map(cardHtml).join('');
     document.getElementById('gridFin').innerHTML = INDICADORES.filter(function (i) { return i.sec === 'fin'; }).map(cardHtml).join('');
