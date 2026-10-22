@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"></head>
+<body>
+<title>Navegação do Performance Hub</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Poppins:wght@400;500;600&display=swap">
+<style>
+/* Layout: memorando de decisão — veredito no topo, depois níveis da
+   arquitetura, comparação, públicos, navegação proposta (com esboços),
+   acesso, hospedagem e plano. Coluna de leitura de ~72ch; esboços e
+   tabelas usam a largura toda. Identidade do VBM Performance Hub. */
+:root {
+  --bg: #FFFFFF;
+  --surface: #F3F5F7;
+  --surface-2: #E9EEF3;
+  --text: #1F2937;
+  --text-soft: #5B6573;
+  --line: #DFE4EA;
+  --accent: #0B6E99;
+  --accent-soft: rgba(60,181,229,.14);
+  --title: #1E8FC4;
+  --teal: #1B7F7B;
+  --good: #007E7A;
+  --good-bg: rgba(0,126,122,.10);
+  --warn: #B45309;
+  --warn-bg: rgba(245,158,11,.12);
+  --bad: #B91C1C;
+  --bad-bg: rgba(220,38,38,.08);
+  --nav: #072842;
+  --nav-text: #E8F1F8;
+  --font-display: 'Vale Sans', 'Fira Sans', 'Segoe UI', system-ui, sans-serif;
+  --font-ui: 'Poppins', 'Segoe UI', system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #06192B; --surface: #0C2438; --surface-2: #12304A; --text: #E8EEF5; --text-soft: rgba(232,238,245,.68);
+    --line: rgba(255,255,255,.12); --accent: #7DD3F0; --accent-soft: rgba(60,181,229,.16); --title: #5CC6EE; --teal: #5FD0C9;
+    --good: #34C3B8; --good-bg: rgba(52,195,184,.14); --warn: #FCD34D; --warn-bg: rgba(245,158,11,.14);
+    --bad: #F87171; --bad-bg: rgba(248,113,113,.14); --nav: #03111F; --nav-text: #E8F1F8; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #06192B; --surface: #0C2438; --surface-2: #12304A; --text: #E8EEF5; --text-soft: rgba(232,238,245,.68);
+  --line: rgba(255,255,255,.12); --accent: #7DD3F0; --accent-soft: rgba(60,181,229,.16); --title: #5CC6EE; --teal: #5FD0C9;
+  --good: #34C3B8; --good-bg: rgba(52,195,184,.14); --warn: #FCD34D; --warn-bg: rgba(245,158,11,.14);
+  --bad: #F87171; --bad-bg: rgba(248,113,113,.14); --nav: #03111F; --nav-text: #E8F1F8; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 400 15px/1.6 var(--font-display); }
+.wrap {
+  max-width: 1120px; margin: 0 auto;
+  padding-block: 40px 72px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 52px;
+}
+h1, h2, h3 { text-wrap: balance; margin: 0; }
+p { margin: 0; }
+.prose { max-width: 72ch; display: flex; flex-direction: column; gap: 12px; }
+.eyebrow { font: 600 .7rem var(--font-ui); letter-spacing: .14em; text-transform: uppercase; color: var(--text-soft); }
+code { font-size: .86em; padding: 1px 5px; border-radius: 4px; background: var(--surface); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Cabeçalho */
+header.top { display: flex; flex-direction: column; gap: 10px; }
+header.top h1 { font: italic 300 clamp(2rem, 4.4vw, 3rem)/1.1 var(--font-display); color: var(--title); letter-spacing: -.01em; }
+header.top .lead { font-size: 1.05rem; color: var(--text-soft); max-width: 70ch; }
+
+/* Veredito */
+.verdict { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 28px; padding: 26px 28px; border-radius: 18px; background: var(--surface); }
+.verdict h2 { font: 400 1.5rem/1.3 var(--font-display); }
+.verdict h2 b { font-weight: 500; color: var(--accent); }
+.verdict ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; }
+.verdict .side { display: flex; flex-direction: column; gap: 10px; border-left: 1px solid var(--line); padding-left: 24px; }
+.tag { display: inline-flex; align-items: center; gap: 6px; width: fit-content; padding: 2px 10px; border-radius: 999px; font: 500 .74rem var(--font-ui); }
+.tag.good { color: var(--good); background: var(--good-bg); }
+.tag.warn { color: var(--warn); background: var(--warn-bg); }
+.tag.bad { color: var(--bad); background: var(--bad-bg); }
+
+section { display: flex; flex-direction: column; gap: 18px; }
+section > h2 { font: italic 400 1.6rem var(--font-display); }
+
+/* Níveis */
+.levels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+.level { padding: 20px 22px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.level + .level { border-left: 1px solid var(--line); }
+.level h3 { font: 500 1.05rem var(--font-display); color: var(--teal); }
+.level .url { font: 400 .8rem var(--font-ui); color: var(--text-soft); word-break: break-all; }
+.level ul { margin: 0; padding-left: 18px; font-size: .9rem; display: flex; flex-direction: column; gap: 4px; }
+.level.focus { background: var(--accent-soft); }
+
+/* Tabela */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; }
+table { width: 100%; border-collapse: collapse; font-size: .9rem; min-width: 760px; }
+th, td { padding: 12px 14px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); }
+thead th { font: 600 .74rem var(--font-ui); letter-spacing: .06em; text-transform: uppercase; color: var(--text-soft); background: var(--surface); }
+tbody tr:last-child td { border-bottom: 0; }
+td:first-child { font-weight: 500; width: 22%; }
+th.rec, td.rec { background: var(--accent-soft); }
+
+/* Públicos */
+.personas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.persona { padding: 20px; border-radius: 16px; border: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.persona h3 { font: 500 1.1rem var(--font-display); }
+.persona .need { font-size: .88rem; color: var(--text-soft); }
+.persona dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: .86rem; }
+.persona dt { color: var(--text-soft); }
+.persona dd { margin: 0; }
+
+/* Esboços de tela */
+.sketches { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+.sketch { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.sketch figcaption { font-size: .88rem; color: var(--text-soft); }
+.sketch figcaption b { color: var(--text); font-weight: 500; }
+figure { margin: 0; }
+.screen { border-radius: 12px; overflow: hidden; border: 1px solid var(--line); background: var(--bg); font-family: var(--font-ui); font-size: 11px; }
+.s-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; background: var(--nav); color: var(--nav-text); }
+.s-nav .brand { letter-spacing: .08em; font-weight: 300; }
+.s-nav .btn { padding: 2px 9px; border-radius: 999px; border: 1px solid rgba(125,211,240,.5); white-space: nowrap; }
+.s-body { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.s-crumb { color: var(--text-soft); }
+.s-crumb b { color: var(--text); font-weight: 500; }
+.s-search { padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line); color: var(--text-soft); }
+.s-group { display: flex; flex-direction: column; gap: 6px; }
+.s-group > span { font-weight: 600; letter-spacing: .08em; text-transform: uppercase; font-size: 9px; color: var(--text-soft); }
+.s-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.s-card { padding: 8px; border-radius: 8px; background: var(--surface); display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.s-card b { font-weight: 500; color: var(--teal); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.s-card i { font-style: normal; color: var(--text-soft); font-size: 9.5px; }
+.s-card.star { box-shadow: inset 0 0 0 1.5px var(--accent); }
+.badge { display: inline-block; padding: 0 6px; border-radius: 999px; font-size: 9px; width: fit-content; }
+.badge.of { background: var(--accent-soft); color: var(--accent); }
+.badge.pe { background: var(--warn-bg); color: var(--warn); }
+.s-split { display: grid; grid-template-columns: 1.2fr 1fr; gap: 0; min-height: 210px; }
+.s-dash { padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.s-bars { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.s-bars div { border-radius: 6px; background: linear-gradient(180deg, transparent 35%, var(--surface-2) 35%); }
+.s-pop { border-left: 1px solid var(--line); background: var(--surface); padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+.s-pop .row { padding: 4px 8px; border-radius: 6px; display: flex; justify-content: space-between; gap: 6px; }
+.s-pop .row.on { background: var(--accent); color: #fff; }
+.s-pop .k { color: var(--text-soft); font-size: 9px; }
+
+/* Caminho de análise */
+.path { display: flex; flex-wrap: wrap; align-items: stretch; gap: 0; }
+.step { flex: 1 1 150px; min-width: 0; padding: 14px 16px; border: 1px solid var(--line); background: var(--bg); display: flex; flex-direction: column; gap: 4px; position: relative; }
+.step + .step { border-left: 0; }
+.step:first-child { border-radius: 12px 0 0 12px; }
+.step:last-child { border-radius: 0 12px 12px 0; }
+.step b { font: 500 .95rem var(--font-display); color: var(--teal); }
+.step span { font-size: .8rem; color: var(--text-soft); }
+.step code { font-size: .74rem; width: fit-content; }
+
+/* Lista de critérios */
+.cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 40px; }
+.cols > div { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.cols h3 { font: 500 1.05rem var(--font-display); color: var(--teal); }
+.cols ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: .92rem; max-width: 62ch; }
+pre.sql { margin: 0; padding: 14px 16px; border-radius: 12px; background: var(--surface); overflow-x: auto; font: 400 .8rem/1.55 ui-monospace, 'Cascadia Code', Consolas, monospace; color: var(--text); }
+
+/* Plano */
+.plan { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.phase { border-top: 3px solid var(--accent); padding-top: 12px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.phase h3 { font: 500 1rem var(--font-display); }
+.phase .when { font: 500 .72rem var(--font-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--text-soft); }
+.phase ul { margin: 0; padding-left: 18px; font-size: .88rem; display: flex; flex-direction: column; gap: 5px; }
+.phase:nth-child(2) { border-top-color: var(--teal); }
+.phase:nth-child(3) { border-top-color: #6E8CBA; }
+.phase:nth-child(4) { border-top-color: var(--text-soft); }
+
+.decide { display: flex; flex-direction: column; gap: 10px; padding: 22px 24px; border-radius: 16px; border: 1px dashed var(--line); }
+.decide h2 { font: italic 400 1.35rem var(--font-display); }
+.decide ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; max-width: 80ch; }
+
+@media (max-width: 900px) {
+  .verdict, .levels, .personas, .sketches, .cols { grid-template-columns: minmax(0, 1fr); }
+  .verdict .side { border-left: 0; padding-left: 0; border-top: 1px solid var(--line); padding-top: 16px; }
+  .level + .level { border-left: 0; border-top: 1px solid var(--line); }
+  .plan { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .step + .step { border-left: 1px solid var(--line); border-top: 0; }
+  .step, .step:first-child, .step:last-child { flex-basis: 100%; border-radius: 0; }
+  .step:first-child { border-radius: 12px 12px 0 0; }
+  .step:last-child { border-radius: 0 0 12px 12px; }
+}
+@media (max-width: 520px) { .plan { grid-template-columns: minmax(0, 1fr); } .s-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <span class="eyebrow">Avaliação · Portal Performance &amp; Continuous Improvement</span>
+    <h1>Onde ficam os dashboards CEO, COO e os próximos?</h1>
+    <p class="lead">Avaliação de hospedagem e navegação para uma aplicação profissional que atenda do executivo ao analista, considerando o que já existe no repositório <code>pci-portal</code>: o Portal com controle de acesso, o VBM Performance Hub com o conceito de dashboard e as aplicações ainda sem link (Cockpit, Quartely, VDT).</p>
+  </header>
+
+  <div class="verdict">
+    <div class="prose">
+      <span class="tag good">Recomendação</span>
+      <h2>Os dashboards ficam <b>dentro do VBM Performance Hub</b>, com catálogo próprio e seletor no cabeçalho. O menu inicial do Portal continua listando aplicações.</h2>
+      <p>O menu inicial ganha só um atalho personalizado: "Meus dashboards", com os favoritos e os últimos abertos de cada usuário. Assim o executivo abre o painel dele com um clique, sem transformar o Portal numa lista que cresce a cada novo dashboard.</p>
+    </div>
+    <div class="side">
+      <span class="eyebrow">Por quê, em uma linha cada</span>
+      <ul>
+        <li>O Portal separa aplicações; dashboard é conteúdo de uma aplicação.</li>
+        <li>CEO, COO, CFO, BUs e dashboards pessoais passam de dezenas em poucos meses.</li>
+        <li>Permissão por dashboard só se resolve bem dentro do Performance Hub.</li>
+        <li>O Performance Hub já tem "Selecionar dashboard", criar e reutilizar.</li>
+        <li>Link direto por dashboard dá ao executivo o mesmo clique único.</li>
+      </ul>
+    </div>
+  </div>
+
+  <section aria-labelledby="h-niveis">
+    <h2 id="h-niveis">Três níveis, cada um com um papel</h2>
+    <div class="prose"><p>A confusão entre "colocar no menu inicial" e "criar menu no Performance Hub" some quando cada nível tem uma única responsabilidade.</p></div>
+    <div class="levels">
+      <div class="level">
+        <span class="eyebrow">Nível 1 · Portal</span>
+        <h3>Aplicações</h3>
+        <span class="url">/</span>
+        <ul>
+          <li>VBM - Kaizen App</li>
+          <li>VBM - Performance Hub</li>
+          <li>Próximas: Cockpit, VDT</li>
+          <li>Atalho "Meus dashboards" (por usuário)</li>
+        </ul>
+      </div>
+      <div class="level focus">
+        <span class="eyebrow">Nível 2 · Performance Hub</span>
+        <h3>Catálogo de dashboards</h3>
+        <span class="url">/VBM-Performance-Hub/</span>
+        <ul>
+          <li>Executivo: CEO, COO, CFO</li>
+          <li>Unidades: COO – Business Units (Sossego, Salobo…)</li>
+          <li>Análise: Quartely, explorador de gráficos</li>
+          <li>Meus dashboards (pessoais)</li>
+        </ul>
+      </div>
+      <div class="level">
+        <span class="eyebrow">Nível 3 · Dashboard</span>
+        <h3>Tela de indicadores</h3>
+        <span class="url">/VBM-Performance-Hub/d/coo-business-units?bu=sossego&amp;ano=2026&amp;tri=3&amp;mes=9</span>
+        <ul>
+          <li>Filtros na URL (link compartilhável)</li>
+          <li>Clique no indicador abre o detalhe</li>
+          <li>Detalhe leva à árvore de valor (VDT)</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-opcoes">
+    <h2 id="h-opcoes">Comparação das opções</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th scope="col">Critério</th><th scope="col">A · Links no menu inicial</th><th scope="col">B · Menu só no Performance Hub</th><th scope="col" class="rec">C · B + atalhos no Portal (recomendada)</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Cliques do executivo até o painel</td><td>1</td><td>2 (Portal → Hub → dashboard)</td><td class="rec">1 pelo atalho ou pelo link salvo</td></tr>
+          <tr><td>Crescimento (CEO, COO, CFO, BUs, pessoais)</td><td><span class="tag bad">Ruim</span> o menu vira lista longa e mistura níveis</td><td><span class="tag good">Bom</span> catálogo agrupado e com busca</td><td class="rec"><span class="tag good">Bom</span> igual a B</td></tr>
+          <tr><td>Permissão por dashboard</td><td><span class="tag warn">Frágil</span> cada card precisa de regra própria no Portal</td><td><span class="tag good">Bom</span> regra no Hub, validada no servidor</td><td class="rec"><span class="tag good">Bom</span> o atalho só lista o que a pessoa pode abrir</td></tr>
+          <tr><td>Consistência visual e de filtros</td><td><span class="tag warn">Média</span> cada dashboard tende a virar um HTML separado</td><td><span class="tag good">Alta</span> um motor de dashboard, vários conteúdos</td><td class="rec"><span class="tag good">Alta</span></td></tr>
+          <tr><td>Manutenção</td><td><span class="tag bad">Alta</span> novo dashboard mexe no Portal e no servidor</td><td><span class="tag good">Baixa</span> novo dashboard é cadastro no banco</td><td class="rec"><span class="tag good">Baixa</span></td></tr>
+          <tr><td>Analista criando dashboards</td><td><span class="tag bad">Não cabe</span></td><td><span class="tag good">Cabe</span> já existe no Hub (hoje só no navegador)</td><td class="rec"><span class="tag good">Cabe</span> com selo Oficial ou Pessoal</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-publicos">
+    <h2 id="h-publicos">Quem usa e o que cada um precisa</h2>
+    <div class="personas">
+      <article class="persona">
+        <span class="eyebrow">Executivo</span>
+        <h3>CEO, COO, diretores</h3>
+        <p class="need">Ver o resultado em segundos, numa tela, sem configurar nada.</p>
+        <dl>
+          <dt>Entrada</dt><dd>Atalho no Portal ou link salvo; pode abrir direto no dashboard dele.</dd>
+          <dt>Tela</dt><dd>Tela única, modo apresentação (tela cheia, tema escuro para TV).</dd>
+          <dt>Ações</dt><dd>Trocar período e unidade, ligar ou desligar o delta, copiar link.</dd>
+          <dt>Não vê</dt><dd>Ferramentas de edição.</dd>
+        </dl>
+      </article>
+      <article class="persona">
+        <span class="eyebrow">Gestor</span>
+        <h3>Gerente de unidade, controller</h3>
+        <p class="need">Entender por que um número saiu do Budget.</p>
+        <dl>
+          <dt>Entrada</dt><dd>Catálogo, grupo Unidades.</dd>
+          <dt>Tela</dt><dd>Mesma tela do executivo, com clique no indicador para detalhe mensal.</dd>
+          <dt>Ações</dt><dd>Comparar unidades, abrir a árvore de valor (VDT), exportar imagem.</dd>
+          <dt>Não vê</dt><dd>Dashboards de outras diretorias sem permissão.</dd>
+        </dl>
+      </article>
+      <article class="persona">
+        <span class="eyebrow">Analista</span>
+        <h3>Performance, PCI, IBP</h3>
+        <p class="need">Montar, ajustar e validar dashboards e dados.</p>
+        <dl>
+          <dt>Entrada</dt><dd>Catálogo completo e "Meus dashboards".</dd>
+          <dt>Tela</dt><dd>Quadro editável do Performance Hub (o que já existe).</dd>
+          <dt>Ações</dt><dd>Criar, reutilizar, publicar como Oficial (com aprovação), ver origem do dado.</dd>
+          <dt>Não vê</dt><dd>Nada escondido além do que a governança definir.</dd>
+        </dl>
+      </article>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-nav">
+    <h2 id="h-nav">Navegação proposta dentro do Performance Hub</h2>
+    <div class="prose">
+      <p>Dois elementos bastam: um <b>catálogo</b> como página inicial do Hub e um <b>seletor</b> no cabeçalho, que é o botão "Selecionar dashboard" já existente, ampliado. Não recomendo menu lateral fixo: ele tira largura da tela única que o executivo quer ver inteira.</p>
+    </div>
+    <div class="sketches">
+      <figure class="sketch">
+        <div class="screen" role="img" aria-label="Esboço do catálogo de dashboards do Performance Hub, com busca e grupos Favoritos, Executivo e Unidades">
+          <div class="s-nav"><span>VALE</span><span class="brand">VBM Performance Hub</span><span class="btn">Selecionar dashboard</span></div>
+          <div class="s-body">
+            <div class="s-search">Buscar dashboard, indicador ou unidade…</div>
+            <div class="s-group"><span>Favoritos</span>
+              <div class="s-cards">
+                <div class="s-card star"><b>COO – Business Units</b><i>Sossego · atualizado 14/10</i><span class="badge of">Oficial</span></div>
+                <div class="s-card"><b>CEO Dashboard</b><i>Consolidado VBM</i><span class="badge of">Oficial</span></div>
+                <div class="s-card"><b>Recovery – teste</b><i>Criado por você</i><span class="badge pe">Pessoal</span></div>
+              </div>
+            </div>
+            <div class="s-group"><span>Executivo</span>
+              <div class="s-cards">
+                <div class="s-card"><b>CEO Dashboard</b><i>Mensal</i></div>
+                <div class="s-card"><b>COO Dashboard</b><i>Mensal</i></div>
+                <div class="s-card"><b>CFO Dashboard</b><i>Mensal</i></div>
+              </div>
+            </div>
+            <div class="s-group"><span>Unidades</span>
+              <div class="s-cards">
+                <div class="s-card"><b>COO – Business Units</b><i>Sossego, Salobo</i></div>
+                <div class="s-card"><b>Quartely</b><i>Trimestral</i></div>
+                <div class="s-card"><b>Explorador de gráficos</b><i>Análise</i></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <figcaption><b>Catálogo</b> em <code>/VBM-Performance-Hub/</code>: busca, favoritos no topo e grupos por público. Cada card mostra só o que a pessoa pode abrir, com selo Oficial ou Pessoal e a data da última carga.</figcaption>
+      </figure>
+      <figure class="sketch">
+        <div class="screen" role="img" aria-label="Esboço do seletor de dashboards aberto sobre o dashboard COO Business Units">
+          <div class="s-nav"><span>VALE</span><span class="brand">VBM Performance Hub</span><span class="btn">COO – Business Units ▾</span></div>
+          <div class="s-split">
+            <div class="s-dash">
+              <div class="s-crumb">Performance Hub › Executivo › <b>COO – Business Units</b></div>
+              <div class="s-bars"><div></div><div></div><div></div><div></div><div></div><div></div></div>
+            </div>
+            <div class="s-pop">
+              <div class="s-search">Buscar…</div>
+              <span class="k">RECENTES</span>
+              <div class="row on"><span>COO – Business Units</span><span>★</span></div>
+              <div class="row"><span>CEO Dashboard</span><span>☆</span></div>
+              <span class="k">EXECUTIVO</span>
+              <div class="row"><span>COO Dashboard</span></div>
+              <div class="row"><span>CFO Dashboard</span></div>
+              <span class="k">TODOS OS DASHBOARDS →</span>
+            </div>
+          </div>
+        </div>
+        <figcaption><b>Seletor</b> no cabeçalho, disponível em qualquer dashboard: busca, recentes, favoritos (estrela) e grupos. A trilha "Performance Hub › Executivo › COO" mostra onde a pessoa está e volta ao catálogo.</figcaption>
+      </figure>
+    </div>
+
+    <div class="prose"><p><b>Caminho de análise.</b> Cada passo leva os filtros adiante pela URL, então o gestor não refaz a seleção ao descer de nível:</p></div>
+    <div class="path">
+      <div class="step"><b>CEO</b><span>Consolidado VBM</span><code>/d/ceo</code></div>
+      <div class="step"><b>COO</b><span>Por diretoria</span><code>/d/coo</code></div>
+      <div class="step"><b>Business Unit</b><span>Sossego, Salobo</span><code>/d/coo-business-units?bu=…</code></div>
+      <div class="step"><b>Indicador</b><span>Série mensal, B × A/F</span><code>/d/…/i/copper-recovery</code></div>
+      <div class="step"><b>Árvore de valor</b><span>VDT, causas</span><code>/VBM-Vdt/?vdt=…</code></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-acesso">
+    <h2 id="h-acesso">Acesso, governança e hospedagem</h2>
+    <div class="cols">
+      <div>
+        <h3>Acesso</h3>
+        <ul>
+          <li>Mantém a regra atual do Portal (<code>IBP.USERS</code> com <code>CD_MATRICULA</code>, via <code>X-Forwarded-Email</code>) para entrar no Hub.</li>
+          <li>Acrescenta permissão por dashboard: perfil ou grupo do usuário × dashboard. O CEO Dashboard, por exemplo, fica restrito.</li>
+          <li>A validação acontece no servidor, como o Portal já faz ao remover os cards de quem não tem acesso. O navegador nunca recebe a lista do que a pessoa não pode ver.</li>
+          <li>Grupos do Microsoft Entra ID exigem consulta ao Microsoft Graph, porque o Databricks Apps entrega só o e-mail. No começo, um perfil em tabela própria resolve com menos dependências.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Governança</h3>
+        <ul>
+          <li><b>Oficial:</b> curado pela equipe de Performance, com dono, aprovação e data da última carga visível.</li>
+          <li><b>Pessoal:</b> criado por analistas no quadro editável; pode ser promovido a Oficial.</li>
+          <li>Hoje os dashboards do Hub ficam só no navegador ("Validação: os dashboards ficam salvos só neste navegador"). Levá-los para o banco é pré-requisito do catálogo.</li>
+          <li>Registro de acesso por dashboard (quem abriu, quando) para medir uso e limpar o que não é usado.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Hospedagem</h3>
+        <ul>
+          <li>Continua um único Databricks App (o Portal), com cada aplicação montada na sua pasta, como no <code>server.js</code> atual.</li>
+          <li>Dashboards viram rotas do Performance Hub (<code>/d/&lt;slug&gt;</code>), não pastas nem arquivos HTML novos. A página de proposta do COO vira um modelo de layout ("dois painéis") do motor do Hub.</li>
+          <li>Dashboards executivos leem o retrato mensal pré-calculado (a proposta <code>002_snapshot_mensal.sql</code>) para abrir rápido e mostrar sempre o mesmo número fechado.</li>
+          <li>Cockpit e VDT entram como cards no Portal quando forem publicados, por serem aplicações próprias.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Modelo de dados mínimo</h3>
+<pre class="sql">IBP.PH_DASHBOARD
+  ID_DASHBOARD, CD_SLUG, NM_DASHBOARD, CD_GRUPO
+  (EXECUTIVO | UNIDADES | ANALISE),
+  TP_DASHBOARD (OFICIAL | PESSOAL),
+  DS_LAYOUT (JSON), CD_EMAIL_DONO, DT_ATUALIZACAO
+
+IBP.PH_DASHBOARD_ACESSO
+  ID_DASHBOARD, CD_PERFIL
+
+IBP.PH_INDICADOR_META
+  ID_INDICADOR, NM_SECAO, DS_UNIDADE,
+  TP_POLARIDADE (MAIOR_MELHOR | MENOR_MELHOR),
+  NR_CASAS, NR_ORDEM, DS_COMPONENTES (JSON)
+
+IBP.PH_FAVORITO
+  CD_EMAIL, ID_DASHBOARD, DT_ULTIMO_ACESSO</pre>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-plano">
+    <h2 id="h-plano">Plano em quatro etapas</h2>
+    <div class="plan">
+      <div class="phase">
+        <span class="when">Etapa 1</span>
+        <h3>Rotas e catálogo</h3>
+        <ul>
+          <li>Rotas <code>/d/&lt;slug&gt;</code> com filtros na URL.</li>
+          <li>Catálogo como página inicial do Hub.</li>
+          <li>Seletor no cabeçalho com busca e recentes.</li>
+        </ul>
+      </div>
+      <div class="phase">
+        <span class="when">Etapa 2</span>
+        <h3>Dashboards no banco</h3>
+        <ul>
+          <li>Tabelas de dashboard, acesso e metadados de indicador.</li>
+          <li>COO – Business Units como primeiro dashboard Oficial.</li>
+          <li>Selo Oficial ou Pessoal.</li>
+        </ul>
+      </div>
+      <div class="phase">
+        <span class="when">Etapa 3</span>
+        <h3>Executivo</h3>
+        <ul>
+          <li>Atalho "Meus dashboards" no Portal.</li>
+          <li>Abrir direto no favorito.</li>
+          <li>Modo apresentação e exportar imagem ou PDF.</li>
+        </ul>
+      </div>
+      <div class="phase">
+        <span class="when">Etapa 4</span>
+        <h3>Análise</h3>
+        <ul>
+          <li>Detalhe por indicador.</li>
+          <li>Ligação com o VDT levando os filtros.</li>
+          <li>Registro de uso por dashboard.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <div class="decide">
+    <h2>Decisões que dependem de vocês</h2>
+    <ol>
+      <li>Quem aprova um dashboard como Oficial: a equipe de Performance ou o dono da área?</li>
+      <li>A permissão por dashboard usa perfil em tabela (mais rápido de implantar) ou grupos do Entra ID (exige acesso ao Microsoft Graph)?</li>
+      <li>O executivo deve cair direto no dashboard favorito ao entrar no Portal, ou passar pela tela inicial com o atalho?</li>
+      <li>Quais dashboards entram na primeira onda além do COO – Business Units: CEO, COO consolidado, CFO?</li>
+    </ol>
+  </div>
+</div>
+</body></html>
