@@ -6,7 +6,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Poppins:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&display=swap">
 <style>
 /* Layout: tela única com o ritmo do print original — título editorial em itálico,
    painel cinza de Produção (3×3) e Financeiro solto
@@ -49,7 +49,7 @@
   --nav-bg: linear-gradient(135deg, #041523 0%, #072842 55%, #0b3a64 100%);
   --table-head: #0B6E99;
 
-  --font-display: 'Vale Sans', 'Fira Sans', 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Poppins', 'Segoe UI', system-ui, sans-serif;
   --font-ui: 'Poppins', 'Segoe UI', system-ui, sans-serif;
 }
 @media (prefers-color-scheme: dark) {
@@ -203,7 +203,9 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 /* Título + gráfico centralizados na faixa da linha: em telas altas a sobra se divide acima e abaixo,
    e o bloco desce em direção à base sem aumentar os gráficos */
 .card { min-width: 0; min-height: 0; display: flex; flex-direction: column; justify-content: center; gap: 6px; padding-top: 6px; }
-.card-head { flex-shrink: 0; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.card-head { flex-shrink: 0; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 4px 8px; }
+/* O título não encolhe: sem espaço, o seletor (Cu/Au, All-in…) desce para baixo dele */
+.card-name { flex: 1 0 auto; max-width: 100%; min-width: 0; }
 .card-title { margin: 0; font: 400 1rem/1.2 var(--font-display); color: var(--chart-title); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Tela cheia em telas altas: gráficos no MESMO tamanho do modo normal (sem esticar);
    os painéis ficam do tamanho do conteúdo e são centralizados na altura que sobra */
@@ -274,6 +276,10 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 
 /* Monitores de notebook (1366–1600 px, até ~950 px de altura): tudo mais compacto para caber */
 @media (max-width: 1600px) {
+  .card-title { font-size: .88rem; }
+  .card .seg { gap: 1px; }
+  .card .seg button { padding: 1px 5px; font-size: .62rem; }
+  .card-head { column-gap: 4px; }
   .title-block h2 { font-size: 1.75rem; }
   .filters { gap: 8px 10px; }
   .seg button { padding: 2px 8px; font-size: .7rem; }
@@ -531,7 +537,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
       }).join('') + '</div>';
     }
     return '<article class="card card-' + ind.id + '" id="card-' + ind.id + '">' +
-      '<div class="card-head"><div style="min-width:0"><h4 class="card-title" title="' + esc(v.t) + '">' + esc(v.t) + '</h4><p class="card-unit">(' + esc(v.u) + ')</p></div>' + ctl + '</div>' +
+      '<div class="card-head"><div class="card-name"><h4 class="card-title" title="' + esc(v.t) + '">' + esc(v.t) + '</h4><p class="card-unit">(' + esc(v.u) + ')</p></div>' + ctl + '</div>' +
       '<div class="chart" data-ind="' + ind.id + '"></div>' +
       '</article>';
   }
