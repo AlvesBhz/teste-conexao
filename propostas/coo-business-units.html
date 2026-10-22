@@ -156,18 +156,18 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 /* ── Página ── */
 .page {
   flex: 1 1 auto; min-height: 0; width: 100%;
-  padding-block: 18px 16px;
+  padding-block: 12px 16px;
   padding-left: max(28px, env(safe-area-inset-left, 0px));
   padding-right: max(28px, env(safe-area-inset-right, 0px));
   display: flex; flex-direction: column; gap: 14px;
 }
 
 /* Cabeçalho editorial + filtros */
-.head { position: relative; flex-shrink: 0; display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 14px 32px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.head { position: relative; flex-shrink: 0; display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 14px 32px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
 .title-block { min-width: 0; }
 .title-block h2 { margin: 0; font: italic 300 clamp(1.7rem, 2.6vw, 2.5rem)/1.05 var(--font-display); color: var(--accent); letter-spacing: -.01em; text-wrap: balance; }
-.title-block .bu { margin: 6px 0 0; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
-.title-block .bu strong { font: italic 400 1.35rem var(--font-display); color: var(--accent-strong); }
+.title-block .bu { margin: 4px 0 0; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.title-block .bu strong { font: italic 400 1.85rem/1.1 var(--font-display); color: var(--accent-strong); }
 
 .filters { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: flex-end; }
 .filter { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
@@ -193,7 +193,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 :root[data-theme="dark"] .demo { color: #FCD34D; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .demo { color: #FCD34D; } }
 
-.panel-grid { flex: 1 1 auto; min-height: 0; display: grid; grid-template-rows: repeat(3, minmax(0, 1fr)); column-gap: 28px; row-gap: 8px; }
+.panel-grid { flex: 1 1 auto; min-height: 0; display: grid; grid-template-rows: repeat(3, minmax(0, 1fr)); column-gap: 28px; row-gap: 22px; }
 .panel-prod .panel-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .panel-fin .panel-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 40px; }
 
@@ -203,7 +203,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .card-title { margin: 0; font: 400 1rem/1.2 var(--font-display); color: var(--chart-title); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .card-unit { margin: 1px 0 0; font: 400 .74rem var(--font-display); color: var(--text-faint); }
 /* Tela cheia (botão ou F11): sem o cabeçalho azul; tela cheia e tema descem para o canto direito */
-.fs-tools { display: none; position: absolute; top: -4px; right: 0; gap: 4px; }
+.fs-tools { display: none; align-self: flex-end; gap: 4px; margin-left: 4px; }
 .fs-btn { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 8px; border: 1px solid var(--ctl-border); background: var(--ctl-bg); color: var(--text-soft); cursor: pointer; }
 .fs-btn:hover { color: var(--accent-strong); border-color: var(--accent-strong); }
 .ico-exit { display: none; }
@@ -211,11 +211,9 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .is-fs .ico-enter { display: none; }
 .is-fs .topnav { display: none; }
 .is-fs .fs-tools { display: flex; }
-.is-fs .head { padding-top: 40px; }
 @media (display-mode: fullscreen) {
   .topnav { display: none; }
   .fs-tools { display: flex; }
-  .head { padding-top: 40px; }
 }
 .card .seg button { transition: background-color .18s ease, color .18s ease; }
 .card .seg button { min-height: 22px; padding: 1px 8px; font-size: .68rem; }
@@ -257,13 +255,13 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 /* Monitores de notebook (1366–1600 px, até ~950 px de altura): tudo mais compacto para caber */
 @media (max-width: 1600px) {
   .title-block h2 { font-size: 1.75rem; }
-  .title-block .bu strong { font-size: 1.15rem; }
+  .title-block .bu strong { font-size: 1.5rem; }
   .filters { gap: 8px 10px; }
   .seg button { padding: 2px 8px; font-size: .7rem; }
   .head { gap: 10px 20px; }
 }
 @media (max-height: 960px) {
-  .page { padding-block: 12px 10px; gap: 10px; }
+  .page { padding-block: 8px 10px; gap: 10px; }
   .head { padding-bottom: 10px; }
   .panel-prod { padding: 12px 18px 10px; }
   .panel-fin { padding: 12px 4px 10px; }
@@ -332,10 +330,6 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 
 <main class="page">
   <section class="head" aria-label="Dashboard e filtros">
-    <div class="fs-tools" aria-label="Ações da tela cheia">
-      <button type="button" class="fs-btn js-full" aria-label="Sair da tela cheia" title="Sair da tela cheia (Esc)"><svg class="ico-enter" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><svg class="ico-exit" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-      <button type="button" class="fs-btn js-theme" aria-label="Alternar tema claro/escuro"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.7"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button>
-    </div>
     <div class="title-block">
       <h2>COO – Business Units Dashboard</h2>
       <p class="bu"><strong id="buName">Sossego</strong></p>
@@ -347,6 +341,10 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
       <div class="filter"><span class="filter-label" id="lblTri">Trimestre:</span><div class="seg" role="group" aria-labelledby="lblTri" data-filter="tri"></div></div>
       <div class="filter"><span class="filter-label" id="lblMes">Mês:</span><div class="seg" role="group" aria-labelledby="lblMes" data-filter="mes"></div></div>
       <div class="filter"><span class="filter-label" id="lblDelta">Delta:</span><div class="seg" role="group" aria-labelledby="lblDelta" data-filter="delta"></div></div>
+      <div class="fs-tools" aria-label="Ações da tela cheia">
+      <button type="button" class="fs-btn js-full" aria-label="Sair da tela cheia" title="Sair da tela cheia (Esc)"><svg class="ico-enter" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><svg class="ico-exit" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <button type="button" class="fs-btn js-theme" aria-label="Alternar tema claro/escuro"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.7"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button>
+      </div>
     </div>
   </section>
 
@@ -453,7 +451,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   }
 
   // ── Gráfico: altura e largura contidas (ritmo do print); valores em selos dentro das barras ──
-  var MAX_W = 380, MAX_H = 190;
+  var MAX_W = 400, MAX_H = 270;
   function chartSvg(ind, W, H) {
     var v = view(ind), ax = axis();
     var showDelta = state.delta === 'on';
