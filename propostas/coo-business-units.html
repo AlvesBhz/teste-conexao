@@ -179,7 +179,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .seg button[aria-pressed="true"] { background: var(--ctl-on-bg); color: var(--ctl-on-text); }
 
 /* Painéis */
-.dash { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(0, .88fr); gap: 32px; }
+.dash { flex: 1 1 auto; min-height: 0; margin-top: 8px; display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(0, .88fr); gap: 32px; }
 .panel { min-height: 0; display: flex; flex-direction: column; gap: 10px; }
 .panel-prod { background: var(--panel); border-radius: 20px; padding: 16px 22px 14px; }
 .panel-fin { padding: 16px 4px 14px; }
@@ -201,7 +201,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 /* Indicador: título + unidade, gráfico com altura contida, espaço livre abaixo */
 /* Título + gráfico centralizados na faixa da linha: em telas altas a sobra se divide acima e abaixo,
    e o bloco desce em direção à base sem aumentar os gráficos */
-.card { min-width: 0; min-height: 0; display: flex; flex-direction: column; justify-content: center; gap: 6px; padding-top: 6px; }
+.card { min-width: 0; min-height: 0; display: flex; flex-direction: column; justify-content: center; gap: 6px; padding-top: 16px; }
 .card-head { flex-shrink: 0; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 4px 8px; }
 /* O título não encolhe: sem espaço, o seletor (Cu/Au, All-in…) desce para baixo dele */
 .card-name { flex: 1 0 auto; max-width: 100%; min-width: 0; }
@@ -210,11 +210,11 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
    Os painéis seguem logo abaixo do cabeçalho até a base; cada linha de gráficos tem a
    mesma faixa de altura, com o gráfico no topo dela, e a sobra vira respiro igual por linha */
 @media (min-height: 1000px) {
-  .is-fs .panel-grid { row-gap: 20px; }
+  .is-fs .panel-grid { grid-template-rows: repeat(3, auto); align-content: space-between; row-gap: 20px; }
   .is-fs .chart { flex: none; height: 190px; }
 }
 @media (display-mode: fullscreen) and (min-height: 1000px) {
-  .panel-grid { row-gap: 20px; }
+  .panel-grid { grid-template-rows: repeat(3, auto); align-content: space-between; row-gap: 20px; }
   .chart { flex: none; height: 190px; }
 }
 .card-unit { margin: 1px 0 0; font: 400 .74rem var(--font-display); color: var(--text-faint); }
@@ -289,7 +289,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   .head { padding-bottom: 10px; }
   .panel-prod { padding: 12px 18px 10px; }
   .panel-fin { padding: 12px 4px 10px; }
-  .card { padding-top: 2px; }
+  .card { padding-top: 10px; }
 }
 
 @media (max-width: 1180px), (max-height: 700px) {
@@ -485,9 +485,11 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
     var MT = showDelta ? 46 : 20, MB = 16, PW = W / 3;
     var BW = Math.max(16, Math.min(30, PW * 0.3)), GAP = Math.max(14, Math.min(24, PW * 0.2));
     var all = [].concat.apply([], v.d);
+    var folgaTopo = v.u === '%' || ind.id === 'grade';
     function dom(vals) {
       var lo = Math.min(0, Math.min.apply(null, vals)), hi = Math.max(0, Math.max.apply(null, vals));
       if (hi === lo) hi = lo + 1;
+      if (folgaTopo) hi = hi / 0.72; // a coluna mais alta usa ~72% da altura
       return [lo, hi];
     }
     var label = [v.t + ' (' + v.u + ').'];
