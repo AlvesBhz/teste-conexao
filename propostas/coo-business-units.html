@@ -209,7 +209,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 /* Mesmo arranjo no modo normal e em tela cheia: cada linha tem a altura do conteúdo, a 1ª logo abaixo
    do título do painel e a última junto à base. A altura dos gráficos (--chart-h, até 190 px, sem esticar)
    é calculada em ajustarAltura() para as três linhas caberem no painel */
-.panel-grid { grid-template-rows: repeat(3, auto); align-content: space-between; row-gap: 20px; }
+.panel-grid { grid-template-rows: repeat(3, auto); align-content: start; row-gap: 10px; }
 .card-unit { margin: 1px 0 0; font: 400 .74rem var(--font-display); color: var(--text-faint); }
 /* Tela cheia (botão ou F11): sem o cabeçalho azul; tela cheia e tema descem para o canto direito */
 .fs-tools { display: flex; align-self: flex-end; gap: 4px; margin-left: 4px; }
@@ -554,14 +554,24 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 
   // Altura dos gráficos: até 190 px, o quanto couber para as três linhas ocuparem o painel
   function ajustarAltura() {
-    var g = document.getElementById('gridProd'), card = g && g.querySelector('.card');
+    var gProd = document.getElementById('gridProd'), gFin = document.getElementById('gridFin');
+    var card = gProd && gProd.querySelector('.card');
     if (!card) return;
-    var cs = getComputedStyle(card), gs = getComputedStyle(g);
-    // cabeçalho de card mais alto da página (ex.: seletor do All-in quebrando linha em telas estreitas)
-    var maiorCabeca = Math.max.apply(null, [].map.call(document.querySelectorAll('.card-head'), function (h) { return h.offsetHeight; }));
-    var cabeca = maiorCabeca + parseFloat(cs.paddingTop) + (parseFloat(cs.rowGap) || 6);
-    var livre = (g.clientHeight - 2 * (parseFloat(gs.rowGap) || 20)) / 3 - cabeca;
-    document.documentElement.style.setProperty('--chart-h', Math.max(90, Math.min(MAX_H, Math.floor(livre))) + 'px');
+    var cs = getComputedStyle(card), GAP_MIN = 10;
+    var extra = parseFloat(cs.paddingTop) + (parseFloat(cs.rowGap) || 6);
+    function maiorCabeca(raiz) {
+      return Math.max.apply(null, [].map.call(raiz.querySelectorAll('.card-head'), function (h) { return h.offsetHeight; }));
+    }
+    // altura única dos gráficos, pelo cabeçalho de card mais alto da página (ex.: seletor do All-in quebrando linha)
+    var livre = (gProd.clientHeight - 2 * GAP_MIN) / 3 - (maiorCabeca(document) + extra);
+    var h = Math.max(90, Math.min(MAX_H, Math.floor(livre)));
+    document.documentElement.style.setProperty('--chart-h', h + 'px');
+    // espaço entre as linhas: 80% da sobra dividida entre as duas separações (linhas um pouco mais
+    // próximas; o restante fica no rodapé). O mesmo valor nos dois painéis, para as linhas ficarem alinhadas
+    var gap = Math.min.apply(null, [gProd, gFin].map(function (g) {
+      return Math.floor((g.clientHeight - 3 * (h + maiorCabeca(g) + extra)) / 2 * 0.8);
+    }));
+    gProd.style.rowGap = gFin.style.rowGap = Math.max(GAP_MIN, gap) + 'px';
   }
   new ResizeObserver(ajustarAltura).observe(document.getElementById('gridProd'));
 
