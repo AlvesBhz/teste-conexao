@@ -22,10 +22,6 @@
   --accent: #1E8FC4;          /* títulos grandes (3,9:1 em branco, uso só em ≥24px) */
   --accent-strong: #0B6E99;
   --panel: #F3F4F5;
-  --tile-prod: transparent;             /* só a borda marca cada gráfico */
-  --tile-fin: transparent;
-  --tile-line: rgba(15,23,42,.07);
-  --tile-shadow: none;
   --chart-title: #1B7F7B;
   --ink-strong: #111827;
   --ink-soft: #6B7280;
@@ -66,10 +62,6 @@
     --accent: #5CC6EE;
     --accent-strong: #7DD3F0;
     --panel: #0C2438;
-    --tile-prod: transparent;
-    --tile-fin: transparent;
-    --tile-line: rgba(255,255,255,.07);
-    --tile-shadow: none;
     --chart-title: #5FD0C9;
     --ink-strong: #F1F5F9;
     --ink-soft: rgba(241,245,249,.62);
@@ -105,10 +97,6 @@
   --accent: #5CC6EE;
   --accent-strong: #7DD3F0;
   --panel: #0C2438;
-  --tile-prod: transparent;
-  --tile-fin: transparent;
-  --tile-line: rgba(255,255,255,.07);
-  --tile-shadow: none;
   --chart-title: #5FD0C9;
   --ink-strong: #F1F5F9;
   --ink-soft: rgba(241,245,249,.62);
@@ -207,17 +195,13 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .demo { color: #FCD34D; } }
 
 .panel-grid { flex: 1 1 auto; min-height: 0; display: grid; grid-template-rows: repeat(3, minmax(0, 1fr)); column-gap: 28px; row-gap: 8px; }
-.panel-prod .panel-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 14px; }
-.panel-fin .panel-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 14px; }
+.panel-prod .panel-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.panel-fin .panel-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 40px; }
 
 /* Indicador: título + unidade, gráfico com altura contida, espaço livre abaixo */
 /* Título + gráfico centralizados na faixa da linha: em telas altas a sobra se divide acima e abaixo,
    e o bloco desce em direção à base sem aumentar os gráficos */
 .card { min-width: 0; min-height: 0; display: flex; flex-direction: column; justify-content: flex-start; gap: 6px; padding-top: 16px; }
-/* Fundo sutil por gráfico (referência: cards do VBM Performance Hub) */
-.panel-grid .card { padding: 14px 16px 10px; border-radius: 12px; border: 1px solid var(--tile-line); box-shadow: var(--tile-shadow); }
-.panel-prod .card { background: var(--tile-prod); }
-.panel-fin .card { background: var(--tile-fin); }
 .card-head { flex-shrink: 0; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 4px 8px; }
 /* O título não encolhe: sem espaço, o seletor (Cu/Au, All-in…) desce para baixo dele */
 .card-name { flex: 1 0 auto; max-width: 100%; min-width: 0; }
@@ -283,8 +267,6 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 
 /* Monitores de notebook (1366–1600 px, até ~950 px de altura): tudo mais compacto para caber */
 @media (max-width: 1600px) {
-  .panel-grid .card { padding-left: 10px; padding-right: 10px; }
-  .panel-prod .panel-grid, .panel-fin .panel-grid { column-gap: 10px; }
   .card-title { font-size: .88rem; }
   .card .seg { gap: 1px; }
   .card .seg button { padding: 1px 5px; font-size: .62rem; }
@@ -300,7 +282,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   .head { padding-bottom: 10px; }
   .panel-prod { padding: 12px 18px 10px; }
   .panel-fin { padding: 12px 4px 10px; }
-  .panel-grid .card { padding-top: 10px; }
+  .card { padding-top: 10px; }
 }
 
 @media (max-width: 1180px), (max-height: 700px) {
@@ -576,7 +558,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
     var card = gProd && gProd.querySelector('.card');
     if (!card) return;
     var cs = getComputedStyle(card), GAP_MIN = 10;
-    var extra = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom) + (parseFloat(cs.rowGap) || 6) + 2; // + borda
+    var extra = parseFloat(cs.paddingTop) + (parseFloat(cs.rowGap) || 6);
     function maiorCabeca(raiz) {
       return Math.max.apply(null, [].map.call(raiz.querySelectorAll('.card-head'), function (h) { return h.offsetHeight; }));
     }
