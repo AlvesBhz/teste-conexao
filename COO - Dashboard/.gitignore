@@ -1,0 +1,21 @@
+# Dependências
+node_modules/
+npm-debug.log*
+
+# Variáveis de ambiente (credenciais nunca vão para o git)
+.env
+.env.local
+.env.*.local
+
+# IDE / SO
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Logs e temporários
+logs/
+*.log
+.cache/
+temp/
