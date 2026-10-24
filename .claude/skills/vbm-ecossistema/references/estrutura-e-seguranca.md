@@ -1,6 +1,7 @@
 # Estrutura, segurança e conexão com o banco
 
-Referência viva: `COO - Dashboard/` (copie os arquivos e troque nomes/prefixos).
+Referência: `COO - Dashboard/` no commit `44fdbd6` (copie os arquivos e troque nomes/prefixos):
+`git archive 44fdbd6 "COO - Dashboard" | tar -x -C <destino>`.
 
 ## Árvore de um app
 

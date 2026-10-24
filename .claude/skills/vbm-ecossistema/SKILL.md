@@ -6,9 +6,11 @@ description: Padrão de estrutura, segurança, conexão com o Azure SQL e identi
 # Ecossistema VBM — estrutura e identidade
 
 Todo app do ecossistema segue o mesmo molde. A **implementação de referência** é a pasta
-`COO - Dashboard/` deste repositório: copie dela, não reinvente. Ela junta o desenho do
-VBM Performance Hub (rotas num módulo, dois pontos de entrada) com as regras de
-segurança do VBM Kaizen.
+`COO - Dashboard/` no commit `44fdbd6` deste repositório (servidor, API, acesso, testes e
+docs completos): copie dela, não reinvente. Hoje a pasta no ramo atual guarda só a página
+(`index.html`, layout aprovado com dados de exemplo); para recuperar a estrutura completa:
+`git archive 44fdbd6 "COO - Dashboard" | tar -x -C <destino>`. Ela junta o desenho do VBM Performance Hub (rotas num módulo, dois pontos
+de entrada) com as regras de segurança do VBM Kaizen.
 
 ## Regras que nunca mudam
 
@@ -41,7 +43,7 @@ segurança do VBM Kaizen.
 
 ## Como criar um app novo
 
-1. Copie a estrutura de `COO - Dashboard/` (ver `references/estrutura-e-seguranca.md`)
+1. Copie a estrutura de `COO - Dashboard/` do commit `44fdbd6` (ver `references/estrutura-e-seguranca.md`)
    para a pasta nova e troque o prefixo: rota pública sem espaços (`/Nome-Do-App`),
    variáveis com prefixo do app (`NOMEAPP_ID_DASH`, `NOMEAPP_SQL_*`).
 2. Peça os scripts SQL daquele dashboard ao time de dados (não reaproveite os de outro app),

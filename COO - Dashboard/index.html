@@ -412,7 +412,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
             <li><span class="swatch" style="background:var(--serie-b)"></span>Budget | Adjusted Budget (B)</li>
             <li><span class="swatch" style="background:var(--serie-a)"></span>Forecast | Actual (F | A)</li>
           </ul>
-          <p class="updated"><span class="demo" id="dataBadge" title="API indisponível: exibindo os valores do print COO – Business Units (Sossego, set/2026).">dados de exemplo</span>Last updated: <span id="lastUpdated">14/10/2026 08:58</span></p>
+          <p class="updated"><span class="demo" title="Valores do print COO – Business Units (Sossego, set/2026). Trocar unidade ou período só muda a seleção; na integração, cada troca refaz a consulta de chart-data.">dados de exemplo</span>Last updated: 14/10/2026 08:58</p>
     </div>
   </div>
 
@@ -471,10 +471,11 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   // ── Estado dos filtros ──
   var MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
   var MESES_LONGOS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-  // Fase de teste de dados: só Sossego e Salobo (a lista real vem de api/unidades,
-  // que respeita COO_SITES no servidor)
+  // Unidades por país (exemplo; na integração vem do cadastro de sites)
   var UNIDADES = [
-    { pais: 'Brasil', sites: ['Sossego', 'Salobo'] }
+    { pais: 'Brasil', sites: ['Sossego', 'Salobo', 'Onça Puma'] },
+    { pais: 'Canadá', sites: ['Sudbury', "Voisey's Bay", 'Thompson', 'Long Harbour'] },
+    { pais: 'Indonésia', sites: ['Sorowako'] }
   ];
   var state = { pais: 'Brasil', bu: 'Sossego', visao: 'Plan', ano: 2026, tri: 3, mes: 9, delta: 'on', sel: { grade: 'cu', allin: 'allin' } };
   var OPTS = {
@@ -491,11 +492,9 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   // Rótulos do eixo no padrão do print: "Set B", "Q3A", "26F"
   function axis() {
     var m = MESES[state.mes - 1], q = 'Q' + state.tri, y = yy();
-    return [[m + ' B', m + ' ' + LETRAS_AF[0]], [q + 'B', q + LETRAS_AF[1]], [y + 'B', y + LETRAS_AF[2]]];
+    return [[m + ' B', m + ' A'], [q + 'B', q + 'A'], [y + 'B', y + 'F']];
   }
   var PER = ['mês', 'trimestre', 'ano'];
-  // Actual (A) ou Forecast (F) por janela; vem do script quando há dados reais
-  var LETRAS_AF = ['A', 'A', 'F'];
 
   function fmt(v, dec) {
     return v.toLocaleString('pt-BR', { minimumFractionDigits: dec, maximumFractionDigits: dec }).replace('-', '−');
@@ -691,7 +690,6 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
       abrirUnit(false);
       unitTrigger.focus();
       render();
-      carregarIndicadores();
     }
   });
   document.addEventListener('click', function (e) {
@@ -708,104 +706,6 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
     render();
   });
 
-  // ── Dados: API do COO Dashboard (coo-api.js), com os valores de exemplo como reserva ──
-  // Caminhos candidatos: de dentro do navegador não dá para saber se a página
-  // está no Portal (/COO-Dashboard/) ou num app próprio; tenta na ordem e
-  // guarda o primeiro que responder (mesma estratégia do Performance Hub).
-  var API_BASES = ['api/', '../api/', '/COO-Dashboard/api/', '/api/'];
-  var apiBase = null, SITE_ID = {}, seqDados = 0;
-  INDICADORES.forEach(function (ind) {
-    if (ind.alt) Object.keys(ind.alt).forEach(function (k) { ind.alt[k]._exemplo = ind.alt[k].d; });
-    else ind._exemplo = ind.d;
-  });
-
-  function apiGet(recurso) {
-    var bases = apiBase ? [apiBase] : API_BASES, i = 0;
-    function tentar() {
-      if (i >= bases.length) return Promise.reject(new Error('API indisponível'));
-      var b = bases[i++];
-      return fetch(new URL(recurso, new URL(b, location.href)), { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
-        .then(function (r) {
-          if (!r.ok) throw new Error(recurso + ' → ' + r.status);
-          return r.json().then(function (j) { apiBase = b; return j; });
-        })
-        .catch(tentar);
-    }
-    return tentar();
-  }
-
-  // Origem dos números, sempre visível: exemplo, parcial (indicadores sem cadastro) ou real
-  function marcarFonte(tipo, detalhe) {
-    var b = document.getElementById('dataBadge');
-    b.hidden = tipo === 'real';
-    b.textContent = tipo === 'parcial' ? 'dados parciais' : 'dados de exemplo';
-    b.title = tipo === 'parcial'
-      ? 'Sem dado no banco (exibindo valor de exemplo): ' + detalhe
-      : 'API indisponível: exibindo os valores do print COO – Business Units (Sossego, set/2026).' + (detalhe ? ' ' + detalhe : '');
-  }
-
-  function usarExemplo() {
-    LETRAS_AF = ['A', 'A', 'F'];
-    INDICADORES.forEach(function (ind) {
-      if (ind.alt) Object.keys(ind.alt).forEach(function (k) { ind.alt[k].d = ind.alt[k]._exemplo; });
-      else ind.d = ind._exemplo;
-    });
-  }
-
-  // Liga cada card ao KPI pelo nome cadastrado em IBP.DASHBOARD.NM_KPIS_DASH
-  // (o título do card, ou `kpi` quando o nome no banco for diferente).
-  function normalizar(t) { return String(t || '').toLowerCase().replace(/[^a-z0-9]+/g, ''); }
-  function aplicarIndicadores(resp) {
-    var porNome = {}, faltando = [], encontrados = 0;
-    var JANELA = { MONTH: 0, QUARTER: 1, YEAR: 2 }, letras = ['A', 'A', 'F'];
-    (resp.linhas || []).forEach(function (l) {
-      if (l.LETRA_AF) letras[JANELA[l.CD_VISAO]] = l.LETRA_AF;
-      var k = normalizar(l.NM_KPI);
-      (porNome[k] = porNome[k] || {})[l.CD_VISAO] = [Number(l.VL_B) || 0, Number(l.VL_AF) || 0];
-    });
-    function preencher(alvo, nome) {
-      var m = porNome[normalizar(alvo.kpi || nome)];
-      if (m && m.MONTH && m.QUARTER && m.YEAR) { alvo.d = [m.MONTH, m.QUARTER, m.YEAR]; encontrados++; return; }
-      alvo.d = alvo._exemplo;
-      faltando.push(nome);
-    }
-    INDICADORES.forEach(function (ind) {
-      if (ind.alt) Object.keys(ind.alt).forEach(function (k) { preencher(ind.alt[k], ind.alt[k].t || ind.t); });
-      else preencher(ind, ind.t);
-    });
-    if (resp.geradoEm) {
-      var dt = new Date(resp.geradoEm);
-      document.getElementById('lastUpdated').textContent = dt.toLocaleDateString('pt-BR') + ' ' + dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    }
-    LETRAS_AF = encontrados ? letras : ['A', 'A', 'F'];
-    if (!encontrados) marcarFonte('exemplo', 'Sem dados no banco para ' + state.bu + ' neste período.');
-    else marcarFonte(faltando.length ? 'parcial' : 'real', faltando.join(', '));
-  }
-
-  function carregarIndicadores() {
-    var meu = ++seqDados, id = SITE_ID[state.pais + '|' + state.bu];
-    if (!id) {
-      usarExemplo(); marcarFonte('exemplo'); render();
-      return Promise.resolve();
-    }
-    return apiGet('indicadores?site=' + id + '&ano=' + state.ano + '&mes=' + state.mes)
-      .then(function (resp) { if (meu === seqDados) { aplicarIndicadores(resp); render(); } })
-      .catch(function (e) { if (meu === seqDados) { usarExemplo(); marcarFonte('exemplo', e.message); render(); } });
-  }
-
-  function iniciarDados() {
-    apiGet('unidades').then(function (lista) {
-      if (!Array.isArray(lista) || !lista.length) throw new Error('nenhum site cadastrado para o dashboard');
-      SITE_ID = {};
-      UNIDADES = lista.map(function (p) {
-        return { pais: p.pais, sites: p.sites.map(function (st) { SITE_ID[p.pais + '|' + st.nome] = st.id; return st.nome; }) };
-      });
-      if (!SITE_ID[state.pais + '|' + state.bu]) { state.pais = UNIDADES[0].pais; state.bu = UNIDADES[0].sites[0]; }
-      render();
-      return carregarIndicadores();
-    }).catch(function (e) { marcarFonte('exemplo', e.message); });
-  }
-
   // ── Eventos ──
   document.querySelector('.filters').addEventListener('click', function (e) {
     var btn = e.target.closest('button[data-v]');
@@ -815,7 +715,6 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
     if (k === 'tri') state.mes = (state.tri - 1) * 3 + 3; // cascata: último mês do trimestre
     renderFilters();
     render();
-    carregarIndicadores();
   });
 
   document.addEventListener('click', function (e) {
@@ -874,7 +773,6 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 
   renderFilters();
   render();
-  iniciarDados();
 })();
 </script>
 </body></html>

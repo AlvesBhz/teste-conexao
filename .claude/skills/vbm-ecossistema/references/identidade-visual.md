@@ -1,6 +1,6 @@
 # Identidade visual VBM
 
-Referência viva: `COO - Dashboard/index.html` (padrão de gráficos do VBM Performance Hub,
+Referência viva: `COO - Dashboard/index.html` (ramo atual; layout aprovado com dados de exemplo) (padrão de gráficos do VBM Performance Hub,
 layout aprovado do COO Dashboard). Copie os blocos de CSS/JS de lá.
 
 ## Tipografia
