@@ -237,6 +237,10 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .panel-fin .panel-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 40px; }
 /* Visões de mina: Ontario (uma mina, Production 2×2) e VNL (uma coluna por mina) */
 .dash--mina .panel-prod .panel-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 40px; }
+/* Minas de Ontario (2×2): bloco centralizado na altura, linhas mais próximas e gráficos no centro de cada coluna.
+   O mesmo espaçamento nos dois painéis mantém as linhas alinhadas (vence o cálculo de ajustarAltura) */
+.dash--mina .panel-grid { align-content: center; justify-items: center; row-gap: clamp(36px, 7vh, 76px) !important; }
+.dash--mina .panel .card { width: 100%; max-width: 380px; }
 .dash--minas { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
 .dash--minas .panel .panel-grid { grid-template-columns: minmax(0, 1fr); }
 .dash--ir { grid-template-columns: minmax(0, .62fr) minmax(0, 1.38fr); }
