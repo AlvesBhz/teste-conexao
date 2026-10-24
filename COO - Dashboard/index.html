@@ -243,6 +243,8 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .dash--ir .panel-prod .panel-grid { grid-template-columns: minmax(0, 1fr); align-content: center; justify-items: center; }
 /* IR: os dois gráficos centralizados no painel, na largura máxima do gráfico (título alinhado à barra) */
 .dash--ir .panel-prod .card { width: 100%; max-width: 380px; }
+/* IR: só dois gráficos no painel; mais ar entre eles (vence o espaçamento comum calculado em ajustarAltura) */
+.dash--ir .panel-prod .panel-grid { row-gap: clamp(40px, 8vh, 90px) !important; }
 .panel-nota { flex-shrink: 0; margin: 0; font: italic 400 .66rem var(--font-display); color: var(--text-faint); }
 .card-title sup { font-size: .6em; margin-left: 1px; }
 .panel-sub { font: italic 400 .8rem var(--font-display); color: var(--text-faint); }
