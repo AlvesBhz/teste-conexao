@@ -192,6 +192,8 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .unit-list button { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; padding: 7px 10px; border: 0; border-radius: 7px; background: transparent; color: var(--ctl-text); font: 500 .76rem var(--font-ui); text-align: left; cursor: pointer; }
 .unit-list button:hover { background: color-mix(in srgb, var(--ctl-on-bg) 10%, transparent); }
 .unit-list button .n { color: var(--text-faint); font-size: .68rem; }
+.unit-grp { font: italic 400 .7rem var(--font-display); color: var(--text-soft); padding: 6px 10px 2px; }
+.unit-grp ~ button[data-site] { padding-left: 18px; }
 .unit-list button[data-pais][aria-current="true"] { background: color-mix(in srgb, var(--ctl-on-bg) 12%, transparent); color: var(--ctl-on-bg); }
 .unit-list button[data-site][aria-pressed="true"] { background: var(--ctl-on-bg); color: var(--ctl-on-text); }
 /* Delta: interruptor liga/desliga */
@@ -225,6 +227,11 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .panel-grid { flex: 1 1 auto; min-height: 0; display: grid; grid-template-rows: repeat(3, minmax(0, 1fr)); column-gap: 28px; row-gap: 8px; }
 .panel-prod .panel-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .panel-fin .panel-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 40px; }
+/* Visões de mina: Ontario (uma mina, Production 2×2) e VNL (uma coluna por mina) */
+.dash--mina .panel-prod .panel-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 40px; }
+.dash--minas { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.dash--minas .panel .panel-grid { grid-template-columns: minmax(0, 1fr); }
+.panel-sub { font: italic 400 .8rem var(--font-display); color: var(--text-faint); }
 
 /* Indicador: título + unidade, gráfico com altura contida, espaço livre abaixo */
 /* Título + gráfico centralizados na faixa da linha: em telas altas a sobra se divide acima e abaixo,
@@ -237,7 +244,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 /* Mesmo arranjo no modo normal e em tela cheia: cada linha tem a altura do conteúdo, a 1ª logo abaixo
    do título do painel e a última junto à base. A altura dos gráficos (--chart-h, até 190 px, sem esticar)
    é calculada em ajustarAltura() para as três linhas caberem no painel */
-.panel-grid { grid-template-rows: repeat(3, auto); align-content: start; row-gap: 10px; }
+.panel-grid { grid-template-rows: repeat(var(--rows, 3), auto); align-content: start; row-gap: 10px; }
 .card-unit { margin: 1px 0 0; font: 400 .74rem var(--font-display); color: var(--text-faint); }
 /* Tela cheia (botão ou F11): sem o cabeçalho azul; tela cheia e tema descem para o canto direito */
 .fs-tools { display: flex; align-self: flex-end; gap: 4px; margin-left: 4px; }
@@ -268,6 +275,8 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .b-val { fill: var(--ink-strong); font-size: 11px; font-variant-numeric: tabular-nums; letter-spacing: .01em; }
 .b-axis { fill: var(--ink-soft); font-size: 9.5px; }
 .b-base { stroke: var(--base-line); }
+.b-vazio { fill: var(--text-soft); font: italic 400 15px var(--font-display); }
+.b-vazio.is-pend { fill: var(--bad); }
 .cota { animation: fade .5s .6s ease-out both; }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 .is-static .card:not(.replay) .b-bar, .is-static .card:not(.replay) .cota { animation: none; }
@@ -322,7 +331,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 }
 @media (max-width: 720px) {
   .page { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
-  .panel-prod .panel-grid, .panel-fin .panel-grid { grid-template-columns: minmax(0, 1fr); }
+  .panel-prod .panel-grid, .panel-fin .panel-grid, .dash .panel .panel-grid { grid-template-columns: minmax(0, 1fr); }
   .panel-prod { padding: 14px; }
   .topnav { grid-template-columns: auto 1fr auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
   .topnav-brand { font-size: .8rem; justify-self: center; }
@@ -416,18 +425,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
     </div>
   </div>
 
-  <div class="dash">
-    <section class="panel panel-prod" aria-labelledby="hProd">
-      <div class="panel-head"><h3 class="panel-title" id="hProd">Production Drivers</h3></div>
-      <div class="panel-grid" id="gridProd"></div>
-    </section>
-    <section class="panel panel-fin" aria-labelledby="hFin">
-      <div class="panel-head">
-        <h3 class="panel-title" id="hFin">Financial Drivers</h3>
-      </div>
-      <div class="panel-grid" id="gridFin"></div>
-    </section>
-  </div>
+  <div class="dash" id="dash"></div>
 </main>
 
 <div class="tip" id="tip" hidden></div>
@@ -468,13 +466,63 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
       } }
   ];
 
+  // ── Minas (PDF COO – Business Units, págs. 8 a 14; B × A/F de ago/2026) ──
+  // d = null: sem dados; vazio = texto exibido no lugar do gráfico. Budget null = mina sem Budget.
+  var PEND = 'Pending final updates', NA = 'Not applicable';
+  function serie(id, t, u, dec, pol, d, vazio) { return { id: id, t: t, u: u, dec: dec, pol: pol, d: d || null, vazio: vazio || '' }; }
+  function minaVnl(p, nome, tipo, etd, ore, ni, cu) {
+    return { titulo: nome, sub: tipo, cards: [
+      serie(p + '-etd', 'Equivalent Total Development', 'Meters', 0, 'up', etd, etd ? '' : PEND),
+      serie(p + '-ore', 'Ore Mined', 'Kt', 0, 'up', ore),
+      serie(p + '-ni', 'Nickel Grade', '%', 2, 'up', ni),
+      serie(p + '-cu', 'Copper Grade', '%', 1, 'up', cu)
+    ] };
+  }
+  // Ontario: Production 2×2; Financial 2×2 (sem dados no PDF; na = cards "Not applicable")
+  function minaOnt(p, nome, n, ore, etd, ni, cu, na) {
+    na = na || {};
+    return { cls: 'dash--mina', rows: 2, titulo: nome + ' (' + n + '/6)', paineis: [
+      { titulo: 'Production Drivers', cls: 'panel-prod', cards: [
+        serie(p + '-ore', 'Ore Hoisted | Mined (Dry)', 'Kt', 0, 'up', ore),
+        serie(p + '-etd', 'Equivalent Total Development', 'Equivalent Meters | 4.8m x 4.8m', 0, 'up', etd, etd ? '' : NA),
+        serie(p + '-ni', 'Nickel Grade', '%', 2, 'up', ni),
+        serie(p + '-cu', 'Copper Grade', '%', 2, 'up', cu)
+      ] },
+      { titulo: 'Financial Drivers', cls: 'panel-fin', cards: [
+        serie(p + '-c1', 'C1 unit cash cost', 'US$ / Milled Ni contained', 0, 'down', null, na.c1 && NA),
+        serie(p + '-capex', 'CAPEX (Cost)', 'US$ M | Without Corp Projects', 0, 'down', null, na.capex && NA),
+        serie(p + '-lat', 'Vale - Lateral Mine Development Cost', 'US$ CAPEX ACD/Eq M', 0, 'down', null, na.lat && NA),
+        serie(p + '-mpe', 'Mining Production Expenses', 'US$ / Ore Hoisted', 0, 'down', null, na.mpe && NA)
+      ] }
+    ] };
+  }
+  var VISOES = {
+    VNL: { cls: 'dash--minas', rows: 4, titulo: 'VNL', paineis: [
+      minaVnl('ed', 'Eastern Deeps', 'UG Mines', [[528, 485], [1540, 1421], [6306, 6106]], [[124, 102], [316, 247], [1470, 1248]], [[2.23, 2.56], [2.36, 2.47], [2.44, 2.46]], [[0.9, 1.0], [0.9, 1.0], [0.9, 0.9]]),
+      minaVnl('rb', 'Reid Brook', 'UG Mines', [[550, 426], [1646, 1413], [6352, 5719]], [[85, 82], [230, 254], [973, 1057]], [[1.42, 1.69], [1.49, 1.77], [1.79, 1.64]], [[0.6, 0.7], [0.6, 0.7], [0.8, 0.7]]),
+      minaVnl('dh', 'Discovery Hill', 'Open Pit', null, [[null, 34], [null, 52], [null, 313]], [[null, 0.94], [null, 0.98], [null, 1.24]], [[null, 0.8], [null, 0.8], [null, 1.0]])
+    ].map(function (m, i) { m.cls = i === 1 ? 'panel-fin' : 'panel-prod'; return m; }) },
+    Coleman: minaOnt('col', 'Coleman', 1, [[63, 61], [230, 185], [878, 849]], [[592, 234], [1607, 920], [5408, 4588]], [[0.97, 0.86], [0.91, 0.95], [0.89, 1.11]], [[1.60, 1.60], [1.92, 1.61], [2.44, 3.27]]),
+    'Copper Cliff': minaOnt('cc', 'Copper Cliff', 2, [[16, 56], [163, 206], [949, 1038]], [[215, 439], [2014, 1416], [10831, 7222]], [[0.90, 0.80], [1.04, 0.93], [0.89, 1.03]], [[1.32, 1.18], [1.47, 1.23], [1.22, 1.58]]),
+    Creighton: minaOnt('cr', 'Creighton', 3, [[23, 25], [130, 169], [898, 842]], [[111, 172], [765, 844], [6118, 5037]], [[0.52, 0.71], [1.10, 1.44], [2.07, 2.20]], [[0.52, 0.62], [0.82, 1.20], [1.46, 1.68]]),
+    Garson: minaOnt('ga', 'Garson', 4, [[40, 42], [153, 120], [783, 739]], [[370, 170], [1281, 671], [5292, 3765]], [[0.87, 0.86], [1.28, 1.04], [1.27, 1.57]], [[0.76, 0.81], [1.20, 0.87], [1.28, 1.75]]),
+    Totten: minaOnt('to', 'Totten', 5, [[52, 43], [158, 113], [643, 585]], [[291, 158], [842, 403], [3427, 1934]], [[1.04, 0.58], [1.01, 0.72], [1.35, 1.54]], [[1.29, 1.20], [1.43, 1.11], [1.58, 1.88]]),
+    Stobie: minaOnt('st', 'Stobie', 6, [[153, 144], [455, 382], [1796, 1515]], null, [[0.40, 0.22], [0.39, 0.26], [0.43, 0.49]], [[0.39, 0.27], [0.38, 0.28], [0.39, 0.47]], { capex: 1, lat: 1 })
+  };
+  // Demais unidades: arranjo padrão (Production 3×3, Financial 2×3)
+  var VISAO_PADRAO = { cls: '', rows: 3, paineis: [
+    { titulo: 'Production Drivers', cls: 'panel-prod', cards: INDICADORES.filter(function (i) { return i.sec === 'prod'; }) },
+    { titulo: 'Financial Drivers', cls: 'panel-fin', cards: INDICADORES.filter(function (i) { return i.sec === 'fin'; }) }
+  ] };
+  function visao() { return VISOES[state.bu] || VISAO_PADRAO; }
+
   // ── Estado dos filtros ──
   var MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
   var MESES_LONGOS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
   // Unidades por país (exemplo; na integração vem do cadastro de sites)
   var UNIDADES = [
     { pais: 'Brasil', sites: ['Sossego', 'Salobo', 'Onça Puma'] },
-    { pais: 'Canadá', sites: ['Sudbury', "Voisey's Bay", 'Thompson', 'Long Harbour'] },
+    { pais: 'Canadá', sites: ['VNL', { grupo: 'Ontario', sites: ['Coleman', 'Copper Cliff', 'Creighton', 'Garson', 'Totten', 'Stobie'] }, 'Thompson', 'Long Harbour'] },
     { pais: 'Indonésia', sites: ['Sorowako'] }
   ];
   var state = { pais: 'Brasil', bu: 'Sossego', visao: 'Plan', ano: 2026, tri: 3, mes: 9, delta: 'on', sel: { grade: 'cu', allin: 'allin' } };
@@ -510,7 +558,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   }
 
   function view(ind) {
-    if (!ind.alt) return { t: ind.t, d: ind.d, u: ind.u, pp: !!ind.pp, dec: ind.dec };
+    if (!ind.alt) return { t: ind.t, d: ind.d || null, u: ind.u, pp: !!ind.pp, dec: ind.dec };
     var alt = ind.alt[state.sel[ind.id]];
     return { t: alt.t || ind.t, d: alt.d, u: alt.u, pp: alt.pp !== false, dec: ind.dec };
   }
@@ -522,7 +570,13 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
     var showDelta = state.delta === 'on';
     var MT = showDelta ? 46 : 20, MB = 16, PW = W / 3;
     var BW = Math.max(16, Math.min(30, PW * 0.3)), GAP = Math.max(14, Math.min(24, PW * 0.2));
-    var all = [].concat.apply([], v.d);
+    if (!v.d) { // sem dados: só a linha de base e, quando houver, o aviso (Pending / Not applicable)
+      var yv0 = H - MB;
+      return '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(v.t + ' (' + v.u + '): ' + (ind.vazio || 'sem dados') + '.') + '">' +
+        '<line class="b-base" x1="2" x2="' + (W - 2) + '" y1="' + yv0 + '" y2="' + yv0 + '"/>' +
+        (ind.vazio ? '<text class="b-vazio' + (ind.vazio === PEND ? ' is-pend' : '') + '" x="' + W / 2 + '" y="' + Math.round((MT + yv0) / 2) + '" text-anchor="middle">' + esc(ind.vazio) + '</text>' : '') + '</svg>';
+    }
+    var all = [].concat.apply([], v.d).filter(function (x) { return x !== null; });
     var folgaTopo = v.u === '%' || ind.id === 'grade';
     function dom(vals) {
       var lo = Math.min(0, Math.min.apply(null, vals)), hi = Math.max(0, Math.max.apply(null, vals));
@@ -538,11 +592,13 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
       var x0 = i * PW, cx = x0 + PW / 2;
       var xb = cx - GAP / 2 - BW, xa = cx + GAP / 2, y0 = y(0);
       var dl = delta(pair[0], pair[1], ind, v.dec);
-      label.push(PER[i] + ': Budget ' + fmt(pair[0], v.dec) + ', ' + (i === 2 ? 'Forecast ' : 'Actual ') + fmt(pair[1], v.dec) + (showDelta ? ', variação ' + dl.txt : '') + '.');
+      var semPar = pair[0] === null || pair[1] === null;
+      label.push(PER[i] + ': Budget ' + (pair[0] === null ? 'sem dado' : fmt(pair[0], v.dec)) + ', ' + (i === 2 ? 'Forecast ' : 'Actual ') + fmt(pair[1], v.dec) + (showDelta && !semPar ? ', variação ' + dl.txt : '') + '.');
 
       out += '<line class="b-base" x1="' + (x0 + 2) + '" x2="' + (x0 + PW - 2) + '" y1="' + y0 + '" y2="' + y0 + '"/>';
 
       [[xb, pair[0], 'g-b', ax[i][0], 'Budget'], [xa, pair[1], 'g-a', ax[i][1], i === 2 ? 'Forecast' : 'Actual']].forEach(function (bar) {
+        if (bar[1] === null) { out += '<text class="b-axis" x="' + (bar[0] + BW / 2) + '" y="' + (H - 3) + '" text-anchor="middle">' + esc(bar[3]) + '</text>'; return; }
         var yv = y(bar[1]), top = Math.min(yv, y0), h = Math.max(Math.abs(yv - y0), 1.5), neg = bar[1] < 0;
         var tip = esc(bar[3] + ' · ' + bar[4] + ': ' + fmt(bar[1], v.dec) + ' ' + v.u);
         var bx = bar[0] + BW / 2;
@@ -551,7 +607,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
         out += '<text class="b-val" x="' + bx + '" y="' + ((neg ? y0 : yv) - 6) + '" text-anchor="middle">' + fmt(bar[1], v.dec) + '</text>';
         out += '<text class="b-axis" x="' + bx + '" y="' + (H - 3) + '" text-anchor="middle">' + esc(bar[3]) + '</text>';
       });
-      if (!showDelta) return;
+      if (!showDelta || semPar) return;
 
       // Cota de diferença do Performance Hub: nível B tracejado, nível A sólido, faixa, haste, fio guia e pílula.
       var x1 = xb + BW, x2 = xa, yb = y(pair[0]), ya = y(pair[1]);
@@ -585,7 +641,10 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
       '</article>';
   }
 
-  function byId(id) { return INDICADORES.filter(function (i) { return i.id === id; })[0]; }
+  function byId(id) {
+    var cards = [].concat.apply([], visao().paineis.map(function (p) { return p.cards; }));
+    return cards.filter(function (i) { return i.id === id; })[0];
+  }
 
   function drawChart(el) {
     var W = Math.min(MAX_W, Math.round(el.clientWidth)), H = Math.min(MAX_H, Math.round(el.clientHeight));
@@ -598,26 +657,32 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 
   // Altura dos gráficos: até 190 px, o quanto couber para as três linhas ocuparem o painel
   function ajustarAltura() {
-    var gProd = document.getElementById('gridProd'), gFin = document.getElementById('gridFin');
-    var card = gProd && gProd.querySelector('.card');
+    var grids = [].slice.call(document.querySelectorAll('#dash .panel-grid')), N = visao().rows;
+    var gProd = grids[0], card = gProd && gProd.querySelector('.card');
     if (!card) return;
+    // Telas estreitas ou baixas: painéis empilhados com altura fixa por linha (CSS). O cálculo abaixo
+    // aumentaria o espaçamento a cada redimensionamento do painel, sem fim
+    if (matchMedia('(max-width: 1180px), (max-height: 700px)').matches) {
+      grids.forEach(function (g) { g.style.rowGap = ''; });
+      return;
+    }
     var cs = getComputedStyle(card), GAP_MIN = 10;
     var extra = parseFloat(cs.paddingTop) + (parseFloat(cs.rowGap) || 6);
     function maiorCabeca(raiz) {
       return Math.max.apply(null, [].map.call(raiz.querySelectorAll('.card-head'), function (h) { return h.offsetHeight; }));
     }
     // altura única dos gráficos, pelo cabeçalho de card mais alto da página (ex.: seletor do All-in quebrando linha)
-    var livre = (gProd.clientHeight - 2 * GAP_MIN) / 3 - (maiorCabeca(document) + extra);
+    var livre = (gProd.clientHeight - (N - 1) * GAP_MIN) / N - (maiorCabeca(document) + extra);
     var h = Math.max(90, Math.min(MAX_H, Math.floor(livre)));
     document.documentElement.style.setProperty('--chart-h', h + 'px');
     // espaço entre as linhas: 80% da sobra dividida entre as duas separações (linhas um pouco mais
     // próximas; o restante fica no rodapé). O mesmo valor nos dois painéis, para as linhas ficarem alinhadas
-    var gap = Math.min.apply(null, [gProd, gFin].map(function (g) {
-      return Math.floor((g.clientHeight - 3 * (h + maiorCabeca(g) + extra)) / 2 * 0.8);
+    var gap = Math.min.apply(null, grids.map(function (g) {
+      return Math.floor((g.clientHeight - N * (h + maiorCabeca(g) + extra)) / (N - 1) * 0.8);
     }));
-    gProd.style.rowGap = gFin.style.rowGap = Math.max(GAP_MIN, gap) + 'px';
+    grids.forEach(function (g) { g.style.rowGap = Math.max(GAP_MIN, gap) + 'px'; });
   }
-  new ResizeObserver(ajustarAltura).observe(document.getElementById('gridProd'));
+  new ResizeObserver(ajustarAltura).observe(document.getElementById('dash'));
 
   // Redesenha no tamanho real do espaço (sem distorcer texto); animação só no 1º desenho
   var ro = new ResizeObserver(function (entries) { entries.forEach(function (en) { drawChart(en.target); }); });
@@ -640,12 +705,18 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   }
 
   function render() {
-    document.getElementById('buName').textContent = state.bu;
+    var vs = visao(), dash = document.getElementById('dash');
+    document.getElementById('buName').textContent = vs.titulo || state.bu;
     document.getElementById('unitPais').textContent = state.pais;
     document.getElementById('unitSite').textContent = state.bu;
     ro.disconnect();
-    document.getElementById('gridProd').innerHTML = INDICADORES.filter(function (i) { return i.sec === 'prod'; }).map(cardHtml).join('');
-    document.getElementById('gridFin').innerHTML = INDICADORES.filter(function (i) { return i.sec === 'fin'; }).map(cardHtml).join('');
+    dash.className = 'dash ' + vs.cls;
+    dash.style.setProperty('--rows', vs.rows);
+    dash.innerHTML = vs.paineis.map(function (p, i) {
+      return '<section class="panel ' + p.cls + '" aria-labelledby="hPanel' + i + '">' +
+        '<div class="panel-head"><h3 class="panel-title" id="hPanel' + i + '">' + esc(p.titulo) + (p.sub ? ' <span class="panel-sub">(' + esc(p.sub) + ')</span>' : '') + '</h3></div>' +
+        '<div class="panel-grid">' + p.cards.map(cardHtml).join('') + '</div></section>';
+    }).join('');
     ajustarAltura();
     observeCharts();
   }
@@ -653,14 +724,20 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   // ── Unidade: drill-down País → Site ──
   var unitTrigger = document.getElementById('unitTrigger'), unitPop = document.getElementById('unitPop');
   var paisNav = state.pais; // país sendo navegado no painel (ainda não aplicado)
+  // Sites de um país, abrindo os grupos (ex.: Ontario › Coleman…)
+  function folhas(sites) { return [].concat.apply([], sites.map(function (s) { return typeof s === 'string' ? [s] : s.sites; })); }
   function renderUnit() {
     document.getElementById('unitPaises').innerHTML = UNIDADES.map(function (u) {
-      return '<button type="button" data-pais="' + esc(u.pais) + '" aria-current="' + (u.pais === paisNav) + '">' + esc(u.pais) + '<span class="n">' + u.sites.length + ' ›</span></button>';
+      return '<button type="button" data-pais="' + esc(u.pais) + '" aria-current="' + (u.pais === paisNav) + '">' + esc(u.pais) + '<span class="n">' + folhas(u.sites).length + ' ›</span></button>';
     }).join('');
     var atual = UNIDADES.filter(function (u) { return u.pais === paisNav; })[0];
-    document.getElementById('unitSites').innerHTML = atual.sites.map(function (site) {
+    function botao(site) {
       var on = site === state.bu && paisNav === state.pais;
       return '<button type="button" data-site="' + esc(site) + '" aria-pressed="' + on + '">' + esc(site) + '</button>';
+    }
+    document.getElementById('unitSites').innerHTML = atual.sites.map(function (site) {
+      if (typeof site === 'string') return botao(site);
+      return '<div class="unit-list" role="group" aria-label="' + esc(site.grupo) + '"><span class="unit-grp" aria-hidden="true">' + esc(site.grupo) + '</span>' + site.sites.map(botao).join('') + '</div>';
     }).join('');
   }
   function abrirUnit(abrir) {
