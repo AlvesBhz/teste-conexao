@@ -16,6 +16,7 @@
  * COO_SQL_PORT / COO_SQL_USER / COO_SQL_PASSWORD. Sem elas: servidor e base
  * PRD abaixo, e o usuário/senha do Portal (AZURE_SQL_USER / AZURE_SQL_PASSWORD).
  * Dashboard: COO_ID_DASH (IBP.DASHBOARD.ID_DASH), padrão 15 = scripts em database/.
+ * Unidades liberadas: COO_SITES, padrão "Sossego,Salobo".
  */
 const path = require('path');
 const sql = require('mssql');
@@ -88,7 +89,7 @@ module.exports = function montarCooDashboardNoPortal(app) {
       res.status(503).json({ status: 'unhealthy', database: DB.database, error: err.message });
     }
   });
-  app.use(BASE + '/api', semCache, criarCooRouter({ runQuery, idDash: env.COO_ID_DASH }));
+  app.use(BASE + '/api', semCache, criarCooRouter({ runQuery, idDash: env.COO_ID_DASH, sites: env.COO_SITES }));
 
   // Da pasta, só a página é pública. Ela é servida daqui (sendFile), então o
   // Portal não precisa de express.static para esta pasta — e server.js,

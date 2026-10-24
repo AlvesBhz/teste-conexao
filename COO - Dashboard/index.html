@@ -471,11 +471,10 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   // ── Estado dos filtros ──
   var MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
   var MESES_LONGOS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-  // Unidades por país (exemplo; na integração vem do cadastro de sites)
+  // Fase de teste de dados: só Sossego e Salobo (a lista real vem de api/unidades,
+  // que respeita COO_SITES no servidor)
   var UNIDADES = [
-    { pais: 'Brasil', sites: ['Sossego', 'Salobo', 'Onça Puma'] },
-    { pais: 'Canadá', sites: ['Sudbury', "Voisey's Bay", 'Thompson', 'Long Harbour'] },
-    { pais: 'Indonésia', sites: ['Sorowako'] }
+    { pais: 'Brasil', sites: ['Sossego', 'Salobo'] }
   ];
   var state = { pais: 'Brasil', bu: 'Sossego', visao: 'Plan', ano: 2026, tri: 3, mes: 9, delta: 'on', sel: { grade: 'cu', allin: 'allin' } };
   var OPTS = {

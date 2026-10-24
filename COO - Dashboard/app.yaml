@@ -19,6 +19,10 @@ env:
   # Os scripts em database/ usam 15; o filtro entra na SQL por parâmetro.
   - name: 'COO_ID_DASH'
     value: '15'
+  # Unidades liberadas (nomes de IBP.SITES, separados por vírgula).
+  # FASE DE TESTE DE DADOS: só Sossego e Salobo. Para liberar todos: '*'
+  - name: 'COO_SITES'
+    value: 'Sossego,Salobo'
 
   # ── Credenciais: SEMPRE via secret do Databricks App, nunca em texto puro ──
   # Antes do PRIMEIRO deploy, em Compute > Apps > (este app) > Edit >

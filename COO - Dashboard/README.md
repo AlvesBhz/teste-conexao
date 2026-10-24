@@ -49,6 +49,12 @@ O selo ao lado de "Last updated" sempre diz de onde vêm os números:
 - **dados parciais** — algum card sem KPI correspondente em `IBP.DASHBOARD` (passe o mouse para ver quais);
 - sem selo — todos os cards com dados do banco.
 
+## Unidades (fase de teste de dados)
+Por enquanto só **Sossego** e **Salobo** estão liberadas, para o teste de dados: aparecem no
+seletor e são as únicas com dados na API — outro site pedido direto responde 404.
+Para ampliar, ajuste `COO_SITES` no `app.yaml`: nomes de `IBP.SITES` separados por vírgula,
+ou `*` para liberar todos os sites do dashboard. Não é preciso mexer no código.
+
 Cada card é ligado ao KPI pelo nome em `IBP.DASHBOARD.NM_KPIS_DASH` (o título do card,
 sem diferenciar maiúsculas/espaços). Se o nome no banco for outro, informe `kpi: '<nome>'`
 no indicador dentro do `index.html`.

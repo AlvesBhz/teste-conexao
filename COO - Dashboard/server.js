@@ -9,6 +9,7 @@
  *   AZURE_SQL_SERVER, AZURE_SQL_DATABASE, AZURE_SQL_PORT
  *   AZURE_SQL_USER, AZURE_SQL_PASSWORD   ← secrets (valueFrom), nunca em texto puro
  *   COO_ID_DASH                          ← IBP.DASHBOARD.ID_DASH (padrão 15, o dos scripts em database/)
+ *   COO_SITES                            ← unidades liberadas (padrão "Sossego,Salobo")
  *   COO_ACESSO, COO_ACESSO_LOCAL_EMAIL, COO_USERS_EMAIL_COLUMN (ver acesso.js)
  */
 const path = require('path');
@@ -116,7 +117,7 @@ const ping = (req, res) => res.set('Cache-Control', 'no-store').json({ ok: true,
 // O front-end tenta api/, ../api/, /COO-Dashboard/api/ e /api/ (ver API_BASES
 // no index.html): a MESMA instância do router em todos os caminhos
 // compartilha o cache de 5 min.
-const router = criarCooRouter({ runQuery, idDash: process.env.COO_ID_DASH });
+const router = criarCooRouter({ runQuery, idDash: process.env.COO_ID_DASH, sites: process.env.COO_SITES });
 for (const base of ['/api', '/COO-Dashboard/api']) {
   app.get(`${base}/health`, health);
   app.get(`${base}/ping`, ping);

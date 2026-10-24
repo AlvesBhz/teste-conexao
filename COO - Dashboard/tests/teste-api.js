@@ -34,6 +34,8 @@ async function get(caminho, headers = {}) {
   console.log('=== Dados ===');
   r = await get('/api/unidades', MEMBRO);
   ok(r.status === 200 && Array.isArray(r.corpo) && r.corpo.some(p => p.pais === 'Brasil' && p.sites.some(s => s.nome === 'Sossego' && s.id === 11)), '/api/unidades agrupa sites por país');
+  const nomes = (r.corpo || []).flatMap(p => p.sites.map(s => s.nome)).sort().join(',');
+  ok(nomes === 'Salobo,Sossego', '/api/unidades só com Sossego e Salobo (Sudbury fora do escopo)');
   ok(/no-store/.test(r.h.get('cache-control') || ''), 'API com Cache-Control: no-store');
   r = await get('/api/indicadores?site=11&ano=2026&mes=9', MEMBRO);
   const porVisao = {}; (r.corpo.linhas || []).forEach(l => { porVisao[l.CD_VISAO] = l; });
@@ -42,6 +44,10 @@ async function get(caminho, headers = {}) {
   ok(porVisao.QUARTER.VL_B === 6 && porVisao.QUARTER.VL_AF === 6.5 && porVisao.YEAR.VL_AF === 28 && porVisao.YEAR.LETRA_AF === 'F', 'trimestre e ano corretos, letra F no ano');
   r = await get('/api/indicadores?site=10&ano=2026&mes=9', MEMBRO);
   ok(r.status === 200 && r.corpo.linhas.length === 0, 'site sem dados → lista vazia (página usa exemplo)');
+  r = await get('/api/indicadores?site=20&ano=2026&mes=9', MEMBRO);
+  ok(r.status === 404, 'site fora do escopo (Sudbury) → 404 mesmo pedido direto');
+  r = await get('/api/atualizacao?site=20&ano=2026&mes=9', MEMBRO);
+  ok(r.status === 404, '/api/atualizacao fora do escopo → 404');
   r = await get('/api/atualizacao?site=11&ano=2026&mes=9', MEMBRO);
   ok(r.status === 200 && r.corpo.linhas.length === 1 && r.corpo.linhas[0].DS_VALIDATE === 'Pending final updates', '/api/atualizacao filtra site e mês');
   r = await get('/api/indicadores?site=abc&ano=2026&mes=9', MEMBRO);

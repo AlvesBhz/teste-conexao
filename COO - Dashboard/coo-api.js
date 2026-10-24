@@ -22,7 +22,8 @@
  *
  * Rotas:
  *   GET /ping                         diagnóstico sem banco
- *   GET /unidades                     países e sites do dashboard (drill-down)
+ *   GET /unidades                     países e sites do dashboard (drill-down),
+ *                                     só os sites em COO_SITES (padrão Sossego e Salobo)
  *   GET /indicadores?site=&ano=&mes=  Budget e Actual/Forecast por KPI: mês,
  *                                     trimestre do mês e ano
  *   GET /atualizacao?site=&ano=&mes=  status de atualização por KPI (regras de
@@ -35,6 +36,9 @@ const sql = require('mssql');
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const ID_DASH_PADRAO = 15; // = scripts originais do time de dados
+// Escopo do dashboard: só estas unidades aparecem e têm dados liberados (COO_SITES).
+// FASE DE TESTE DE DADOS: Sossego e Salobo. Para liberar todos os sites: COO_SITES=*
+const SITES_PADRAO = 'Sossego,Salobo';
 
 // Lê o script e parametriza o dashboard. Falha AO SUBIR se o script mudar de
 // forma que a troca não aconteça (melhor que consultar o dashboard errado).
@@ -95,13 +99,22 @@ function letraAF(tipo) {
   return l === 'A' || l === 'F' ? l : null;
 }
 
+// Nome de site comparável: sem acento, espaços ou maiúsculas
+function chaveSite(nome) {
+  return String(nome || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+
 /**
  * Monta o router. `idDash` = IBP.DASHBOARD.ID_DASH (variável COO_ID_DASH;
- * padrão 15, o dos scripts originais).
+ * padrão 15, o dos scripts originais). `sites` = nomes das unidades liberadas,
+ * separados por vírgula (variável COO_SITES; padrão "Sossego,Salobo").
  */
-function criarCooRouter({ runQuery, idDash }) {
+function criarCooRouter({ runQuery, idDash, sites }) {
   if (typeof runQuery !== 'function') throw new Error('criarCooRouter: `runQuery` é obrigatório');
   const ID_DASH = inteiro(idDash, 1, 1e9) || ID_DASH_PADRAO;
+  const TODOS = String(sites || '').trim() === '*';
+  const SITES = new Set(String(sites || SITES_PADRAO).split(',').map(chaveSite).filter(Boolean));
+  const liberado = (nome) => TODOS || SITES.has(chaveSite(nome));
 
   const router = express.Router();
   const cache = new Map();
@@ -154,7 +167,7 @@ function criarCooRouter({ runQuery, idDash }) {
         const col = await descobrirColunaPais();
         const linhas = (await runQuery(SITES_SQL(col), P())).recordset;
         const porPais = new Map();
-        linhas.forEach(l => {
+        linhas.filter(l => liberado(l.NM_SITE)).forEach(l => {
           const pais = l.NM_PAIS || 'Sites';
           if (!porPais.has(pais)) porPais.set(pais, []);
           porPais.get(pais).push({ id: l.ID_SITE, nome: l.NM_SITE });
@@ -165,6 +178,19 @@ function criarCooRouter({ runQuery, idDash }) {
     } catch (err) { falha(res, 'Failed to fetch sites', err); }
   });
 
+  // Só os IDs das unidades liberadas (derivados de /unidades, mesmo cache)
+  async function siteLiberado(id) {
+    const unidades = await comCache('unidades-ids', async () => {
+      const col = await descobrirColunaPais();
+      return (await runQuery(SITES_SQL(col), P())).recordset
+        .filter(l => liberado(l.NM_SITE)).map(l => Number(l.ID_SITE));
+    });
+    return unidades.includes(id);
+  }
+  function foraDoEscopo(res) {
+    res.status(404).json({ error: 'Site não disponível neste dashboard' });
+  }
+
   // O script devolve, para cada mês de referência (DT_REF), as linhas do mês,
   // do trimestre daquele mês e do ano. Filtrar pelo mês escolhido já traz as
   // três janelas do card.
@@ -172,6 +198,7 @@ function criarCooRouter({ runQuery, idDash }) {
     const p = periodo(req, res);
     if (!p) return;
     try {
+      if (!(await siteLiberado(p.site))) return foraDoEscopo(res);
       const porKpi = new Map();
       (await dadosGraficos()).forEach(l => {
         const serie = SERIE_POR_ORDEM[l.ORDEM_GRAFICO];
@@ -195,6 +222,7 @@ function criarCooRouter({ runQuery, idDash }) {
     const p = periodo(req, res);
     if (!p) return;
     try {
+      if (!(await siteLiberado(p.site))) return foraDoEscopo(res);
       const linhas = (await dadosAtualizacao())
         .filter(l => Number(l.ID_SITE) === p.site && anoMes(l.DT_REF).join('-') === `${p.ano}-${p.mes}`)
         .map(l => ({ ID_KPI: l.ID_KPI, NM_KPI: String(l.NM_KPIS_DASH || '').trim(), ID_ORDEM: l.ID_ORDEM, VALIDATE: l.VALIDATE, DS_VALIDATE: l.DS_VALIDATE, DT_ATUALIZACAO: l.DT_ATUALIZACAO }));
