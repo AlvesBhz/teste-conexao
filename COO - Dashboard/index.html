@@ -240,7 +240,9 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .dash--minas { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
 .dash--minas .panel .panel-grid { grid-template-columns: minmax(0, 1fr); }
 .dash--ir { grid-template-columns: minmax(0, .62fr) minmax(0, 1.38fr); }
-.dash--ir .panel-prod .panel-grid { grid-template-columns: minmax(0, 1fr); align-content: center; }
+.dash--ir .panel-prod .panel-grid { grid-template-columns: minmax(0, 1fr); align-content: center; justify-items: center; }
+/* IR: os dois gráficos centralizados no painel, na largura máxima do gráfico (título alinhado à barra) */
+.dash--ir .panel-prod .card { width: 100%; max-width: 380px; }
 .panel-nota { flex-shrink: 0; margin: 0; font: italic 400 .66rem var(--font-display); color: var(--text-faint); }
 .card-title sup { font-size: .6em; margin-left: 1px; }
 .panel-sub { font: italic 400 .8rem var(--font-display); color: var(--text-faint); }
@@ -631,7 +633,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   var UNIDADES = [
     { pais: 'Brasil', sites: ['Salobo', 'Sossego', 'Onça Puma'] },
     { pais: 'Canadá', sites: ['Ontario', 'VNL', 'Manitoba'] },
-    { pais: 'Internacional', sites: ['International Refineries'] }
+    { pais: 'IR', sites: ['International Refineries'] }
   ];
   var state = { pais: 'Brasil', bu: 'Sossego', visao: 'Plan', ano: 2026, tri: 3, mes: 8, delta: 'on', sel: {} };
   var OPTS = {
