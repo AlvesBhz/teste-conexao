@@ -712,7 +712,9 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
       return [lo, hi];
     }
     var label = [v.t + ' (' + v.u + ').'];
-    var out = '';
+    // Linha do eixo contínua sob os três períodos, com as mesmas pontas de antes (2 px das bordas)
+    var dm0 = dom(all), yZero = MT + dm0[1] / (dm0[1] - dm0[0]) * (H - MT - MB);
+    var out = '<line class="b-base" x1="2" x2="' + (W - 2) + '" y1="' + yZero + '" y2="' + yZero + '"/>';
     v.d.forEach(function (pair, i) {
       var dm = dom(all); // escala única: as seis barras do gráfico na mesma régua
       var y = function (val) { return MT + (dm[1] - val) / (dm[1] - dm[0]) * (H - MT - MB); };
@@ -722,7 +724,6 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
       var semPar = pair[0] === null || pair[1] === null;
       label.push(PER[i] + ': Budget ' + (pair[0] === null ? 'sem dado' : fmt(pair[0], v.dec)) + ', ' + (i === 2 ? 'Forecast ' : 'Actual ') + (pair[1] === null ? 'sem dado' : fmt(pair[1], v.dec)) + (showDelta && !semPar ? ', variação ' + dl.txt : '') + '.');
 
-      out += '<line class="b-base" x1="' + (x0 + 2) + '" x2="' + (x0 + PW - 2) + '" y1="' + y0 + '" y2="' + y0 + '"/>';
 
       [[xb, pair[0], 'g-b', ax[i][0], 'Budget'], [xa, pair[1], 'g-a', ax[i][1], i === 2 ? 'Forecast' : 'Actual']].forEach(function (bar) {
         if (bar[1] === null) { out += '<text class="b-axis" x="' + (bar[0] + BW / 2) + '" y="' + (H - 3) + '" text-anchor="middle">' + esc(bar[3]) + '</text>'; return; }
