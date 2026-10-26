@@ -164,7 +164,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 
 /* Cabeçalho editorial + filtros */
 .head { position: relative; flex-shrink: 0; display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 14px 32px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
-.title-block { min-width: 0; margin-bottom: -4px; } /* centro óptico do título na altura dos botões */
+.title-block { min-width: 0; margin-bottom: -4px; position: relative; top: -7px; } /* título um pouco acima: centrado entre o topo e a linha do cabeçalho */
 .title-block h2 { margin: 0; font: italic 300 clamp(1.7rem, 2.6vw, 2.5rem)/1.05 var(--font-display); color: var(--accent); letter-spacing: -.01em; text-wrap: balance; }
 /* Unidade em linha própria (como no print), legenda e atualização alinhadas à direita */
 .site-row { flex-shrink: 0; display: flex; justify-content: space-between; align-items: flex-end; gap: 8px 24px; flex-wrap: wrap; margin-top: -2px; }
