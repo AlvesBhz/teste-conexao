@@ -261,8 +261,13 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
    e o bloco desce em direção à base sem aumentar os gráficos */
 .card { min-width: 0; min-height: 0; display: flex; flex-direction: column; justify-content: flex-start; gap: 6px; padding-top: 16px; }
 .card-head { flex-shrink: 0; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 4px 8px; }
-/* O título não encolhe: sem espaço, o seletor (Cu/Au, All-in…) desce para baixo dele */
 .card-name { flex: 1 0 auto; max-width: 100%; min-width: 0; }
+/* Card com seletor (Cu/Au, All-in…): título inteiro na 1ª linha e o seletor ao lado, na linha da unidade.
+   Sem quebra para baixo do título, mesmo com nomes longos como "All-in | By Product" */
+.card-head:has(.seg) { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 8px; row-gap: 2px; }
+.card-head:has(.seg) .card-name { display: contents; }
+.card-head:has(.seg) .card-title { grid-column: 1 / -1; }
+.card-head:has(.seg) .card-unit { margin: 0; }
 .card-title { margin: 0; font: 400 1rem/1.2 var(--font-display); color: var(--chart-title); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Mesmo arranjo no modo normal e em tela cheia: cada linha tem a altura do conteúdo, a 1ª logo abaixo
    do título do painel e a última junto à base. A altura dos gráficos (--chart-h, até 190 px, sem esticar)
