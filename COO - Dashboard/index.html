@@ -262,12 +262,15 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .card { min-width: 0; min-height: 0; display: flex; flex-direction: column; justify-content: flex-start; gap: 6px; padding-top: 16px; }
 .card-head { flex-shrink: 0; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 4px 8px; }
 .card-name { flex: 1 0 auto; max-width: 100%; min-width: 0; }
-/* Card com seletor (Cu/Au, All-in…): título inteiro na 1ª linha e o seletor ao lado, na linha da unidade.
-   Sem quebra para baixo do título, mesmo com nomes longos como "All-in | By Product" */
-.card-head:has(.seg) { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 8px; row-gap: 2px; }
+/* Card com seletor (Cu/Au, All-in…): seletor na linha do título, à direita; sem espaço, o título
+   ("All-in | By Product") quebra em duas linhas em vez de empurrar o seletor para baixo */
+.card-head:has(.seg) { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto 1fr; align-items: start; align-content: start; column-gap: 8px; row-gap: 1px; }
 .card-head:has(.seg) .card-name { display: contents; }
-.card-head:has(.seg) .card-title { grid-column: 1 / -1; }
-.card-head:has(.seg) .card-unit { margin: 0; }
+.card-head:has(.seg) .card-title { grid-area: 1 / 1; white-space: normal; }
+.card-head:has(.seg) .seg { grid-area: 1 / 2 / 4 / 3; display: grid; grid-template-columns: repeat(2, auto); } /* 2×2 com 4 opções */
+.card-head:has(.seg) .card-unit { grid-area: 2 / 1; }
+/* Cabeçalhos com a mesma altura na página (ajustarAltura): os gráficos de uma linha começam na mesma altura */
+.card-head { min-height: var(--head-h, 0px); }
 .card-title { margin: 0; font: 400 1rem/1.2 var(--font-display); color: var(--chart-title); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Mesmo arranjo no modo normal e em tela cheia: cada linha tem a altura do conteúdo, a 1ª logo abaixo
    do título do painel e a última junto à base. A altura dos gráficos (--chart-h, até 190 px, sem esticar)
@@ -788,6 +791,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
     // aumentaria o espaçamento a cada redimensionamento do painel, sem fim
     if (matchMedia('(max-width: 1180px), (max-height: 700px)').matches) {
       grids.forEach(function (g) { g.style.rowGap = ''; });
+      document.documentElement.style.removeProperty('--head-h');
       return;
     }
     var cs = getComputedStyle(card), GAP_MIN = 10;
@@ -795,6 +799,9 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
     function maiorCabeca(raiz) {
       return Math.max.apply(null, [].map.call(raiz.querySelectorAll('.card-head'), function (h) { return h.offsetHeight; }));
     }
+    // mede os cabeçalhos na altura natural e iguala todos pelo mais alto
+    document.documentElement.style.setProperty('--head-h', '0px');
+    document.documentElement.style.setProperty('--head-h', maiorCabeca(document) + 'px');
     // altura única dos gráficos, pelo cabeçalho de card mais alto da página (ex.: seletor do All-in quebrando linha)
     var livre = (gProd.clientHeight - (N - 1) * GAP_MIN) / N - (maiorCabeca(document) + extra);
     var h = Math.max(90, Math.min(MAX_H, Math.floor(livre)));
@@ -966,6 +973,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
     var card = tmp.firstChild;
     card.classList.add('replay');
     document.getElementById('card-' + id).replaceWith(card);
+    ajustarAltura(); // o novo título pode mudar a altura do cabeçalho
     observeCharts();
     setTimeout(function () { card.classList.remove('replay'); }, 1500);
     var btn = card.querySelector('button[data-alt="' + k + '"]');
