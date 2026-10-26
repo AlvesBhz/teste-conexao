@@ -243,7 +243,10 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .dash--mina .panel .card { width: 100%; max-width: 380px; }
 .dash--minas { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
 .dash--minas .panel .panel-grid { grid-template-columns: minmax(0, 1fr); }
-.dash--ir { grid-template-columns: minmax(0, .62fr) minmax(0, 1.38fr); }
+.dash--ir { grid-template-columns: minmax(0, .62fr) minmax(0, 1.38fr); column-gap: 56px; }
+/* IR: colunas financeiras largas; cada card na largura do gráfico e centralizado, com o seletor do All-in junto ao título */
+.dash--ir .panel-fin .panel-grid { justify-items: center; }
+.dash--ir .panel-fin .card { width: 100%; max-width: 380px; }
 .dash--ir .panel-prod .panel-grid { grid-template-columns: minmax(0, 1fr); align-content: center; justify-items: center; }
 /* IR: os dois gráficos centralizados no painel, na largura máxima do gráfico (título alinhado à barra) */
 .dash--ir .panel-prod .card { width: 100%; max-width: 380px; }
