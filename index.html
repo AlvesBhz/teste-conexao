@@ -20,6 +20,15 @@
   (function(){try{if(localStorage.getItem('vdt-theme')==='dark'){document.documentElement.style.background='linear-gradient(145deg,#1a1a1a 0%,#0d2640 100%)'}}catch(e){}})();
   </script>
   <script>
+  /* Modo simulado: em hospedagem estática (GitHub Pages) ou com ?mock=1
+     não existe server.js — mock-api.js responde /api/* no próprio
+     navegador com dados fictícios. Precisa carregar ANTES do fetch
+     abaixo; no Databricks App esta linha não baixa nada. */
+  if (/\.github\.io$/.test(location.hostname) || /[?&]mock=1(&|$)/.test(location.search)) {
+    document.write('<script src="mock-api.js"><\/script>');
+  }
+  </script>
+  <script>
   /* Dispara a consulta inicial JÁ, em paralelo com o download de
      d3.v7.min.js (273KB) e app.js. Sem isto o fetch só saía depois de
      todo o JS ter baixado e parseado — medido em ~570ms de espera antes
